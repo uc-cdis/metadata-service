@@ -1,7 +1,7 @@
 """metadata
 
 Revision ID: f96cb3b2c523
-Revises: 
+Revises:
 Create Date: 2019-12-09 16:23:39.943713
 
 """
