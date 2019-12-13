@@ -41,6 +41,12 @@ Create a file `.env` in the root directory of the checkout:
 # DB_DATABASE = "..." # default: current user
 ```
 
+Run database schema migration:
+
+```bash
+alembic upgrade head
+```
+
 Run the server with auto-reloading:
 
 ```bash
@@ -49,8 +55,37 @@ uvicorn mds.app:app --reload
 
 Try out the API at: <http://localhost:8000/docs>.
 
-To run tests:
+## Run tests
 
 ```bash
 pytest --cov=src --cov=migrations/versions tests
+```
+
+Please note that, the name of the test database is prepended with "test_", you
+need to create that database too.
+
+## Develop with Docker
+
+Use Docker compose:
+
+```bash
+docker-compose up
+```
+
+Run database schema migration as well:
+
+```bash
+docker-compose exec mds poetry run alembic upgrade head
+```
+
+Create test database:
+
+```bash
+docker-compose exec db createdb -U mds test_mds
+```
+
+Run tests:
+
+```bash
+docker-compose exec mds poetry run pytest --cov=src --cov=migrations/versions tests
 ```
