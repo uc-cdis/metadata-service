@@ -33,7 +33,7 @@ jobs:
         DB_HOST: localhost
         DB_USER: mds
       run: |
-        $HOME/.poetry/bin/poetry run pytest --cov=mds --cov-report xml
+        $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-report xml
     - name: Submit coverage report
       env:
         CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_TOKEN }}
