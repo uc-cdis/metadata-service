@@ -1,3 +1,7 @@
+import gino
+import pytest
+
+
 def test_get(client):
     data = dict(a=1, b=2)
     client.post("/metadata/test_get", json=data).raise_for_status()
@@ -47,6 +51,9 @@ def test_query_offset(client):
             client.delete(f"/metadata/tqo_{i}")
 
 
+@pytest.mark.skipif(
+    gino.__version__ <= "0.8.5", reason="https://github.com/fantix/gino/pull/609"
+)
 def test_query_filter(client):
     try:
         for guid, data in [
