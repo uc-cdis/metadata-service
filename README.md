@@ -1,5 +1,11 @@
 # DCFS Metadata Service
 
+[![License Badge](https://img.shields.io/github/license/uc-cdis/metadata-service?logo=apache)](https://github.com/uc-cdis/metadata-service/blob/master/LICENSE)
+[![GitHub Action Badge](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/pytest?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3Apytest)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/34e8e8c4502444afac0f48a7d2a592ea)](https://www.codacy.com/manual/fantix/metadata-service?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=uc-cdis/metadata-service&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Coverage/34e8e8c4502444afac0f48a7d2a592ea)](https://www.codacy.com/manual/fantix/metadata-service?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=uc-cdis/metadata-service&amp;utm_campaign=Badge_Coverage)
+[![Dependabot Badge](https://badgen.net/dependabot/uc-cdis/metadata-service/?icon=dependabot)](https://dependabot.com/)
+
 The Metadata Service provides API for retrieving JSON metadata of GUIDs.
 
 The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged with
