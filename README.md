@@ -89,3 +89,14 @@ Run tests:
 ```bash
 docker-compose exec mds poetry run pytest --cov=src --cov=migrations/versions tests
 ```
+
+## Deployment
+
+For production, use [gunicorn](https://gunicorn.org/):
+
+```bash
+gunicorn mds.app:app -k uvicorn.workers.UvicornWorker
+```
+
+Or use the Docker image built from the `Dockerfile`, using environment variables
+with the same name to configure the server.
