@@ -1,9 +1,5 @@
 name: docker
-on:
-  push:
-    tags:
-      - 'v*.*'
-      - 'v*.*.*'
+on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
