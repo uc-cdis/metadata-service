@@ -1,9 +1,17 @@
 from starlette.config import Config
+from starlette.datastructures import CommaSeparatedStrings
 from starlette.datastructures import Secret
+
+
+class CommaSeparatedLogins(CommaSeparatedStrings):
+    def __init__(self, value):
+        super().__init__(value)
+        self._items = [item.split(":") for item in self._items]
+
 
 config = Config(".env")
 
-DEBUG = config("DEBUG", cast=bool, default=False)
+DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
 
 DB_HOST = config("DB_HOST", default=None)
@@ -14,6 +22,7 @@ DB_DATABASE = config("DB_DATABASE", default=None)
 DB_MIN_SIZE = config("DB_MIN_SIZE", cast=int, default=1)
 DB_MAX_SIZE = config("DB_MAX_SIZE", cast=int, default=10)
 
+ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 
 if TESTING:
     DB_DATABASE = "test_" + (DB_DATABASE or "mds")

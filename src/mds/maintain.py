@@ -1,13 +1,14 @@
 import re
 
 from asyncpg import UniqueViolationError
-from fastapi import HTTPException, APIRouter
+from fastapi import HTTPException, APIRouter, Depends
 from sqlalchemy import bindparam
 from sqlalchemy.dialects.postgresql import insert
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
 
+from .admin_login import admin_required
 from .models import db, Metadata
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
@@ -113,4 +114,4 @@ async def delete_metadata(guid):
 
 
 def init_app(app):
-    app.include_router(mod, tags=["Maintain"])
+    app.include_router(mod, tags=["Maintain"], dependencies=[Depends(admin_required)])

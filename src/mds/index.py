@@ -2,7 +2,7 @@ import hashlib
 import re
 
 from asyncpg import DuplicateTableError, UndefinedObjectError
-from fastapi import HTTPException, APIRouter
+from fastapi import HTTPException, APIRouter, Depends
 from starlette.status import (
     HTTP_201_CREATED,
     HTTP_204_NO_CONTENT,
@@ -10,6 +10,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
+from .admin_login import admin_required
 from .models import db, Metadata
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
@@ -90,4 +91,4 @@ async def drop_metadata_indexes(path):
 
 
 def init_app(app):
-    app.include_router(mod, tags=["Index"])
+    app.include_router(mod, tags=["Index"], dependencies=[Depends(admin_required)])

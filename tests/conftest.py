@@ -1,3 +1,5 @@
+import importlib
+
 import pytest
 from alembic.config import main
 from starlette.config import environ
@@ -19,7 +21,10 @@ def setup_test_database():
 
 @pytest.fixture()
 def client():
+    from mds import config
     from mds.app import app
+
+    importlib.reload(config)
 
     with TestClient(app) as client:
         yield client
