@@ -13,6 +13,7 @@ app = FastAPI(
     version=pkg_resources.get_distribution("mds").version,
     debug=config.DEBUG,
 )
+startup_complete_event = asyncio.Future()
 
 
 class ClientDisconnectMiddleware:
@@ -49,6 +50,22 @@ class ClientDisconnectMiddleware:
                 raise
         if waiter and not waiter.done():
             waiter.cancel()
+
+
+class WaitForStartupCompleteMiddleware:
+    """
+    Workaround for https://github.com/encode/uvicorn/issues/499
+    """
+
+    def __init__(self, app_):
+        self._app = app_
+
+    async def __call__(self, scope, receive, send) -> None:
+        if not scope["type"] == "http":
+            return await self._app(scope, receive, send)
+
+        await startup_complete_event
+        return await self._app(scope, receive, send)
 
 
 def format_engine(engine, color=False):
@@ -100,7 +117,17 @@ def format_engine(engine, color=False):
 
 
 @app.on_event("startup")
-async def set_bind():
+async def setup_database_connection_pool():
+    try:
+        await _set_bind()
+    except BaseException as e:
+        startup_complete_event.set_exception(e)
+        raise
+    else:
+        startup_complete_event.set_result(None)
+
+
+async def _set_bind():
     args = dict(
         host=config.DB_HOST,
         port=config.DB_PORT,
@@ -120,17 +147,29 @@ async def set_bind():
             )
         },
     )
-    await db.set_bind(
-        URL(
-            drivername="asyncpg",
-            host=args.pop("host"),
-            port=args.pop("port"),
-            username=args.pop("user"),
-            password=str(config.DB_PASSWORD),
-            database=args.pop("database"),
-        ),
-        **args,
+    url_args = dict(
+        drivername="asyncpg",
+        host=args.pop("host"),
+        port=args.pop("port"),
+        username=args.pop("user"),
+        password=str(config.DB_PASSWORD),
+        database=args.pop("database"),
     )
+    retries = 0
+    while True:
+        retries += 1
+        # noinspection PyBroadException
+        try:
+            await db.set_bind(URL(**url_args), **args)
+        except Exception:
+            if retries < config.DB_CONNECT_RETRIES:
+                logger.info("Waiting for the database to start...")
+                await asyncio.sleep(1)
+            else:
+                logger.error("Max retries reached.")
+                raise
+        else:
+            break
     msg = "Database connection pool created: "
     logger.info(
         msg + format_engine(db.bind),
@@ -139,7 +178,9 @@ async def set_bind():
 
 
 @app.on_event("shutdown")
-async def pop_bind():
+async def shutdown_database_connection_pool():
+    global startup_complete_event
+    startup_complete_event = asyncio.Future()
     msg = "Closing database connection pool: "
     logger.info(
         msg + format_engine(db.bind),
@@ -156,6 +197,7 @@ async def pop_bind():
 
 def load_extras():
     app.add_middleware(ClientDisconnectMiddleware)
+    app.add_middleware(WaitForStartupCompleteMiddleware)
 
     logger.info("Start to load modules.")
     for ep in pkg_resources.iter_entry_points("mds.modules"):
