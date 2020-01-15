@@ -1,11 +1,11 @@
 # DCFS Metadata Service
 
-[![License Badge](https://img.shields.io/github/license/uc-cdis/metadata-service?logo=apache)](https://github.com/uc-cdis/metadata-service/blob/master/LICENSE)
-[![GitHub Action Badge](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/pytest?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3Apytest)
-[![GitHub release Bacge](https://img.shields.io/github/v/release/uc-cdis/metadata-service?logo=docker&logoColor=white)](https://github.com/uc-cdis/metadata-service/packages/79876)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/34e8e8c4502444afac0f48a7d2a592ea)](https://www.codacy.com/manual/fantix/metadata-service?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=uc-cdis/metadata-service&amp;utm_campaign=Badge_Grade)
-[![Codacy Badge](https://api.codacy.com/project/badge/Coverage/34e8e8c4502444afac0f48a7d2a592ea)](https://www.codacy.com/manual/fantix/metadata-service?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=uc-cdis/metadata-service&amp;utm_campaign=Badge_Coverage)
-[![Dependabot Badge](https://badgen.net/dependabot/uc-cdis/metadata-service/?icon=dependabot)](https://dependabot.com/)
+[![Docker release](https://img.shields.io/github/v/release/uc-cdis/metadata-service?logo=docker&logoColor=white)](https://quay.io/repository/cdis/metadata-service)
+[![GitHub workflow](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/CI%20Workflow?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3A%22CI+Workflow%22)
+[![Codacy coverage](https://img.shields.io/codacy/coverage/5acc2d70109f451ab8047b2691ffcffe?logo=codacy)](https://www.codacy.com/gh/uc-cdis/metadata-service)
+[![Codacy grade](https://img.shields.io/codacy/grade/5acc2d70109f451ab8047b2691ffcffe?logo=codacy)](https://www.codacy.com/gh/uc-cdis/metadata-service)
+[![Dependabot Badge](https://img.shields.io/badge/Dependabot-active-brightgreen?logo=dependabot)](https://dependabot.com/)
+[![License](https://img.shields.io/github/license/uc-cdis/metadata-service?logo=apache)](https://github.com/uc-cdis/metadata-service/blob/master/LICENSE)
 
 The Metadata Service provides API for retrieving JSON metadata of GUIDs.
 
