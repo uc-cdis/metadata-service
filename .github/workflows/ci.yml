@@ -1,12 +1,11 @@
-name: pytest
+name: CI Workflow
 
 on: [push]
 
 jobs:
+
   test:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v1
     - uses: harmon758/postgresql-action@v1
@@ -40,3 +39,25 @@ jobs:
       run: |
         pip install codacy-coverage
         python-codacy-coverage -r coverage.xml
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Publish to quay.io
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: cdis/metadata-service
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+          registry: quay.io
+          tag_names: true
+      - name: Publish to GitHub Packages
+        uses: elgohr/Publish-Docker-Github-Action@master
+        with:
+          name: uc-cdis/metadata-service/mds
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          tag_names: true
