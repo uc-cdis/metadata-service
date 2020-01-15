@@ -21,6 +21,7 @@ DB_PASSWORD = config("DB_PASSWORD", cast=Secret, default=None)
 DB_DATABASE = config("DB_DATABASE", default=None)
 DB_MIN_SIZE = config("DB_MIN_SIZE", cast=int, default=1)
 DB_MAX_SIZE = config("DB_MAX_SIZE", cast=int, default=10)
+DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 

@@ -6,12 +6,12 @@ services:
       - "8000:8000"
     volumes:
       - .:/src
-    links:
+    depends_on:
       - db
     environment:
       - DB_HOST=db
       - DB_USER=mds
-    command: poetry run uvicorn mds.app:app --reload
+    command: poetry run uvicorn --host 0.0.0.0 mds.app:app --reload
   db:
     image: postgres
     environment:
