@@ -1,9 +1,20 @@
 version: '3'
 services:
-  mds:
-    build: .
+  app:
+    image: mds
     ports:
-      - "8000:8000"
+      - "8000:80"
+    volumes:
+      - .:/src
+    depends_on:
+      - migration
+    environment:
+      - DB_HOST=db
+      - DB_USER=mds
+    command: /env/bin/uvicorn --host 0.0.0.0 --port 80 mds.app:app --reload
+  migration:
+    build: .
+    image: mds
     volumes:
       - .:/src
     depends_on:
@@ -11,7 +22,7 @@ services:
     environment:
       - DB_HOST=db
       - DB_USER=mds
-    command: poetry run uvicorn --host 0.0.0.0 mds.app:app --reload
+    command: /env/bin/alembic upgrade head
   db:
     image: postgres
     environment:
