@@ -1,3 +1,5 @@
+import logging
+import time
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -77,8 +79,23 @@ def run_migrations_online():
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
+    retries = 0
+    while True:
+        # noinspection PyBroadException
+        try:
+            retries += 1
+            connection = connectable.connect()
+        except Exception:
+            if retries < conf.DB_CONNECT_RETRIES:
+                logging.info("Waiting for the database to start...")
+                time.sleep(1)
+            else:
+                logging.error("Max retries reached.")
+                raise
+        else:
+            break
 
-    with connectable.connect() as connection:
+    with connection:
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
