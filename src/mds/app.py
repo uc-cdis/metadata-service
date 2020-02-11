@@ -13,7 +13,6 @@ app = FastAPI(
     version=pkg_resources.get_distribution("mds").version,
     debug=config.DEBUG,
 )
-startup_complete_event = asyncio.Future()
 
 
 class ClientDisconnectMiddleware:
@@ -50,22 +49,6 @@ class ClientDisconnectMiddleware:
                 raise
         if waiter and not waiter.done():
             waiter.cancel()
-
-
-class WaitForStartupCompleteMiddleware:
-    """
-    Workaround for https://github.com/encode/uvicorn/issues/499
-    """
-
-    def __init__(self, app_):
-        self._app = app_
-
-    async def __call__(self, scope, receive, send) -> None:
-        if not scope["type"] == "http":
-            return await self._app(scope, receive, send)
-
-        await startup_complete_event
-        return await self._app(scope, receive, send)
 
 
 def format_engine(engine, color=False):
@@ -118,16 +101,6 @@ def format_engine(engine, color=False):
 
 @app.on_event("startup")
 async def setup_database_connection_pool():
-    try:
-        await _set_bind()
-    except BaseException as e:
-        startup_complete_event.set_exception(e)
-        raise
-    else:
-        startup_complete_event.set_result(None)
-
-
-async def _set_bind():
     args = dict(
         host=config.DB_HOST,
         port=config.DB_PORT,
@@ -179,8 +152,6 @@ async def _set_bind():
 
 @app.on_event("shutdown")
 async def shutdown_database_connection_pool():
-    global startup_complete_event
-    startup_complete_event = asyncio.Future()
     msg = "Closing database connection pool: "
     logger.info(
         msg + format_engine(db.bind),
@@ -197,7 +168,6 @@ async def shutdown_database_connection_pool():
 
 def load_extras():
     app.add_middleware(ClientDisconnectMiddleware)
-    app.add_middleware(WaitForStartupCompleteMiddleware)
 
     logger.info("Start to load modules.")
     for ep in pkg_resources.iter_entry_points("mds.modules"):
@@ -215,6 +185,12 @@ def load_extras():
 @app.get("/version")
 def get_version():
     return pkg_resources.get_distribution("mds").version
+
+
+@app.get("/_status")
+async def get_status():
+    now = await db.scalar("SELECT now()")
+    return dict(status="OK", timestamp=now)
 
 
 load_extras()

@@ -32,8 +32,9 @@ jobs:
         DB_HOST: localhost
         DB_USER: mds
       run: |
-        $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-report xml
+        $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=97 --cov-report xml
     - name: Submit coverage report
+      if: github.ref == 'refs/heads/master'
       env:
         CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_TOKEN }}
       run: |
@@ -45,14 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - name: Publish to quay.io
-        uses: elgohr/Publish-Docker-Github-Action@master
-        with:
-          name: cdis/metadata-service
-          username: ${{ secrets.QUAY_USERNAME }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-          registry: quay.io
-          tag_names: true
       - name: Publish to GitHub Packages
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
