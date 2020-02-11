@@ -15,6 +15,8 @@ def setup_test_database():
     main(["--raiseerr", "upgrade", "head"])
 
     yield
+
+    importlib.reload(config)
     if not config.TEST_KEEP_DB:
         main(["--raiseerr", "downgrade", "base"])
 
