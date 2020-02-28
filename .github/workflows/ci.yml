@@ -6,13 +6,18 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:9.6
+        env:
+          POSTGRES_USER: mds
+          POSTGRES_PASSWORD: mds
+          POSTGRES_DB: test_mds
+        ports:
+        - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
     - uses: actions/checkout@v1
-    - uses: harmon758/postgresql-action@v1
-      with:
-        postgresql version: '9.6'
-        postgresql user: mds
-        postgresql db: test_mds
     - name: Set up Python 3.7
       uses: actions/setup-python@v1
       with:
@@ -30,7 +35,9 @@ jobs:
     - name: Test with pytest
       env:
         DB_HOST: localhost
+        DB_PORT: ${{ job.services.postgres.ports[5432] }}
         DB_USER: mds
+        DB_PASSWORD: mds
       run: |
         $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=97 --cov-report xml
     - name: Submit coverage report
