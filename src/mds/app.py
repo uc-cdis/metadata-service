@@ -12,6 +12,7 @@ app = FastAPI(
     title="DCFS Metadata Service",
     version=pkg_resources.get_distribution("mds").version,
     debug=config.DEBUG,
+    openapi_prefix=config.URL_PREFIX,
 )
 
 

@@ -13,6 +13,7 @@ config = Config(".env")
 
 DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
+URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 
 DB_HOST = config("DB_HOST", default=None)
 DB_PORT = config("DB_PORT", cast=int, default=None)
