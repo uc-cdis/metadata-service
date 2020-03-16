@@ -32,8 +32,8 @@ The initial coverage comprises the following scenarios:
 ## Load Tests
 ### Performance benchmarking
 The service is currently being load tested with the following criteria:
-    - http_req_duration: avg<1000, p(95)<2000
-    - failed_requests: rate<0.05
-    - virtual_users: <ramping up from 0 to 50 users in ~5 mins and then bumping up to 100 users in a short time-frame (10s)> and keep running for 2 more minutes>
+* http_req_duration: avg<1000, p(95)<2000
+* failed_requests: rate<0.05
+* virtual_users: <ramping up from 0 to 50 users in ~5 mins and then bumping up to 100 users in a short time-frame (10s)> and keep running for 2 more minutes>
 ### Soak test
 This test involves a continuous 4hs run, constantly creating random entries and running queries with 200 virtual users.
