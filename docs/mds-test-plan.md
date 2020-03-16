@@ -4,7 +4,7 @@
 The MDS is a blobstore used to store JSON-formatted data, any schemaless data.
 ## RESTful API
 Here's one of its swagger pages:
-![https://nci-crdc-staging.datacommons.io/mds/docs](https://nci-crdc-staging.datacommons.io/mds/docs)
+[https://nci-crdc-staging.datacommons.io/mds/docs](https://nci-crdc-staging.datacommons.io/mds/docs)
 ## Authentication
 Users can interact with MDS through basic auth, e.g.:
 ```bash
