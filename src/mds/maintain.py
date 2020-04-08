@@ -85,10 +85,16 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
 
 
 @mod.put("/metadata/{guid}")
-async def update_metadata(guid, data: dict):
-    """Update the metadata of the GUID."""
+async def update_metadata(guid, data: dict, merge: bool = False):
+    """Update the metadata of the GUID.
+
+    If `merge` is True, then any top-level keys that are not in the new data will be
+    kept, and those that also exist in the new data will be replaced completely. This
+    is also known as the shallow merge. The metadata service currently doesn't support
+    deep merge.
+    """
     metadata = (
-        await Metadata.update.values(data=data)
+        await Metadata.update.values(data=(Metadata.data + data) if merge else data)
         .where(Metadata.guid == guid)
         .returning(*Metadata)
         .gino.first()

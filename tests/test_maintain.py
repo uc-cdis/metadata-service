@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_create(client):
     data = dict(a=1, b=2)
     resp = client.post("/metadata/test_create", json=data)
@@ -69,6 +72,30 @@ def test_update(client):
 
     finally:
         client.delete("/metadata/test_update")
+
+
+@pytest.mark.parametrize("merge", [True, False])
+def test_update_merge(client, merge):
+    orig = dict(a=dict(x=1, y=2), b=2)
+    new = dict(a=dict(z=3), c=3)
+    key = "/metadata/test_update"
+    client.post(key, json=orig).raise_for_status()
+    try:
+        resp = client.put(key, params=dict(merge=merge), json=new)
+        resp.raise_for_status()
+        if merge:
+            expected = orig.copy()
+            expected.update(new)
+        else:
+            expected = new
+        assert resp.json() == expected
+
+        resp = client.get(key)
+        resp.raise_for_status()
+        assert resp.json() == expected
+
+    finally:
+        client.delete(key)
 
 
 def test_delete(client):

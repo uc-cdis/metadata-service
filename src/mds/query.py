@@ -16,7 +16,7 @@ async def search_metadata(
         "or GUIDs mapping to their metadata (true).",
     ),
     limit: int = Query(
-        10, description="Maximum number of records returned. (max: 100)"
+        10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
 ):
