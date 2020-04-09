@@ -2,16 +2,17 @@ import gino
 import pytest
 
 
-def test_get(client):
+@pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
+def test_get(client, key):
     data = dict(a=1, b=2)
-    client.post("/metadata/test_get", json=data).raise_for_status()
+    client.post("/metadata/" + key, json=data).raise_for_status()
     try:
-        assert client.get("/metadata/test_get").json() == data
+        assert client.get("/metadata/" + key).json() == data
 
-        resp = client.get("/metadata/test_get_not_exist")
+        resp = client.get("/metadata/{}_not_exist".format(key))
         assert resp.status_code == 404
     finally:
-        client.delete("/metadata/test_get")
+        client.delete("/metadata/" + key)
 
 
 def test_query_data(client):

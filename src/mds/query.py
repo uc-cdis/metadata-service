@@ -85,7 +85,7 @@ async def search_metadata(
         ]
 
 
-@mod.get("/metadata/{guid}")
+@mod.get("/metadata/{guid:path}")
 async def get_metadata(guid):
     """Get the metadata of the GUID."""
     metadata = await Metadata.get(guid)
