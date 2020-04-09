@@ -1,25 +1,26 @@
 import pytest
 
 
-def test_create(client):
+@pytest.mark.parametrize("key", ["test_create", "dg.1234/test_create"])
+def test_create(client, key):
     data = dict(a=1, b=2)
-    resp = client.post("/metadata/test_create", json=data)
+    resp = client.post("/metadata/" + key, json=data)
     resp.raise_for_status()
     try:
         assert resp.status_code == 201
         assert resp.json() == data
 
-        assert client.get("/metadata/test_create").json() == data
+        assert client.get("/metadata/" + key).json() == data
 
-        resp = client.post("/metadata/test_create", json=data)
+        resp = client.post("/metadata/" + key, json=data)
         assert resp.status_code == 409
 
-        resp = client.post("/metadata/test_create?overwrite=true", json=data)
+        resp = client.post("/metadata/{}?overwrite=true".format(key), json=data)
         assert resp.status_code == 200
         assert resp.json() == data
 
     finally:
-        client.delete("/metadata/test_create")
+        client.delete("/metadata/" + key)
 
 
 def test_batch_create(client):
@@ -55,30 +56,32 @@ def test_batch_create(client):
             client.delete(f"/metadata/tbc_{i}")
 
 
-def test_update(client):
+@pytest.mark.parametrize("key", ["test_update", "dg.1234/test_update"])
+def test_update(client, key):
     data = dict(a=1, b=2)
-    client.post("/metadata/test_update", json={}).raise_for_status()
+    client.post("/metadata/" + key, json={}).raise_for_status()
     try:
-        resp = client.put("/metadata/test_update", json=data)
+        resp = client.put("/metadata/" + key, json=data)
         resp.raise_for_status()
         assert resp.json() == data
 
-        resp = client.get("/metadata/test_update")
+        resp = client.get("/metadata/" + key)
         resp.raise_for_status()
         assert resp.json() == data
 
-        resp = client.put("/metadata/test_update_not_existing", json=data)
+        resp = client.put("/metadata/{}_not_existing".format(key), json=data)
         assert resp.status_code == 404
 
     finally:
-        client.delete("/metadata/test_update")
+        client.delete("/metadata/" + key)
 
 
 @pytest.mark.parametrize("merge", [True, False])
-def test_update_merge(client, merge):
+@pytest.mark.parametrize("key", ["test_update_merge", "dg.1234/test_update_merge"])
+def test_update_merge(client, merge, key):
     orig = dict(a=dict(x=1, y=2), b=2)
     new = dict(a=dict(z=3), c=3)
-    key = "/metadata/test_update"
+    key = "/metadata/" + key
     client.post(key, json=orig).raise_for_status()
     try:
         resp = client.put(key, params=dict(merge=merge), json=new)
@@ -98,8 +101,9 @@ def test_update_merge(client, merge):
         client.delete(key)
 
 
-def test_delete(client):
-    client.post("/metadata/test_delete", json={}).raise_for_status()
-    client.delete("/metadata/test_delete").raise_for_status()
-    resp = client.delete("/metadata/test_delete")
+@pytest.mark.parametrize("key", ["test_delete", "dg.1234/test_delete"])
+def test_delete(client, key):
+    client.post("/metadata/" + key, json={}).raise_for_status()
+    client.delete("/metadata/" + key).raise_for_status()
+    resp = client.delete("/metadata/" + key)
     assert resp.status_code == 404

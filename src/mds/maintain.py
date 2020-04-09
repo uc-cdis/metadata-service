@@ -55,7 +55,7 @@ async def batch_create_metadata(
     return dict(created=created, updated=updated, conflict=conflict)
 
 
-@mod.post("/metadata/{guid}")
+@mod.post("/metadata/{guid:path}")
 async def create_metadata(guid, data: dict, overwrite: bool = False):
     """Create metadata for the GUID."""
     created = True
@@ -84,7 +84,7 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
         return rv["data"]
 
 
-@mod.put("/metadata/{guid}")
+@mod.put("/metadata/{guid:path}")
 async def update_metadata(guid, data: dict, merge: bool = False):
     """Update the metadata of the GUID.
 
@@ -105,7 +105,7 @@ async def update_metadata(guid, data: dict, merge: bool = False):
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
 
 
-@mod.delete("/metadata/{guid}")
+@mod.delete("/metadata/{guid:path}")
 async def delete_metadata(guid):
     """Delete the metadata of the GUID."""
     metadata = (
