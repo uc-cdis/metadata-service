@@ -4,7 +4,6 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from sqlalchemy.engine.url import URL
 
 from alembic import context
 
@@ -21,20 +20,11 @@ fileConfig(config.config_file_name)
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
-from mds.app import db as target_metadata
-from mds import config as conf
+from mds.main import db as target_metadata, load_modules
+from mds.config import DB_DSN
 
-config.set_main_option(
-    "sqlalchemy.url",
-    str(URL(
-        drivername="postgresql",
-        host=conf.DB_HOST,
-        port=conf.DB_PORT,
-        username=conf.DB_USER,
-        password=str(conf.DB_PASSWORD),
-        database=conf.DB_DATABASE,
-    )),
-)
+load_modules()
+config.set_main_option("sqlalchemy.url", str(DB_DSN))
 
 
 # other values from the config, defined by the needs of env.py,
