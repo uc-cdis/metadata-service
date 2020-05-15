@@ -12,9 +12,14 @@ class CommaSeparatedLogins(CommaSeparatedStrings):
 
 config = Config(".env")
 
+# Server
+
 DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
+
+
+# Database
 
 DB_DRIVER = config("DB_DRIVER", default="postgresql")
 DB_HOST = config("DB_HOST", default=None)
@@ -50,4 +55,11 @@ DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)  # depre
 DB_RETRY_LIMIT = config("DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES)
 DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 
+
+# Security
+
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
+FORCE_ISSUER = config("FORCE_ISSUER", default=None)
+ALLOWED_ISSUERS = set(
+    config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default='')
+)

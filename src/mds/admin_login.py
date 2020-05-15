@@ -1,13 +1,24 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBasicCredentials, HTTPBasic
+from fastapi import Depends, HTTPException, Security
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBasic,
+    HTTPBasicCredentials,
+    HTTPBearer,
+)
+from gen3authz.client.arborist.async_client import ArboristClient
 from starlette.status import HTTP_403_FORBIDDEN
 
 from . import config
 
 security = HTTPBasic(auto_error=False)
+bearer = HTTPBearer()
+arborist = ArboristClient()
 
 
-def admin_required(credentials: HTTPBasicCredentials = Depends(security)):
+async def admin_required(
+    credentials: HTTPBasicCredentials = Depends(security),
+    token: HTTPAuthorizationCredentials = Security(bearer),
+):
     if not config.DEBUG:
         for username, password in config.ADMIN_LOGINS:
             if (
@@ -17,4 +28,7 @@ def admin_required(credentials: HTTPBasicCredentials = Depends(security)):
             ):
                 break
         else:
-            raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+            if not await arborist.auth_request(
+                token.credentials, "mds_gateway", "access", "/mds_gateway"
+            ):
+                raise HTTPException(status_code=HTTP_403_FORBIDDEN)
