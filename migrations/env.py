@@ -24,17 +24,16 @@ fileConfig(config.config_file_name)
 from mds.app import db as target_metadata
 from mds import config as conf
 
-config.set_main_option(
-    "sqlalchemy.url",
-    str(URL(
-        drivername="postgresql",
-        host=conf.DB_HOST,
-        port=conf.DB_PORT,
-        username=conf.DB_USER,
-        password=str(conf.DB_PASSWORD),
-        database=conf.DB_DATABASE,
-    )),
+db_url = URL(
+    drivername="postgresql",
+    host=conf.DB_HOST,
+    port=conf.DB_PORT,
+    username=conf.DB_USER,
+    password=str(conf.DB_PASSWORD),
+    database=conf.DB_DATABASE,
 )
+logging.info(f"connecting to: {db_url}")
+config.set_main_option("sqlalchemy.url", str(db_url))
 
 
 # other values from the config, defined by the needs of env.py,

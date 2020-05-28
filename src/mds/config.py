@@ -26,6 +26,13 @@ DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 
+INDEXING_SERVICE_ENDPOINT = config(
+    "INDEXING_SERVICE_ENDPOINT", cast=str, default="http://indexd-service"
+)
+DATA_ACCESS_SERVICE_ENDPOINT = config(
+    "DATA_ACCESS_SERVICE_ENDPOINT", cast=str, default="http://fence-service"
+)
+
 if TESTING:
     DB_DATABASE = "test_" + (DB_DATABASE or "mds")
     TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)

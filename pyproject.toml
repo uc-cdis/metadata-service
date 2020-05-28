@@ -13,6 +13,8 @@ gunicorn = "^20.0.4"
 gino = "^0.8.5"
 alembic = "^1.3"
 psycopg2-binary = "^2.8"
+indexclient = "^2.1.0"
+httpx = "^0.12.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
@@ -23,6 +25,7 @@ requests = "^2.22"
 "query" = "mds.query"
 "maintain" = "mds.maintain"
 "index" = "mds.index"
+"objects" = "mds.objects"
 
 [build-system]
 requires = ["poetry>=0.12"]
