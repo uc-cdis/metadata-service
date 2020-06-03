@@ -24,9 +24,9 @@ def setup_test_database():
 @pytest.fixture()
 def client():
     from mds import config
-    from mds.app import app
+    from mds.main import get_app
 
     importlib.reload(config)
 
-    with TestClient(app) as client:
+    with TestClient(get_app()) as client:
         yield client
