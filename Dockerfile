@@ -12,4 +12,4 @@ RUN apk add --no-cache postgresql-libs
 COPY --from=builder /env /env
 COPY --from=builder /src /src
 WORKDIR /src
-CMD ["/env/bin/gunicorn", "mds.app:app", "-b", "0.0.0.0:80", "-k", "uvicorn.workers.UvicornWorker"]
+CMD ["/env/bin/gunicorn", "mds.asgi:app", "-b", "0.0.0.0:80", "-k", "uvicorn.workers.UvicornWorker"]

@@ -4,10 +4,10 @@ import json
 import sys
 import traceback
 
+from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from fastapi import HTTPException, Query, APIRouter
-
-# from gen3authz.client.arborist.client import ArboristClient
+from fastapi import Depends, HTTPException, Query, APIRouter
+from gen3authz.client.arborist.async_client import ArboristClient
 import httpx
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -25,6 +25,7 @@ from . import config, logger
 from .models import db, Metadata
 
 mod = APIRouter()
+arborist = ArboristClient()
 
 
 class FileUploadStatus(str, Enum):
@@ -39,29 +40,32 @@ class CreateObjInput(BaseModel):
 
     file_name (str): Name for the file being uploaded
     authz (dict): authorization block with requirements for what's being uploaded
-    alias (str, optional): unique name to allow using in place of whatever GUID gets
+    aliases (list, optional): unique name to allow using in place of whatever GUID gets
         created for this upload
     metadata (dict, optional): any additional metadata to attach to the upload
     """
 
     file_name: str
     authz: dict
-    alias: str = None
+    aliases: list = None
     metadata: dict = None
 
 
 @mod.post("/objects")
-async def create_object(body: CreateObjInput, request: Request):
+async def create_object(
+    body: CreateObjInput,
+    request: Request,
+    token=Depends(access_token("user", "openid", purpose="access")),
+):
     """
-    Create object.
+    Create object placeholder and attach metadata, return Upload url to the user.
 
     Args:
         body (CreateObjInput): input body for create object
     """
-    # input validation
     file_name = body.dict().get("file_name")
     authz = body.dict().get("authz")
-    alias = body.dict().get("alias")
+    aliases = body.dict().get("aliases")
     metadata = body.dict().get("metadata")
     logger.debug(f"validating authz block input: {authz}")
 
@@ -78,8 +82,8 @@ async def create_object(body: CreateObjInput, request: Request):
 
     metadata = metadata or {}
 
-    # TODO uploader = token.sub
-    uploader = None
+    # get token claims
+    uploader = token.get("sub")
 
     # create indexd blank record
     blank_guid = None
@@ -122,12 +126,86 @@ async def create_object(body: CreateObjInput, request: Request):
 
     logger.info(f"created a blank indexd record: {blank_guid}")
 
-    # TODO create alias for GUID if alias is provided
-    logger.info(f"using alias: {alias}")
-    # response = create_alias(guid, alias)
+    # create aliases for GUID if aliases is provided
+    if aliases:
+        aliases_data = {"aliases": [{"value": alias} for alias in aliases]}
+        logger.debug(f"trying to create aliases: {aliases_data}")
+        try:
+            async with httpx.AsyncClient() as client:
+                endpoint = (
+                    config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
+                    + f"/index/{blank_guid}/aliases"
+                )
+
+                # pass along the authorization header to indexd request
+                headers = {
+                    "Authorization": str(request.headers.get("Authorization", ""))
+                }
+                response = await client.post(
+                    endpoint, json=aliases_data, headers=headers
+                )
+                response.raise_for_status()
+        except httpx.HTTPError as err:
+            # check if user has permission for resources specified
+            if err.response and err.response.status_code in (401, 403):
+                logger.error(
+                    f"Creating aliases in indexd failed, status code: "
+                    f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
+                )
+                raise HTTPException(
+                    HTTP_401_UNAUTHORIZED,
+                    "You do not have access to create the aliases you are trying to assign: "
+                    f"{aliases} to the guid {blank_guid}",
+                )
+
+            msg = (
+                f"Unable to create alises for guid {blank_guid} by user {uploader} "
+                f"with aliases: {aliases}."
+            )
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
+
+        logger.info(f"added aliases: {aliases} for guid: {blank_guid}")
 
     # TODO request upload URL from fence for GUID
     signed_upload_url = None
+    upload_url_params = {"file_id": blank_guid, "protocol": "s3"}
+    logger.debug(f"trying to generate an upload url using params: {upload_url_params}")
+    try:
+        async with httpx.AsyncClient() as client:
+            endpoint = (
+                config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/")
+                + f"/data/upload/{blank_guid}"
+            )
+
+            # pass along the authorization header to indexd request
+            headers = {"Authorization": str(request.headers.get("Authorization", ""))}
+            response = await client.get(
+                endpoint, params=upload_url_params, headers=headers
+            )
+            logger.debug(response)
+            response.raise_for_status()
+            signed_upload_url = response.json().get("url")
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        # check if user has permission for resources specified
+        if err.response and err.response.status_code in (401, 403):
+            logger.error(
+                f"Generating upload url failed, status code: "
+                f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
+            )
+            raise HTTPException(
+                HTTP_401_UNAUTHORIZED,
+                "You do not have access to generate the upload url for: "
+                f"{upload_url_params}",
+            )
+
+        msg = (
+            f"Unable to create signed upload url for guid {blank_guid} with params: "
+            f"{upload_url_params}."
+        )
+        logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
     # TODO add default metadata to db (_resource_paths, _uploader_id, _upload_status)
     additional_object_metadata = {

@@ -13,10 +13,10 @@ gunicorn = "^20.0.4"
 gino = {version = "^1.0.0", extras = ["starlette"]}
 alembic = "^1.3"
 psycopg2-binary = "^2.8"
-authutils = "^5.0.0"
 gen3authz = "^1.0.0"
 indexclient = "^2.1.0"
 httpx = "^0.12.1"
+authutils = "^5.0.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
