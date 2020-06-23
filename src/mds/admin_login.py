@@ -11,7 +11,7 @@ from starlette.status import HTTP_403_FORBIDDEN
 from . import config
 
 security = HTTPBasic(auto_error=False)
-bearer = HTTPBearer()
+bearer = HTTPBearer(auto_error=False)
 arborist = ArboristClient()
 
 
@@ -28,7 +28,7 @@ async def admin_required(
             ):
                 break
         else:
-            if not await arborist.auth_request(
+            if not token or not await arborist.auth_request(
                 token.credentials, "mds_gateway", "access", "/mds_gateway"
             ):
                 raise HTTPException(status_code=HTTP_403_FORBIDDEN)
