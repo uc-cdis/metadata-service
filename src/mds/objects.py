@@ -61,7 +61,7 @@ async def create_object(
     """
     file_name = body.dict().get("file_name")
     authz = body.dict().get("authz")
-    aliases = body.dict().get("aliases")
+    aliases = body.dict().get("aliases") or []
     metadata = body.dict().get("metadata")
     logger.debug(f"validating authz block input: {authz}")
 
@@ -82,12 +82,12 @@ async def create_object(
     uploader = token.get("sub")
     auth_header = str(request.headers.get("Authorization", ""))
 
-    blank_guid = await _create_indexd_blank_record(file_name, authz, auth_header)
+    blank_guid, signed_upload_url = await _create_blank_record_and_url(
+        file_name, authz, auth_header
+    )
 
     if aliases:
         await _create_aliases_for_record(aliases, blank_guid, auth_header)
-
-    signed_upload_url = await _create_upload_url(blank_guid, file_name, auth_header)
 
     await _add_metadata(blank_guid, metadata, authz, uploader)
 
@@ -101,47 +101,7 @@ async def create_object(
     return JSONResponse(response, HTTP_201_CREATED)
 
 
-async def _create_indexd_blank_record(file_name, authz, auth_header):
-    blank_guid = None
-    blank_record_data = {
-        "uploader": None,
-        "file_name": file_name,
-        "authz": authz.get("resource_paths", []),
-    }
-    logger.debug(f"trying to create a blank indexd record: {blank_record_data}")
-    try:
-        async with httpx.AsyncClient() as client:
-            endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + "/index/blank"
-
-            # pass along the authorization header to indexd request
-            headers = {"Authorization": auth_header}
-            response = await client.post(
-                endpoint, json=blank_record_data, headers=headers
-            )
-            response.raise_for_status()
-            blank_guid = response.json().get("did")
-    except httpx.HTTPError as err:
-        # check if user has permission for resources specified
-        if err.response and err.response.status_code in (401, 403):
-            logger.error(
-                f"Creating a blank record in indexd failed, status code: "
-                f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
-            )
-            raise HTTPException(
-                HTTP_401_UNAUTHORIZED,
-                "You do not have create access to the authz resources you are trying to assign: "
-                f"{authz.get('resource_paths')}",
-            )
-
-        msg = f"Unable to create a blank indexd record with filename: {file_name}."
-        logger.error(f"{msg}\nException:\n{err}", exc_info=True)
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
-
-    logger.info(f"created a blank indexd record: {blank_guid}")
-    return blank_guid
-
-
-async def _create_aliases_for_record(aliases, blank_guid, auth_header):
+async def _create_aliases_for_record(aliases: list, blank_guid: str, auth_header: str):
     aliases_data = {"aliases": [{"value": alias} for alias in aliases]}
     logger.debug(f"trying to create aliases: {aliases_data}")
     try:
@@ -178,27 +138,30 @@ async def _create_aliases_for_record(aliases, blank_guid, auth_header):
     logger.info(f"added aliases: {aliases} for guid: {blank_guid}")
 
 
-async def _create_upload_url(blank_guid, file_name, auth_header):
+async def _create_blank_record_and_url(file_name: str, authz: dict, auth_header: str):
+    blank_guid = None
     signed_upload_url = None
 
-    # only supports s3 upload for now
-    upload_url_params = {"file_id": blank_guid, "file_name": file_name}
+    blank_record_params = {
+        "file_name": file_name,
+        "authz": authz.get("resource_paths", []),
+    }
 
-    logger.debug(f"trying to generate an upload url using params: {upload_url_params}")
+    logger.debug(
+        f"trying to create blank record and generate an upload url using "
+        f"params: {blank_record_params}"
+    )
     try:
         async with httpx.AsyncClient() as client:
-            endpoint = (
-                config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/")
-                + f"/data/upload/{blank_guid}"
-            )
-
+            endpoint = config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
             # pass along the authorization header to indexd request
             headers = {"Authorization": auth_header}
-            response = await client.get(
-                endpoint, params=upload_url_params, headers=headers
+            response = await client.post(
+                endpoint, json=blank_record_params, headers=headers
             )
             logger.debug(response)
             response.raise_for_status()
+            blank_guid = response.json().get("guid")
             signed_upload_url = response.json().get("url")
     except httpx.HTTPError as err:
         logger.debug(err)
@@ -211,20 +174,20 @@ async def _create_upload_url(blank_guid, file_name, auth_header):
             raise HTTPException(
                 HTTP_401_UNAUTHORIZED,
                 "You do not have access to generate the upload url for: "
-                f"{upload_url_params}",
+                f"{blank_record_params}",
             )
 
         msg = (
             f"Unable to create signed upload url for guid {blank_guid} with params: "
-            f"{upload_url_params}."
+            f"{blank_record_params}."
         )
         logger.error(f"{msg}\nException:\n{err}", exc_info=True)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
-    return signed_upload_url
+    return blank_guid, signed_upload_url
 
 
-async def _add_metadata(blank_guid, metadata, authz, uploader):
+async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: str):
     # add default metadata to db
     additional_object_metadata = {
         "_resource_paths": authz.get("resource_paths", []),
