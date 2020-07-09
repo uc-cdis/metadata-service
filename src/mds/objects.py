@@ -3,7 +3,8 @@ from enum import Enum
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from gen3authz.client.arborist.async_client import ArboristClient
 import httpx
 from starlette.requests import Request
@@ -13,6 +14,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
     HTTP_400_BAD_REQUEST,
     HTTP_401_UNAUTHORIZED,
+    HTTP_403_FORBIDDEN,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 from pydantic import BaseModel
@@ -22,6 +24,7 @@ from .models import Metadata
 
 mod = APIRouter()
 arborist = ArboristClient()
+bearer = HTTPBearer()
 
 
 class FileUploadStatus(str, Enum):
@@ -51,7 +54,7 @@ class CreateObjInput(BaseModel):
 async def create_object(
     body: CreateObjInput,
     request: Request,
-    token=Depends(access_token("user", "openid", purpose="access")),
+    token: HTTPAuthorizationCredentials = Security(bearer),
 ):
     """
     Create object placeholder and attach metadata, return Upload url to the user.
@@ -59,6 +62,15 @@ async def create_object(
     Args:
         body (CreateObjInput): input body for create object
     """
+    try:
+        token_claims = await access_token("user", "openid", purpose="access")(token)
+    except Exception as exc:
+        logger.error(exc, exc_info=True)
+        raise HTTPException(
+            HTTP_401_UNAUTHORIZED,
+            f"Could not verify, parse, and/or validate scope from provided access token.",
+        )
+
     file_name = body.dict().get("file_name")
     authz = body.dict().get("authz")
     aliases = body.dict().get("aliases") or []
@@ -79,7 +91,7 @@ async def create_object(
     metadata = metadata or {}
 
     # get user id from token claims
-    uploader = token.get("sub")
+    uploader = token_claims.get("sub")
     auth_header = str(request.headers.get("Authorization", ""))
 
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
@@ -154,7 +166,7 @@ async def _create_blank_record_and_url(file_name: str, authz: dict, auth_header:
     try:
         async with httpx.AsyncClient() as client:
             endpoint = config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
-            # pass along the authorization header to indexd request
+            # pass along the authorization header to new request
             headers = {"Authorization": auth_header}
             response = await client.post(
                 endpoint, json=blank_record_params, headers=headers

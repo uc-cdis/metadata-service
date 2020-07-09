@@ -15,7 +15,7 @@ from .models import db
 
 def get_app():
     app = FastAPI(
-        title="DCFS Metadata Service",
+        title="Framework Services Object Management Service",
         version=pkg_resources.get_distribution("mds").version,
         debug=config.DEBUG,
         openapi_prefix=config.URL_PREFIX,

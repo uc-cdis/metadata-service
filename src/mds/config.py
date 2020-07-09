@@ -27,9 +27,7 @@ DB_PORT = config("DB_PORT", cast=int, default=None)
 DB_USER = config("DB_USER", default=None)
 DB_PASSWORD = config("DB_PASSWORD", cast=Secret, default=None)
 DB_DATABASE = config("DB_DATABASE", default=None)
-if TESTING:
-    DB_DATABASE = "test_" + (DB_DATABASE or "mds")
-    TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
+
 DB_DSN = config(
     "DB_DSN",
     cast=make_url,
@@ -60,9 +58,7 @@ DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
-ALLOWED_ISSUERS = set(
-    config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default='')
-)
+ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
 
 # Other Services
 
@@ -73,3 +69,8 @@ DATA_ACCESS_SERVICE_ENDPOINT = config(
     "DATA_ACCESS_SERVICE_ENDPOINT", cast=str, default="http://fence-service"
 )
 
+if TESTING:
+    DB_DATABASE = "test_" + (DB_DATABASE or "mds")
+    TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
+    INDEXING_SERVICE_ENDPOINT = "http://localhost"
+    DATA_ACCESS_SERVICE_ENDPOINT = "http://localhost"

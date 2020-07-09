@@ -22,6 +22,7 @@ authutils = "^5.0.4"
 pytest = "^5.3"
 pytest-cov = "^2.8"
 requests = "^2.22"
+respx = "*"
 
 [tool.poetry.plugins."mds.modules"]
 "query" = "mds.query"
