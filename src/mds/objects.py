@@ -5,8 +5,8 @@ from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
 from fastapi import Depends, HTTPException, APIRouter, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from gen3authz.client.arborist.async_client import ArboristClient
 import httpx
+from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -17,13 +17,11 @@ from starlette.status import (
     HTTP_403_FORBIDDEN,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
-from pydantic import BaseModel
 
 from . import config, logger
 from .models import Metadata
 
 mod = APIRouter()
-arborist = ArboristClient()
 
 # auto_error=False prevents FastAPI from raises a 403 when the request is missing
 # an Authorization header. Instead, we want to return a 401 to signify that we did
@@ -77,10 +75,10 @@ async def create_object(
             f"Could not verify, parse, and/or validate scope from provided access token.",
         )
 
-    file_name = body.dict().get("file_name")
-    authz = body.dict().get("authz")
-    aliases = body.dict().get("aliases") or []
-    metadata = body.dict().get("metadata")
+    file_name = body.file_name
+    authz = body.authz
+    aliases = body.aliases or []
+    metadata = body.metadata
     logger.debug(f"validating authz block input: {authz}")
 
     if not _is_authz_version_supported(authz):
