@@ -24,7 +24,11 @@ from .models import Metadata
 
 mod = APIRouter()
 arborist = ArboristClient()
-bearer = HTTPBearer()
+
+# auto_error=False prevents FastAPI from raises a 403 when the request is missing
+# an Authorization header. Instead, we want to return a 401 to signify that we did
+# not recieve valid credentials
+bearer = HTTPBearer(auto_error=False)
 
 
 class FileUploadStatus(str, Enum):
@@ -63,6 +67,8 @@ async def create_object(
         body (CreateObjInput): input body for create object
     """
     try:
+        # NOTE: token can be None if no Authorization header was provided, we expect
+        #       this to cause a downstream exception since it is invalid
         token_claims = await access_token("user", "openid", purpose="access")(token)
     except Exception as exc:
         logger.error(exc, exc_info=True)
@@ -135,7 +141,7 @@ async def _create_aliases_for_record(aliases: list, blank_guid: str, auth_header
                 f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
             )
             raise HTTPException(
-                HTTP_401_UNAUTHORIZED,
+                HTTP_403_FORBIDDEN,
                 "You do not have access to create the aliases you are trying to assign: "
                 f"{aliases} to the guid {blank_guid}",
             )
@@ -184,7 +190,7 @@ async def _create_blank_record_and_url(file_name: str, authz: dict, auth_header:
                 f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
             )
             raise HTTPException(
-                HTTP_401_UNAUTHORIZED,
+                HTTP_403_FORBIDDEN,
                 "You do not have access to generate the upload url for: "
                 f"{blank_record_params}",
             )
@@ -206,7 +212,7 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
         "_uploader_id": uploader,
         "_upload_status": FileUploadStatus.NOT_STARTED,
     }
-    # note: this updates the object passed in by reference so changes persist outside
+    # NOTE: this updates the object passed in by reference so changes persist outside
     #       this function namespace
     metadata.update(additional_object_metadata)
     logger.debug(f"attempting to update guid {blank_guid} with metadata: {metadata}")
