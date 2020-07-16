@@ -157,6 +157,9 @@ def test_create(client, valid_upload_file_patcher, data):
         "data_upload_mocked_reponse"
     ].get("url")
 
+    assert "_resource_paths" in resp.json().get("metadata")
+    assert "_uploader_id" in resp.json().get("metadata")
+    assert "_upload_status" in resp.json().get("metadata")
     assert client.get(f"/metadata/{resp.json().get('guid')}").json() == resp.json().get(
         "metadata"
     )

@@ -217,6 +217,7 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
         "_upload_status": FileUploadStatus.NOT_STARTED,
     }
     logger.debug(f"attempting to update guid {blank_guid} with metadata: {metadata}")
+    metadata.update(additional_object_metadata)
 
     try:
         rv = (
