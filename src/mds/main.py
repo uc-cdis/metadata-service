@@ -3,6 +3,7 @@ import asyncio
 import click
 import pkg_resources
 from fastapi import FastAPI, APIRouter
+import httpx
 
 try:
     from importlib.metadata import entry_points
@@ -24,6 +25,8 @@ def get_app():
     db.init_app(app)
     app.add_middleware(ClientDisconnectMiddleware)
     load_modules(app)
+    app.async_client = httpx.AsyncClient()
+
     return app
 
 

@@ -3,7 +3,7 @@ from enum import Enum
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from fastapi import Depends, HTTPException, APIRouter, Security
+from fastapi import HTTPException, APIRouter, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 from pydantic import BaseModel
@@ -63,6 +63,8 @@ async def create_object(
 
     Args:
         body (CreateObjInput): input body for create object
+        request (Request): starlette request (which contains reference to FastAPI app)
+        token (HTTPAuthorizationCredentials, optional): bearer token
     """
     try:
         # NOTE: token can be None if no Authorization header was provided, we expect
@@ -99,13 +101,13 @@ async def create_object(
     auth_header = str(request.headers.get("Authorization", ""))
 
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
-        file_name, authz, auth_header
+        file_name, authz, auth_header, request
     )
 
     if aliases:
-        await _create_aliases_for_record(aliases, blank_guid, auth_header)
+        await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
 
-    await _add_metadata(blank_guid, metadata, authz, uploader)
+    metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
 
     response = {
         "guid": blank_guid,
@@ -117,20 +119,23 @@ async def create_object(
     return JSONResponse(response, HTTP_201_CREATED)
 
 
-async def _create_aliases_for_record(aliases: list, blank_guid: str, auth_header: str):
+async def _create_aliases_for_record(
+    aliases: list, blank_guid: str, auth_header: str, request: Request
+):
     aliases_data = {"aliases": [{"value": alias} for alias in aliases]}
     logger.debug(f"trying to create aliases: {aliases_data}")
     try:
-        async with httpx.AsyncClient() as client:
-            endpoint = (
-                config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-                + f"/index/{blank_guid}/aliases"
-            )
+        endpoint = (
+            config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
+            + f"/index/{blank_guid}/aliases"
+        )
 
-            # pass along the authorization header to indexd request
-            headers = {"Authorization": auth_header}
-            response = await client.post(endpoint, json=aliases_data, headers=headers)
-            response.raise_for_status()
+        # pass along the authorization header to indexd request
+        headers = {"Authorization": auth_header}
+        response = await request.app.async_client.post(
+            endpoint, json=aliases_data, headers=headers
+        )
+        response.raise_for_status()
     except httpx.HTTPError as err:
         # check if user has permission for resources specified
         if err.response and err.response.status_code in (401, 403):
@@ -154,7 +159,9 @@ async def _create_aliases_for_record(aliases: list, blank_guid: str, auth_header
     logger.info(f"added aliases: {aliases} for guid: {blank_guid}")
 
 
-async def _create_blank_record_and_url(file_name: str, authz: dict, auth_header: str):
+async def _create_blank_record_and_url(
+    file_name: str, authz: dict, auth_header: str, request: Request
+):
     blank_guid = None
     signed_upload_url = None
 
@@ -168,17 +175,16 @@ async def _create_blank_record_and_url(file_name: str, authz: dict, auth_header:
         f"params: {blank_record_params}"
     )
     try:
-        async with httpx.AsyncClient() as client:
-            endpoint = config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
-            # pass along the authorization header to new request
-            headers = {"Authorization": auth_header}
-            response = await client.post(
-                endpoint, json=blank_record_params, headers=headers
-            )
-            logger.debug(response)
-            response.raise_for_status()
-            blank_guid = response.json().get("guid")
-            signed_upload_url = response.json().get("url")
+        endpoint = config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
+        # pass along the authorization header to new request
+        headers = {"Authorization": auth_header}
+        response = await request.app.async_client.post(
+            endpoint, json=blank_record_params, headers=headers
+        )
+        logger.debug(response)
+        response.raise_for_status()
+        blank_guid = response.json().get("guid")
+        signed_upload_url = response.json().get("url")
     except httpx.HTTPError as err:
         logger.debug(err)
         # check if user has permission for resources specified
@@ -210,9 +216,6 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
         "_uploader_id": uploader,
         "_upload_status": FileUploadStatus.NOT_STARTED,
     }
-    # NOTE: this updates the object passed in by reference so changes persist outside
-    #       this function namespace
-    metadata.update(additional_object_metadata)
     logger.debug(f"attempting to update guid {blank_guid} with metadata: {metadata}")
 
     try:
@@ -224,6 +227,8 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
         )
     except UniqueViolationError:
         raise HTTPException(HTTP_409_CONFLICT, f"Metadata GUID conflict: {blank_guid}")
+
+    return rv["data"]
 
 
 def _is_authz_version_supported(authz):
