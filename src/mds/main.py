@@ -27,6 +27,11 @@ def get_app():
     load_modules(app)
     app.async_client = httpx.AsyncClient()
 
+    @app.on_event("shutdown")
+    def shutdown_event():
+        logger.info("Closing async client.")
+        app.async_client.close()
+
     return app
 
 
