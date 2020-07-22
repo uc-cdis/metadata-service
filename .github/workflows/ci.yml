@@ -12,7 +12,7 @@ jobs:
         env:
           POSTGRES_USER: mds
           POSTGRES_PASSWORD: mds
-          POSTGRES_DB: test_mds
+          POSTGRES_DB: mds
         ports:
         - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
@@ -39,7 +39,7 @@ jobs:
         DB_USER: mds
         DB_PASSWORD: mds
       run: |
-        $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=97 --cov-report xml
+        $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=96 --cov-report xml
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
       env:

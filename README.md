@@ -51,7 +51,7 @@ alembic upgrade head
 Run the server with auto-reloading:
 
 ```bash
-uvicorn mds.app:app --reload
+uvicorn mds.asgi:app --reload
 ```
 
 Try out the API at: <http://localhost:8000/docs>.
@@ -96,7 +96,7 @@ docker-compose exec mds poetry run pytest --cov=src --cov=migrations/versions te
 For production, use [gunicorn](https://gunicorn.org/):
 
 ```bash
-gunicorn mds.app:app -k uvicorn.workers.UvicornWorker
+gunicorn mds.asgi:app -k uvicorn.workers.UvicornWorker
 ```
 
 Or use the Docker image built from the `Dockerfile`, using environment variables

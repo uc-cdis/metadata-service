@@ -7,22 +7,28 @@ license = "Apache-2.0"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-fastapi = "^0.48.0"
+fastapi = "^0.54.1"
 uvicorn = "^0.11.2"
 gunicorn = "^20.0.4"
-gino = "^0.8.5"
+gino = {version = "^1.0.0", extras = ["starlette"]}
 alembic = "^1.3"
 psycopg2-binary = "^2.8"
+gen3authz = "^1.0.0"
+indexclient = "^2.1.0"
+httpx = "^0.12.1"
+authutils = "^5.0.4"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
 pytest-cov = "^2.8"
 requests = "^2.22"
+respx = "*"
 
 [tool.poetry.plugins."mds.modules"]
 "query" = "mds.query"
 "maintain" = "mds.maintain"
 "index" = "mds.index"
+"objects" = "mds.objects"
 
 [build-system]
 requires = ["poetry>=0.12"]
