@@ -20,6 +20,7 @@ from starlette.status import (
 
 from . import config, logger
 from .models import Metadata
+from .query import get_metadata
 
 mod = APIRouter()
 
@@ -117,6 +118,44 @@ async def create_object(
     }
 
     return JSONResponse(response, HTTP_201_CREATED)
+
+
+@mod.get("/objects/{guid:path}")
+async def get_object(
+    guid, request: Request,
+):
+    """
+    Get the metadata associated with the provided indexd GUID or alias.
+    If the GUID or alias does not exist in indexd, query the metadata
+    database directly.
+
+    Args:
+        guid (str): indexd GUID or alias, or MDS key
+        request (Request): starlette request (which contains reference to FastAPI app)
+    """
+    mds_key = guid
+
+    try:
+        # hit indexd's GUID/alias resolution endpoint
+        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+        response = await request.app.async_client.get(endpoint)
+        response.raise_for_status()
+
+        # if the object is found in indexd, use the indexd did as key
+        mds_key = response.json()["did"]
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response and err.response.status_code == 404:
+            logger.debug(
+                f"Could not find GUID or alias {guid} in indexd, querying the metadata database directly"
+            )
+        else:
+            msg = f"Unable to query indexd for GUID or alias {guid}"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            # TODO: should we just fall back on MDS DB instead of 500?
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
+
+    return await get_metadata(mds_key)
 
 
 async def _create_aliases_for_record(

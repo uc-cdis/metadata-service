@@ -21,7 +21,7 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 from mds.main import db as target_metadata, load_modules
-from mds.config import DB_DSN
+from mds.config import DB_DSN, DB_CONNECT_RETRIES
 
 load_modules()
 logging.info(f"connecting to: {DB_DSN}")
@@ -77,7 +77,7 @@ def run_migrations_online():
             retries += 1
             connection = connectable.connect()
         except Exception:
-            if retries < conf.DB_CONNECT_RETRIES:
+            if retries < DB_CONNECT_RETRIES:
                 logging.info("Waiting for the database to start...")
                 time.sleep(1)
             else:
