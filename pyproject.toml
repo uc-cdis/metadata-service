@@ -21,6 +21,7 @@ authutils = "^5.0.4"
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
 pytest-cov = "^2.8"
+pyyaml = "^5.3.1"
 requests = "^2.22"
 respx = "*"
 
