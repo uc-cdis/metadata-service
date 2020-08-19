@@ -388,9 +388,9 @@ def test_get_object_in_indexd(client):
 def test_get_object_not_in_indexd(client):
     """
     Test the GET object endpoint when the provided key does NOT exist
-    in indexd.
+    in indexd, or when indexd errors.
     If the key exists in MDS, the metadata should be returned regardless
-    of a 404 from indexd.
+    of a non-200 response from indexd.
     """
     guid_or_alias = "dg.hello/test_guid"
 
@@ -408,8 +408,18 @@ def test_get_object_not_in_indexd(client):
     mds_data = dict(a=1, b=2)
     client.post("/metadata/" + guid_or_alias, json=mds_data).raise_for_status()
 
-    # GET an object that exists in MDS but NOT in indexd
     try:
+        # GET an object that exists in MDS but NOT in indexd
+        resp = client.get(get_object_url)
+        assert indexd_mocked_request.called
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == {"record": {}, "metadata": mds_data}
+
+        # mock the request to indexd: 500 error from indexd
+        respx.clear()
+        indexd_mocked_request = respx.get(indexd_url, status_code=500)
+
+        # GET an object that exists in MDS, even if indexd failed
         resp = client.get(get_object_url)
         assert indexd_mocked_request.called
         assert resp.status_code == 200, resp.text
