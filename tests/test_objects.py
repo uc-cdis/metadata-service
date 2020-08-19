@@ -352,31 +352,34 @@ def test_get_object_in_indexd(client):
     Test the GET object endpoint when the provided key exists in indexd.
     If the key is an indexd alias, the metadata returned should be
     associated with the indexd GUID (did), not the alias itself.
+    If the key exists in indexd, the record should be returned regardless
+    of a 404 from MDS.
     """
     guid_or_alias = "dg.hello/test_guid"
     indexd_did = "test_did"
 
     # mock the request to indexd: GUID or alias found in indexd
     indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
-    data = {"did": indexd_did, "size": 42}
-    indexd_mocked_request = respx.get(indexd_url, status_code=200, content=data)
+    indexd_data = {"did": indexd_did, "size": 42}
+    indexd_mocked_request = respx.get(indexd_url, status_code=200, content=indexd_data)
 
     # GET an object that exists in indexd but NOT in MDS
     get_object_url = f"/objects/{guid_or_alias}"
     resp = client.get(get_object_url)
     assert indexd_mocked_request.called
-    assert resp.status_code == 404, resp.text
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"record": indexd_data, "metadata": {}}
 
     # create metadata for this object
-    data = dict(a=1, b=2)
-    client.post("/metadata/" + indexd_did, json=data).raise_for_status()
+    mds_data = dict(a=1, b=2)
+    client.post("/metadata/" + indexd_did, json=mds_data).raise_for_status()
 
     # GET an object that exists in indexd AND in MDS
     try:
         resp = client.get(get_object_url)
         assert indexd_mocked_request.called
         assert resp.status_code == 200, resp.text
-        assert resp.json() == data
+        assert resp.json() == {"record": indexd_data, "metadata": mds_data}
     finally:
         client.delete("/metadata/" + indexd_did)
 
@@ -385,13 +388,15 @@ def test_get_object_in_indexd(client):
 def test_get_object_not_in_indexd(client):
     """
     Test the GET object endpoint when the provided key does NOT exist
-    in indexd. If the key exists in MDS, the metadata should be returned regardless of the 404 from indexd.
+    in indexd.
+    If the key exists in MDS, the metadata should be returned regardless
+    of a 404 from indexd.
     """
     guid_or_alias = "dg.hello/test_guid"
 
     # mock the request to indexd: GUID or alias NOT found in indexd
     indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
-    indexd_mocked_request = respx.get(indexd_url, status_code=404)
+    indexd_mocked_request = respx.get(indexd_url, status_code=500)
 
     # GET an object that exists in NEITHER indexd NOR MDS
     get_object_url = f"/objects/{guid_or_alias}"
@@ -400,14 +405,14 @@ def test_get_object_not_in_indexd(client):
     assert resp.status_code == 404, resp.text
 
     # create metadata for this object
-    data = dict(a=1, b=2)
-    client.post("/metadata/" + guid_or_alias, json=data).raise_for_status()
+    mds_data = dict(a=1, b=2)
+    client.post("/metadata/" + guid_or_alias, json=mds_data).raise_for_status()
 
     # GET an object that exists in MDS but NOT in indexd
     try:
         resp = client.get(get_object_url)
         assert indexd_mocked_request.called
         assert resp.status_code == 200, resp.text
-        assert resp.json() == data
+        assert resp.json() == {"record": {}, "metadata": mds_data}
     finally:
         client.delete("/metadata/" + guid_or_alias)

@@ -10,11 +10,13 @@ from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
+    HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_409_CONFLICT,
     HTTP_400_BAD_REQUEST,
     HTTP_401_UNAUTHORIZED,
     HTTP_403_FORBIDDEN,
+    HTTP_404_NOT_FOUND,
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
 
@@ -132,30 +134,54 @@ async def get_object(
     Args:
         guid (str): indexd GUID or alias, or MDS key
         request (Request): starlette request (which contains reference to FastAPI app)
+
+    Returns:
+        200: { "record": { indexd record }, "metadata": { MDS metadata } }
+        404: if the key is not in indexd and not in MDS
     """
     mds_key = guid
 
+    # hit indexd's GUID/alias resolution endpoint
+    indexd_record = {}
     try:
-        # hit indexd's GUID/alias resolution endpoint
         endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
         response = await request.app.async_client.get(endpoint)
         response.raise_for_status()
 
-        # if the object is found in indexd, use the indexd did as key
-        mds_key = response.json()["did"]
+        # if the object is found in indexd, use the indexd did as MDS key
+        indexd_record = response.json()
+        mds_key = indexd_record["did"]
     except httpx.HTTPError as err:
         logger.debug(err)
         if err.response and err.response.status_code == 404:
             logger.debug(
-                f"Could not find GUID or alias {guid} in indexd, querying the metadata database directly"
+                f"Could not find GUID or alias '{guid}' in indexd, querying the metadata database directly"
             )
         else:
-            msg = f"Unable to query indexd for GUID or alias {guid}"
+            msg = f"Unable to query indexd for GUID or alias '{guid}', querying the metadata database directly"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
-            # TODO: should we just fall back on MDS DB instead of 500?
-            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
-    return await get_metadata(mds_key)
+    # query the metadata database
+    mds_metadata = {}
+    try:
+        mds_metadata = await get_metadata(mds_key)
+    except HTTPException as err:
+        logger.debug(err)
+        if err.status_code == 404:
+            logger.debug(f"Could not find key '{mds_key}', returning empty metadata")
+        else:
+            msg = f"Unable to query key '{mds_key}', returning empty metadata"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+
+    if not indexd_record and not mds_metadata:
+        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
+
+    response = {
+        "record": indexd_record,
+        "metadata": mds_metadata,
+    }
+
+    return JSONResponse(response, HTTP_200_OK)
 
 
 async def _create_aliases_for_record(
