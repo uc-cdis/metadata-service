@@ -126,7 +126,7 @@ async def create_object(
 async def get_object(guid: str, request: Request) -> JSONResponse:
     """
     Get the metadata associated with the provided key. If the key is an
-    indexd GUID or alias, also returns the indexd record.
+    indexd GUID or alias, also returns the indexd record. test change description
 
     Args:
         guid (str): indexd GUID or alias, or MDS key
