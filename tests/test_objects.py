@@ -396,7 +396,7 @@ def test_get_object_not_in_indexd(client):
 
     # mock the request to indexd: GUID or alias NOT found in indexd
     indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
-    indexd_mocked_request = respx.get(indexd_url, status_code=500)
+    indexd_mocked_request = respx.get(indexd_url, status_code=404)
 
     # GET an object that exists in NEITHER indexd NOR MDS
     get_object_url = f"/objects/{guid_or_alias}"

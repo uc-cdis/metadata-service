@@ -106,4 +106,3 @@ ENV/
 
 # Docker db
 postgres-data/
-
