@@ -12,6 +12,8 @@ The Metadata Service provides API for retrieving JSON metadata of GUIDs.
 The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged with
 [Poetry](https://poetry.eustace.io/).
 
+[View API Documentation](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml)
+
 ## Installation
 
 Install required software:
