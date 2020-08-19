@@ -1,0 +1,462 @@
+components:
+  schemas:
+    CreateObjInput:
+      description: "Create object.\n\nfile_name (str): Name for the file being uploaded\n\
+        authz (dict): authorization block with requirements for what's being uploaded\n\
+        aliases (list, optional): unique name to allow using in place of whatever\
+        \ GUID gets\n    created for this upload\nmetadata (dict, optional): any additional\
+        \ metadata to attach to the upload"
+      properties:
+        aliases:
+          items: {}
+          title: Aliases
+          type: array
+        authz:
+          title: Authz
+          type: object
+        file_name:
+          title: File Name
+          type: string
+        metadata:
+          title: Metadata
+          type: object
+      required:
+      - file_name
+      - authz
+      title: CreateObjInput
+      type: object
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            type: string
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+  securitySchemes:
+    HTTPBasic:
+      scheme: basic
+      type: http
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  title: Framework Services Object Management Service
+  version: 1.3.0
+openapi: 3.0.2
+paths:
+  /_status:
+    get:
+      operationId: get_status__status_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Status
+  /metadata:
+    get:
+      description: "Search the metadata.\n\nWithout filters, this will return all\
+        \ data. Add filters as query strings like this:\n\n    GET /metadata?a=1&b=2\n\
+        \nThis will match all records that have metadata containing all of:\n\n  \
+        \  {\"a\": 1, \"b\": 2}\n\nThe values are always treated as strings for filtering.\
+        \ Nesting is supported:\n\n    GET /metadata?a.b.c=3\n\nMatching records containing:\n\
+        \n    {\"a\": {\"b\": {\"c\": 3}}}\n\nProviding the same key with more than\
+        \ one value filters records whose value of the\ngiven key matches any of the\
+        \ given values. But values of different keys must all\nmatch. For example:\n\
+        \n    GET /metadata?a.b.c=3&a.b.c=33&a.b.d=4\n\nMatches these:\n\n    {\"\
+        a\": {\"b\": {\"c\": 3, \"d\": 4}}}\n    {\"a\": {\"b\": {\"c\": 33, \"d\"\
+        : 4}}}\n    {\"a\": {\"b\": {\"c\": \"3\", \"d\": 4, \"e\": 5}}}\n\nBut won't\
+        \ match these:\n\n    {\"a\": {\"b\": {\"c\": 3}}}\n    {\"a\": {\"b\": {\"\
+        c\": 3, \"d\": 5}}}\n    {\"a\": {\"b\": {\"d\": 5}}}\n    {\"a\": {\"b\"\
+        : {\"c\": \"333\", \"d\": 4}}}"
+      operationId: search_metadata_metadata_get
+      parameters:
+      - description: Switch to returning a list of GUIDs (false), or GUIDs mapping
+          to their metadata (true).
+        in: query
+        name: data
+        required: false
+        schema:
+          default: false
+          description: Switch to returning a list of GUIDs (false), or GUIDs mapping
+            to their metadata (true).
+          title: Data
+          type: boolean
+      - description: 'Maximum number of records returned. (max: 2000)'
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          description: 'Maximum number of records returned. (max: 2000)'
+          title: Limit
+          type: integer
+      - description: Return results at this given offset.
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          description: Return results at this given offset.
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Search Metadata
+      tags:
+      - Query
+    post:
+      description: Create metadata in batch.
+      operationId: batch_create_metadata_metadata_post
+      parameters:
+      - in: query
+        name: overwrite
+        required: false
+        schema:
+          default: true
+          title: Overwrite
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              items: {}
+              title: Data List
+              type: array
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Batch Create Metadata
+      tags:
+      - Maintain
+  /metadata/{guid}:
+    delete:
+      description: Delete the metadata of the GUID.
+      operationId: delete_metadata_metadata__guid__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete Metadata
+      tags:
+      - Maintain
+    get:
+      description: Get the metadata of the GUID.
+      operationId: get_metadata_metadata__guid__get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Metadata
+      tags:
+      - Query
+    post:
+      description: Create metadata for the GUID.
+      operationId: create_metadata_metadata__guid__post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      - in: query
+        name: overwrite
+        required: false
+        schema:
+          default: false
+          title: Overwrite
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Create Metadata
+      tags:
+      - Maintain
+    put:
+      description: 'Update the metadata of the GUID.
+
+
+        If `merge` is True, then any top-level keys that are not in the new data will
+        be
+
+        kept, and those that also exist in the new data will be replaced completely.
+        This
+
+        is also known as the shallow merge. The metadata service currently doesn''t
+        support
+
+        deep merge.'
+      operationId: update_metadata_metadata__guid__put
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      - in: query
+        name: merge
+        required: false
+        schema:
+          default: false
+          title: Merge
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Update Metadata
+      tags:
+      - Maintain
+  /metadata_index:
+    get:
+      description: List all the metadata key paths indexed in the database.
+      operationId: list_metadata_indexes_metadata_index_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: List Metadata Indexes
+      tags:
+      - Index
+  /metadata_index/{path}:
+    delete:
+      description: Drop the database index on the given metadata key path.
+      operationId: drop_metadata_indexes_metadata_index__path__delete
+      parameters:
+      - in: path
+        name: path
+        required: true
+        schema:
+          title: Path
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Drop Metadata Indexes
+      tags:
+      - Index
+    post:
+      description: Create a database index on the given metadata key path.
+      operationId: create_metadata_indexes_metadata_index__path__post
+      parameters:
+      - in: path
+        name: path
+        required: true
+        schema:
+          title: Path
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Create Metadata Indexes
+      tags:
+      - Index
+  /objects:
+    post:
+      description: "Create object placeholder and attach metadata, return Upload url\
+        \ to the user.\n\nArgs:\n    body (CreateObjInput): input body for create\
+        \ object\n    request (Request): starlette request (which contains reference\
+        \ to FastAPI app)\n    token (HTTPAuthorizationCredentials, optional): bearer\
+        \ token"
+      operationId: create_object_objects_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Create Object
+      tags:
+      - Object
+  /objects/{guid}:
+    get:
+      description: "Get the metadata associated with the provided key. If the key\
+        \ is an\nindexd GUID or alias, also returns the indexd record. test change\
+        \ description\n\nArgs:\n    guid (str): indexd GUID or alias, or MDS key\n\
+        \    request (Request): starlette request (which contains reference to FastAPI\
+        \ app)\n\nReturns:\n    200: { \"record\": { indexd record }, \"metadata\"\
+        : { MDS metadata } }\n    404: if the key is not in indexd and not in MDS"
+      operationId: get_object_objects__guid__get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Object
+      tags:
+      - Object
+  /version:
+    get:
+      operationId: get_version_version_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Version
