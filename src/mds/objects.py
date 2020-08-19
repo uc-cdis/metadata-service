@@ -123,13 +123,10 @@ async def create_object(
 
 
 @mod.get("/objects/{guid:path}")
-async def get_object(
-    guid, request: Request,
-):
+async def get_object(guid: str, request: Request) -> JSONResponse:
     """
-    Get the metadata associated with the provided indexd GUID or alias.
-    If the GUID or alias does not exist in indexd, query the metadata
-    database directly.
+    Get the metadata associated with the provided key. If the key is an
+    indexd GUID or alias, also returns the indexd record.
 
     Args:
         guid (str): indexd GUID or alias, or MDS key
