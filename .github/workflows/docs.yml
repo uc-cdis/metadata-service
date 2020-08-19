@@ -28,7 +28,7 @@ jobs:
         curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python || true
         $HOME/.poetry/bin/poetry install || true
     - name: Build docs
-      run: python run.py openapi
+      run: $HOME/.poetry/bin/poetry run python run.py openapi
 
     - uses: stefanzweifel/git-auto-commit-action@v4.1.2
       with:
