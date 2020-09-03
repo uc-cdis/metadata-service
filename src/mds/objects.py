@@ -317,7 +317,7 @@ async def _create_aliases_for_record(
             )
             raise HTTPException(
                 HTTP_409_CONFLICT,
-                f"The aliases you are trying to assign ({aliases}) to guid {blank_guid} already exist",
+                f"Some of the aliases you are trying to assign to guid {blank_guid} ({aliases}) already exist",
             )
 
         msg = (
@@ -372,7 +372,7 @@ async def _create_blank_version(
                 f"You do not have access to create a blank version of record of record '{guid}'",
             )
         elif err.response and err.response.status_code == 404:
-            msg = f"Could not find GUID or alias '{guid}' in indexd"
+            msg = f"Could not find GUID '{guid}' in indexd"
             logger.debug(msg)
             raise HTTPException(
                 HTTP_404_NOT_FOUND,

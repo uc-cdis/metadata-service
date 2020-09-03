@@ -126,12 +126,19 @@ def no_authz_upload_file_patcher(client, request):
     """
     patches = []
 
-    data_upload_mocked_reponse = {}
+    data_upload_mocked_reponse = {"guid": request.param.get("mock_guid")}
     data_upload_mock = respx.post(
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload",
         status_code=403,
         content=data_upload_mocked_reponse,
         alias="data_upload",
+    )
+    data_upload_guid_mock = respx.get(
+        config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/")
+        + f"/data/upload/{request.param.get('mock_guid')}",
+        status_code=403,
+        content=data_upload_mocked_reponse,
+        alias="data_upload_guid",
     )
 
     create_aliases_mock = respx.post(
@@ -155,6 +162,7 @@ def no_authz_upload_file_patcher(client, request):
 
     yield {
         "data_upload_mock": data_upload_mock,
+        "data_upload_guid_mock": data_upload_guid_mock,
         "create_aliases_mock": create_aliases_mock,
         "access_token_mock": access_token_mock,
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
