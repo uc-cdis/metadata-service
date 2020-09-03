@@ -22,7 +22,6 @@ components:
           type: object
       required:
       - file_name
-      - authz
       title: CreateObjInput
       type: object
     HTTPValidationError:
@@ -448,6 +447,44 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Get Object
+      tags:
+      - Object
+    post:
+      description: "Create object placeholder and attach metadata, return Upload url\
+        \ to the\nuser. A new GUID (new version of the provided GUID) will be created\
+        \ for\nthis object.\n\nArgs:\n    guid (str): indexd GUID or alias\n    body\
+        \ (CreateObjInput): input body for create object\n    request (Request): starlette\
+        \ request (which contains reference to FastAPI app)\n    token (HTTPAuthorizationCredentials,\
+        \ optional): bearer token"
+      operationId: create_object_for_id_objects__guid__post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Create Object For Id
       tags:
       - Object
   /version:
