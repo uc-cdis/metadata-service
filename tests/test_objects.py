@@ -286,22 +286,15 @@ def test_create_no_access_to_create_aliases(
         },
     ],
 )
-def test_create_duplicate_aliases(client, valid_upload_file_patcher, data):
+def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data):
     """
     Test create /objects response for a user with valid authorization and
-    valid input, but some aliases already exist. The endpoint should return
-    409.
+    valid input, but some aliases already exist. We get a 409 from
+    indexd's alias creation endpoint. The MDS endpoint should return 409.
     """
     fake_jwt = "1.2.3"
-    fake_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get("guid")
-
-    # 409 from indexd's alias creation endpoint
-    # NOTE: blocked by https://github.com/lundberg/respx/issues/70
-    respx.pop("create_aliases")
-    create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{fake_guid}/aliases",
-        status_code=409,
-        alias="create_aliases",
+    fake_guid = create_aliases_duplicate_patcher["data_upload_mocked_reponse"].get(
+        "guid"
     )
 
     resp = client.post(
@@ -315,8 +308,7 @@ def test_create_duplicate_aliases(client, valid_upload_file_patcher, data):
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
 
-    assert valid_upload_file_patcher["data_upload_mock"].called
-    assert create_aliases_mock.called
+    assert create_aliases_duplicate_patcher["data_upload_mock"].called
 
 
 # api call fails with 500
@@ -431,7 +423,7 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
     and valid input, ensure correct response: 200 and metadata if the GUID
-    or alias exists in indexd, 404 otherwise.
+    or alias exists in indexd.
     If the key is an indexd alias, the metadata returned should be
     associated with the indexd GUID (did), not the alias itself.
     """
@@ -462,29 +454,8 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
         alias="indexd_post_blank",
     )
 
-    # mock the request to indexd: GUID or alias NOT found in indexd
-    # NOTE: blocked by https://github.com/lundberg/respx/issues/70
-    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
-    indexd_get_mocked_request = respx.get(
-        indexd_url, status_code=404, content=indexd_data, alias="indexd_get"
-    )
-    resp = client.post(
-        f"/objects/{guid_or_alias}",
-        json=data,
-        headers={"Authorization": f"bearer {fake_jwt}"},
-    )
-
-    # check response contents
-    assert resp.status_code == 404
-    assert resp.json().get("detail")
-    assert not resp.json().get("guid")
-    assert not resp.json().get("upload_url")
-    assert not resp.json().get("aliases")
-    assert not resp.json().get("metadata")
-    assert indexd_get_mocked_request.called
-
     # mock the request to indexd: GUID or alias found in indexd
-    respx.pop("indexd_get")
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     indexd_get_mocked_request = respx.get(
         indexd_url, status_code=200, content=indexd_data, alias="indexd_get"
     )
@@ -518,6 +489,92 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
     assert indexd_get_mocked_request.called
     assert indexd_blank_version_mocked_request.called
     assert valid_upload_file_patcher["data_upload_guid_mock"].called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "data",
+    [
+        # all valid fields
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+            "metadata": {"foo": "bar"},
+        },
+        # all valid fields (multiple aliases and metadata keys)
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg", "123456"],
+            "metadata": {"foo": "bar", "fizz": "buzz"},
+        },
+        # no aliases
+        {
+            "file_name": "test.txt",
+            "metadata": {"foo": "bar"},
+        },
+        # no metadata
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+        },
+        # no aliases or metadata
+        {
+            "file_name": "test.txt",
+        },
+    ],
+)
+def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: 404 and no metadata if the GUID
+    or alias does not exist in indexd.
+    """
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock: creating a new version of "indexd_did" returns "new_version_data"
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=200,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+
+    # mock the request to indexd: GUID or alias NOT found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=404, content=indexd_data, alias="indexd_get"
+    )
+    resp = client.post(
+        f"/objects/{guid_or_alias}",
+        json=data,
+        headers={"Authorization": f"bearer {fake_jwt}"},
+    )
+
+    # check response contents
+    assert resp.status_code == 404
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
+    assert indexd_get_mocked_request.called
 
 
 @respx.mock

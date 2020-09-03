@@ -357,7 +357,6 @@ async def _create_blank_version(
         )
         response.raise_for_status()
 
-        # if the object is found in indexd, we can proceed
         indexd_record = response.json()
         new_version_did = indexd_record["did"]
     except httpx.HTTPError as err:
