@@ -50,7 +50,23 @@ class CreateObjInput(BaseModel):
     """
 
     file_name: str
-    authz: dict = None
+    authz: dict
+    aliases: list = None
+    metadata: dict = None
+
+
+class CreateObjForIdInput(BaseModel):
+    """
+    Create object.
+
+    file_name (str): Name for the file being uploaded
+    authz (dict): authorization block with requirements for what's being uploaded
+    aliases (list, optional): unique name to allow using in place of whatever GUID gets
+        created for this upload
+    metadata (dict, optional): any additional metadata to attach to the upload
+    """
+
+    file_name: str
     aliases: list = None
     metadata: dict = None
 
@@ -81,15 +97,9 @@ async def create_object(
         )
 
     file_name = body.file_name
+    authz = body.authz
     aliases = body.aliases or []
     metadata = body.metadata
-
-    authz = body.authz
-    if authz is None:
-        raise HTTPException(
-            HTTP_400_BAD_REQUEST,
-            f"authz must be provided in body",
-        )
 
     logger.debug(f"validating authz block input: {authz}")
     if not _is_authz_version_supported(authz):
@@ -130,18 +140,18 @@ async def create_object(
 @mod.post("/objects/{guid:path}")
 async def create_object_for_id(
     guid: str,
-    body: CreateObjInput,
+    body: CreateObjForIdInput,
     request: Request,
     token: HTTPAuthorizationCredentials = Security(bearer),
 ) -> JSONResponse:
     """
     Create object placeholder and attach metadata, return Upload url to the
     user. A new GUID (new version of the provided GUID) will be created for
-    this object.
+    this object. The new record will have the same authz as the original one.
 
     Args:
         guid (str): indexd GUID or alias
-        body (CreateObjInput): input body for create object
+        body (CreateObjForIdInput): input body for create object for ID
         request (Request): starlette request (which contains reference to FastAPI app)
         token (HTTPAuthorizationCredentials, optional): bearer token
     """
@@ -182,13 +192,6 @@ async def create_object_for_id(
     file_name = body.file_name
     aliases = body.aliases or []
     metadata = body.metadata
-
-    authz = body.authz
-    if authz is not None:
-        raise HTTPException(
-            HTTP_400_BAD_REQUEST,
-            f"authz cannot be provided for this endpoint. The new record will have the same authz as the previous one.",
-        )
 
     metadata = metadata or {}
 
