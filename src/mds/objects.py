@@ -201,7 +201,7 @@ async def create_object_for_id(
 
     # create a new version (blank record) of this indexd object
     new_version_did = await _create_blank_version(
-        indexd_record, file_name, uploader, auth_header, request
+        indexd_record, file_name, auth_header, request
     )
     logger.debug(f"Created a new version of {indexd_did}: {new_version_did}")
 
@@ -336,7 +336,6 @@ async def _create_aliases_for_record(
 async def _create_blank_version(
     indexd_record: dict,
     file_name: str,
-    uploader: str,
     auth_header: str,
     request: Request,
 ):
@@ -348,10 +347,8 @@ async def _create_blank_version(
     try:
         endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/blank/{guid}"
         data = {
-            "uploader": uploader,
             "file_name": file_name,
-            # NOTE: cannot set ACL of blank versions yet
-            # "acl": indexd_record["acl"],
+            # set authz, but do not set deprecated acl field:
             "authz": indexd_record["authz"],
         }
         headers = {"Authorization": auth_header}
