@@ -115,7 +115,7 @@ async def create_object(
     metadata = metadata or {}
 
     # get user id from token claims
-    uploader = token_claims.get("context", {}).get("user", {}).get("name")
+    uploader = token_claims.get("sub")
     auth_header = str(request.headers.get("Authorization", ""))
 
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
@@ -196,7 +196,7 @@ async def create_object_for_id(
     metadata = metadata or {}
 
     # get user id from token claims
-    uploader = token_claims.get("context", {}).get("user", {}).get("name")
+    uploader = token_claims.get("sub")
     auth_header = str(request.headers.get("Authorization", ""))
 
     # create a new version (blank record) of this indexd object
