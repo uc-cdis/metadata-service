@@ -1,5 +1,26 @@
 components:
   schemas:
+    CreateObjForIdInput:
+      description: "Create object.\n\nfile_name (str): Name for the file being uploaded\n\
+        authz (dict): authorization block with requirements for what's being uploaded\n\
+        aliases (list, optional): unique name to allow using in place of whatever\
+        \ GUID gets\n    created for this upload\nmetadata (dict, optional): any additional\
+        \ metadata to attach to the upload"
+      properties:
+        aliases:
+          items: {}
+          title: Aliases
+          type: array
+        file_name:
+          title: File Name
+          type: string
+        metadata:
+          title: Metadata
+          type: object
+      required:
+      - file_name
+      title: CreateObjForIdInput
+      type: object
     CreateObjInput:
       description: "Create object.\n\nfile_name (str): Name for the file being uploaded\n\
         authz (dict): authorization block with requirements for what's being uploaded\n\
@@ -448,6 +469,45 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Get Object
+      tags:
+      - Object
+    post:
+      description: "Create object placeholder and attach metadata, return Upload url\
+        \ to the\nuser. A new GUID (new version of the provided GUID) will be created\
+        \ for\nthis object. The new record will have the same authz as the original\
+        \ one.\n\nArgs:\n    guid (str): indexd GUID or alias\n    body (CreateObjForIdInput):\
+        \ input body for create object for ID\n    request (Request): starlette request\
+        \ (which contains reference to FastAPI app)\n    token (HTTPAuthorizationCredentials,\
+        \ optional): bearer token"
+      operationId: create_object_for_id_objects__guid__post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjForIdInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Create Object For Id
       tags:
       - Object
   /version:

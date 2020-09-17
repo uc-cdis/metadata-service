@@ -55,6 +55,22 @@ class CreateObjInput(BaseModel):
     metadata: dict = None
 
 
+class CreateObjForIdInput(BaseModel):
+    """
+    Create object.
+
+    file_name (str): Name for the file being uploaded
+    authz (dict): authorization block with requirements for what's being uploaded
+    aliases (list, optional): unique name to allow using in place of whatever GUID gets
+        created for this upload
+    metadata (dict, optional): any additional metadata to attach to the upload
+    """
+
+    file_name: str
+    aliases: list = None
+    metadata: dict = None
+
+
 @mod.post("/objects")
 async def create_object(
     body: CreateObjInput,
@@ -84,13 +100,12 @@ async def create_object(
     authz = body.authz
     aliases = body.aliases or []
     metadata = body.metadata
-    logger.debug(f"validating authz block input: {authz}")
 
+    logger.debug(f"validating authz block input: {authz}")
     if not _is_authz_version_supported(authz):
         raise HTTPException(HTTP_400_BAD_REQUEST, f"Unsupported authz version: {authz}")
 
-    logger.debug(f"validated authz.resource_paths: {authz.get('resource_paths')}")
-
+    logger.debug(f"validating authz.resource_paths: {authz.get('resource_paths')}")
     if not isinstance(authz.get("resource_paths"), Iterable):
         raise HTTPException(
             HTTP_400_BAD_REQUEST,
@@ -122,6 +137,96 @@ async def create_object(
     return JSONResponse(response, HTTP_201_CREATED)
 
 
+@mod.post("/objects/{guid:path}")
+async def create_object_for_id(
+    guid: str,
+    body: CreateObjForIdInput,
+    request: Request,
+    token: HTTPAuthorizationCredentials = Security(bearer),
+) -> JSONResponse:
+    """
+    Create object placeholder and attach metadata, return Upload url to the
+    user. A new GUID (new version of the provided GUID) will be created for
+    this object. The new record will have the same authz as the original one.
+
+    Args:
+        guid (str): indexd GUID or alias
+        body (CreateObjForIdInput): input body for create object for ID
+        request (Request): starlette request (which contains reference to FastAPI app)
+        token (HTTPAuthorizationCredentials, optional): bearer token
+    """
+    try:
+        # NOTE: token can be None if no Authorization header was provided, we expect
+        #       this to cause a downstream exception since it is invalid
+        token_claims = await access_token("user", "openid", purpose="access")(token)
+    except Exception as exc:
+        logger.error(exc, exc_info=True)
+        raise HTTPException(
+            HTTP_401_UNAUTHORIZED,
+            "Could not verify, parse, and/or validate scope from provided access token.",
+        )
+
+    # hit indexd's GUID/alias resolution endpoint to get the indexd did
+    try:
+        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+        response = await request.app.async_client.get(endpoint)
+        response.raise_for_status()
+
+        # if the object is found in indexd, we can proceed
+        indexd_record = response.json()
+        indexd_did = indexd_record["did"]
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response and err.response.status_code == 404:
+            msg = f"Could not find GUID or alias '{guid}' in indexd"
+            logger.debug(msg)
+            raise HTTPException(
+                HTTP_404_NOT_FOUND,
+                msg,
+            )
+        else:
+            msg = f"Unable to query indexd for GUID or alias '{guid}'"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            raise
+
+    file_name = body.file_name
+    aliases = body.aliases or []
+    metadata = body.metadata
+
+    metadata = metadata or {}
+
+    # get user id from token claims
+    uploader = token_claims.get("sub")
+    auth_header = str(request.headers.get("Authorization", ""))
+
+    # create a new version (blank record) of this indexd object
+    new_version_did = await _create_blank_version(
+        indexd_record, file_name, auth_header, request
+    )
+    logger.debug(f"Created a new version of {indexd_did}: {new_version_did}")
+
+    # get an upload URL for the newly created blank record
+    signed_upload_url = await _create_url_for_blank_record(
+        new_version_did, auth_header, request
+    )
+
+    if aliases:
+        await _create_aliases_for_record(aliases, new_version_did, auth_header, request)
+
+    metadata = await _add_metadata(
+        new_version_did, metadata, {"resource_paths": indexd_record["authz"]}, uploader
+    )
+
+    response = {
+        "guid": new_version_did,
+        "aliases": aliases,
+        "metadata": metadata,
+        "upload_url": signed_upload_url,
+    }
+
+    return JSONResponse(response, HTTP_201_CREATED)
+
+
 @mod.get("/objects/{guid:path}")
 async def get_object(guid: str, request: Request) -> JSONResponse:
     """
@@ -138,7 +243,7 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
     """
     mds_key = guid
 
-    # hit indexd's GUID/alias resolution endpoint
+    # hit indexd's GUID/alias resolution endpoint to get the indexd did
     indexd_record = {}
     try:
         endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
@@ -202,23 +307,81 @@ async def _create_aliases_for_record(
         # check if user has permission for resources specified
         if err.response and err.response.status_code in (401, 403):
             logger.error(
-                f"Creating aliases in indexd failed, status code: "
-                f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
+                f"Creating aliases in indexd for guid {blank_guid} failed, status code: {err.response.status_code}. Response text: {getattr(err.response, 'text')}"
             )
             raise HTTPException(
                 HTTP_403_FORBIDDEN,
                 "You do not have access to create the aliases you are trying to assign: "
                 f"{aliases} to the guid {blank_guid}",
             )
+        elif err.response and err.response.status_code == 409:
+            logger.error(
+                f"Creating aliases in indexd for guid {blank_guid} failed, status code: {err.response.status_code}. Response text: {getattr(err.response, 'text')}"
+            )
+            raise HTTPException(
+                HTTP_409_CONFLICT,
+                f"Some of the aliases you are trying to assign to guid {blank_guid} ({aliases}) already exist",
+            )
 
         msg = (
-            f"Unable to create alises for guid {blank_guid} "
+            f"Unable to create aliases for guid {blank_guid} "
             f"with aliases: {aliases}."
         )
         logger.error(f"{msg}\nException:\n{err}", exc_info=True)
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
     logger.info(f"added aliases: {aliases} for guid: {blank_guid}")
+
+
+async def _create_blank_version(
+    indexd_record: dict,
+    file_name: str,
+    auth_header: str,
+    request: Request,
+):
+    """
+    Create a new, blank version of the provided indexd object.
+    """
+    guid = indexd_record["did"]
+    logger.debug(f"trying to create a new blank record version for {guid}")
+    try:
+        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/blank/{guid}"
+        data = {
+            "file_name": file_name,
+            # set authz, but do not set deprecated acl field:
+            "authz": indexd_record["authz"],
+        }
+        headers = {"Authorization": auth_header}
+        response = await request.app.async_client.post(
+            endpoint, json=data, headers=headers
+        )
+        response.raise_for_status()
+
+        indexd_record = response.json()
+        new_version_did = indexd_record["did"]
+    except httpx.HTTPError as err:
+        # check if user has permission for resources specified
+        if err.response and err.response.status_code in (401, 403):
+            logger.error(
+                f"Unable to create a blank version of record '{guid}', status code: "
+                f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
+            )
+            raise HTTPException(
+                HTTP_403_FORBIDDEN,
+                f"You do not have access to create a blank version of record of record '{guid}'",
+            )
+        elif err.response and err.response.status_code == 404:
+            msg = f"Could not find GUID '{guid}' in indexd"
+            logger.debug(msg)
+            raise HTTPException(
+                HTTP_404_NOT_FOUND,
+                msg,
+            )
+        else:
+            msg = f"Unable to create a blank version of record '{guid}'"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            raise
+    return new_version_did
 
 
 async def _create_blank_record_and_url(
@@ -269,6 +432,38 @@ async def _create_blank_record_and_url(
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
     return blank_guid, signed_upload_url
+
+
+async def _create_url_for_blank_record(guid: str, auth_header: str, request: Request):
+    logger.debug(f"trying to generate an upload url for {guid}")
+    try:
+        endpoint = (
+            config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload/{guid}"
+        )
+        # pass along the authorization header to new request
+        headers = {"Authorization": auth_header}
+        response = await request.app.async_client.get(endpoint, headers=headers)
+        logger.debug(response)
+        response.raise_for_status()
+        signed_upload_url = response.json().get("url")
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        # check if user has permission for resources specified
+        if err.response and err.response.status_code in (401, 403):
+            logger.error(
+                f"Generating upload url failed, status code: "
+                f"{err.response.status_code}. Response text: {getattr(err.response, 'text')}"
+            )
+            raise HTTPException(
+                HTTP_403_FORBIDDEN,
+                f"You do not have access to generate the upload url for {guid}",
+            )
+
+        msg = f"Unable to create signed upload url for guid {guid}."
+        logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
+
+    return signed_upload_url
 
 
 async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: str):
