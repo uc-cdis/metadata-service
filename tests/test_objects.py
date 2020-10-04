@@ -792,3 +792,45 @@ def test_get_object_not_in_indexd(client):
         assert resp.json() == {"record": {}, "metadata": mds_data}
     finally:
         client.delete("/metadata/" + guid_or_alias)
+
+
+@respx.mock
+def test_get_object_signed_download_url(client):
+    """
+    XXX
+    """
+    guid = "1234"
+    signed_download_url = "https://cats.com/download/paws"
+    #  indexd_did = "test_did"
+
+    #  mock the request to indexd: GUID or alias found in indexd XXX
+    fence_url = f"{config.DATA_ACCESS_SERVICE_ENDPOINT}/data/download/{guid}"
+    fence_data = {"url": signed_download_url}
+    fence_get_signed_url_mocked_request = respx.get(
+        fence_url, status_code=200, content=fence_data
+    )
+
+    # GET an object that exists in indexd but NOT in MDS
+    #  resp = client.get(get_object_url)
+    #  assert indexd_get_mocked_request.called
+    #  assert resp.status_code == 200, resp.text
+    #  assert resp.json() == {"record": indexd_data, "metadata": {}}
+
+    # create metadata for this object
+    #  mds_data = dict(a=1, b=2)
+    #  client.post("/metadata/" + indexd_did, json=mds_data).raise_for_status()
+
+    #  indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid}/download"
+    #  indexd_get_mocked_request = respx.get(indexd_url, status_code=200)
+    object_download_url = f"/objects/{guid}/download"
+    # GET an object that exists in indexd AND in MDS
+    try:
+        resp = client.get(object_download_url)
+        #  assert indexd_get_mocked_request.called
+        #  assert resp.status_code == 200, resp.text
+        assert fence_get_signed_url_mocked_request.called
+        assert resp.status_code == 200
+        assert resp.json() == {"download_url": signed_download_url}
+    finally:
+        #  XXX
+        print("ERROR")

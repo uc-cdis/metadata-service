@@ -60,7 +60,6 @@ class CreateObjForIdInput(BaseModel):
     Create object.
 
     file_name (str): Name for the file being uploaded
-    authz (dict): authorization block with requirements for what's being uploaded
     aliases (list, optional): unique name to allow using in place of whatever GUID gets
         created for this upload
     metadata (dict, optional): any additional metadata to attach to the upload
@@ -227,6 +226,49 @@ async def create_object_for_id(
     return JSONResponse(response, HTTP_201_CREATED)
 
 
+@mod.get("/objects/{guid:path}/download")
+#  @mod.get("/objects/download")
+#  async def create_object_for_id(
+async def get_object_signed_download_url(
+    guid: str,
+    request: Request,
+    #  XXX what is this token?
+    #  token: HTTPAuthorizationCredentials = Security(bearer),
+) -> JSONResponse:
+    """
+    XXX add comments
+
+    Args:
+        guid (str): indexd GUID or alias
+        request (Request): starlette request (which contains reference to FastAPI app)
+        token (HTTPAuthorizationCredentials, optional): bearer token
+    """
+
+    try:
+        #  XXX why called DATA_ACCESS_...?
+        endpoint = (
+            config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/download/{guid}"
+        )
+        #  XXX rename
+        auth_header = str(request.headers.get("Authorization", ""))
+        response = await request.app.async_client.get(
+            endpoint, headers={"Authorization": auth_header}
+        )
+        response.raise_for_status()
+
+    except httpx.HTTPError as err:
+        logger.error(f"Exception:\n{err}", exc_info=True)
+        raise
+
+    response = {
+        #  XXX check for guid in MDS db
+        #  "guid": new_version_did,
+        "download_url": response.json()["url"]
+    }
+
+    return JSONResponse(response, HTTP_200_OK)
+
+
 @mod.get("/objects/{guid:path}")
 async def get_object(guid: str, request: Request) -> JSONResponse:
     """
@@ -241,6 +283,7 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
         200: { "record": { indexd record }, "metadata": { MDS metadata } }
         404: if the key is not in indexd and not in MDS
     """
+    #  import pdb; pdb.set_trace()
     mds_key = guid
 
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
