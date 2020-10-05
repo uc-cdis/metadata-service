@@ -2,7 +2,6 @@ components:
   schemas:
     CreateObjForIdInput:
       description: "Create object.\n\nfile_name (str): Name for the file being uploaded\n\
-        authz (dict): authorization block with requirements for what's being uploaded\n\
         aliases (list, optional): unique name to allow using in place of whatever\
         \ GUID gets\n    created for this upload\nmetadata (dict, optional): any additional\
         \ metadata to attach to the upload"
@@ -74,18 +73,6 @@ components:
       - type
       title: ValidationError
       type: object
-    DownloadResponse:
-      description: "Signed download url response"
-      properties:
-        guid:
-          title: GUID
-          type: string
-        download_url:
-          title: Signed Download URL
-          type: string
-      title: DownloadResponse
-      type: object
-
   securitySchemes:
     HTTPBasic:
       scheme: basic
@@ -524,8 +511,17 @@ paths:
       - Object
   /objects/{guid}/download:
     get:
-      description: "Proxy to data access service to return a signed download url for the given GUID/alias."
-      operationId: get_object_signed_download_url_objects__guid__get
+      description: "Send a GET request to the data access service to generate a signed\
+        \ download\nurl for the given GUID or alias. Returns the generated signed\
+        \ download url\nto the user.\n\nArgs:\n    guid (str): indexd GUID or alias\n\
+        \    request (Request): starlette request (which contains reference to FastAPI\
+        \ app)\n\nReturns:\n    200: { \"guid\": GUID or alias, \"download_url\":\
+        \ signed download url }\n    404: if the data access service can not find\
+        \ GUID/alias in indexd\n    403: if the data access service returns a 401\
+        \ or a 403\n    500: if there is an error making the request to the data access\
+        \ service\n    or the data access service returns any other 400-range or 500-range\n\
+        \    error"
+      operationId: get_object_signed_download_url_objects__guid__download_get
       parameters:
       - in: path
         name: guid
@@ -537,10 +533,15 @@ paths:
         '200':
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/DownloadResponse'
+              schema: {}
           description: Successful Response
-      summary: Get Signed Download URL
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Object Signed Download Url
       tags:
       - Object
   /version:
