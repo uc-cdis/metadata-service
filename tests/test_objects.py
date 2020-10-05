@@ -795,42 +795,85 @@ def test_get_object_not_in_indexd(client):
 
 
 @respx.mock
-def test_get_object_signed_download_url(client):
+def test_get_object_signed_download_url_for_fence_200(
+    client, download_endpoints, signed_url_mock
+):
     """
     XXX
     """
-    guid = "1234"
-    signed_download_url = "https://cats.com/download/paws"
-    #  indexd_did = "test_did"
-
-    #  mock the request to indexd: GUID or alias found in indexd XXX
-    fence_url = f"{config.DATA_ACCESS_SERVICE_ENDPOINT}/data/download/{guid}"
-    fence_data = {"url": signed_download_url}
-    fence_get_signed_url_mocked_request = respx.get(
-        fence_url, status_code=200, content=fence_data
+    fence_signed_download_get_request_mock = respx.get(
+        download_endpoints["fence"], status_code=200, content={"url": signed_url_mock}
     )
 
-    # GET an object that exists in indexd but NOT in MDS
-    #  resp = client.get(get_object_url)
-    #  assert indexd_get_mocked_request.called
-    #  assert resp.status_code == 200, resp.text
-    #  assert resp.json() == {"record": indexd_data, "metadata": {}}
+    resp = client.get(download_endpoints["mds"])
+    assert fence_signed_download_get_request_mock.called
+    assert resp.status_code == 200, resp.text
+    resp_json = resp.json()
+    assert "guid" in resp_json
+    assert "download_url" in resp_json
+    assert resp_json["guid"] == download_endpoints["guid_mock"]
+    assert resp_json["download_url"] == signed_url_mock
 
-    # create metadata for this object
-    #  mds_data = dict(a=1, b=2)
-    #  client.post("/metadata/" + indexd_did, json=mds_data).raise_for_status()
 
-    #  indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid}/download"
-    #  indexd_get_mocked_request = respx.get(indexd_url, status_code=200)
-    object_download_url = f"/objects/{guid}/download"
-    # GET an object that exists in indexd AND in MDS
-    try:
-        resp = client.get(object_download_url)
-        #  assert indexd_get_mocked_request.called
-        #  assert resp.status_code == 200, resp.text
-        assert fence_get_signed_url_mocked_request.called
-        assert resp.status_code == 200
-        assert resp.json() == {"download_url": signed_download_url}
-    finally:
-        #  XXX
-        print("ERROR")
+@respx.mock
+def test_get_object_signed_download_url_for_fence_404(
+    client, download_endpoints, signed_url_mock
+):
+    """
+    XXX
+    """
+    fence_signed_download_get_request_mock = respx.get(
+        download_endpoints["fence"], status_code=404
+    )
+
+    resp = client.get(download_endpoints["mds"])
+    assert fence_signed_download_get_request_mock.called
+    assert resp.status_code == 404, resp.text
+
+
+@respx.mock
+def test_get_object_signed_download_url_for_fence_401(
+    client, download_endpoints, signed_url_mock
+):
+    """
+    XXX
+    """
+    fence_signed_download_get_request_mock = respx.get(
+        download_endpoints["fence"], status_code=401
+    )
+
+    resp = client.get(download_endpoints["mds"])
+    assert fence_signed_download_get_request_mock.called
+    assert resp.status_code == 403, resp.text
+
+
+@respx.mock
+def test_get_object_signed_download_url_for_fence_403(
+    client, download_endpoints, signed_url_mock
+):
+    """
+    XXX
+    """
+    fence_signed_download_get_request_mock = respx.get(
+        download_endpoints["fence"], status_code=403
+    )
+
+    resp = client.get(download_endpoints["mds"])
+    assert fence_signed_download_get_request_mock.called
+    assert resp.status_code == 403, resp.text
+
+
+@respx.mock
+def test_get_object_signed_download_url_for_fence_500(
+    client, download_endpoints, signed_url_mock
+):
+    """
+    XXX
+    """
+    fence_signed_download_get_request_mock = respx.get(
+        download_endpoints["fence"], status_code=500
+    )
+
+    resp = client.get(download_endpoints["mds"])
+    assert fence_signed_download_get_request_mock.called
+    assert resp.status_code == 500, resp.text

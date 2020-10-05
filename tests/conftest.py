@@ -43,6 +43,30 @@ def client():
 
 
 @pytest.fixture(
+    params=[
+        "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
+        "87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
+    ]
+)
+def guid_mock(request):
+    yield request.param
+
+
+@pytest.fixture()
+def signed_url_mock():
+    yield "https://mock-signed-url"
+
+
+@pytest.fixture()
+def download_endpoints(guid_mock):
+    yield {
+        "guid_mock": guid_mock,
+        "mds": f"/objects/{guid_mock}/download",
+        "fence": f"{config.DATA_ACCESS_SERVICE_ENDPOINT}/data/download/{guid_mock}",
+    }
+
+
+@pytest.fixture(
     scope="function",
     params=[
         # guid w/ prefix
