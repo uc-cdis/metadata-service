@@ -227,13 +227,9 @@ async def create_object_for_id(
 
 
 @mod.get("/objects/{guid:path}/download")
-#  @mod.get("/objects/download")
-#  async def create_object_for_id(
 async def get_object_signed_download_url(
     guid: str,
     request: Request,
-    #  XXX what is this token?
-    #  token: HTTPAuthorizationCredentials = Security(bearer),
 ) -> JSONResponse:
     """
     XXX add comments
@@ -241,31 +237,41 @@ async def get_object_signed_download_url(
     Args:
         guid (str): indexd GUID or alias
         request (Request): starlette request (which contains reference to FastAPI app)
-        token (HTTPAuthorizationCredentials, optional): bearer token
     """
-
     try:
-        #  XXX why called DATA_ACCESS_...?
         endpoint = (
             config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/download/{guid}"
         )
-        #  XXX rename
         auth_header = str(request.headers.get("Authorization", ""))
+        logger.debug(
+            f"Attempting to GET signed download url from fence for guid {guid}"
+        )
         response = await request.app.async_client.get(
             endpoint, headers={"Authorization": auth_header}
         )
         response.raise_for_status()
-
+        signed_download_url = response.json().get("url")
     except httpx.HTTPError as err:
-        logger.error(f"Exception:\n{err}", exc_info=True)
-        raise
+        msg = f"Unable to get signed download url from fence for guid {guid}"
+        logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+        if err.response:
+            logger.error(
+                f"fence response status code: {err.response.status_code}\n"
+                f"fence response text:\n{getattr(err.response, 'text')}"
+            )
+            if err.response.status_code in (401, 403):
+                raise HTTPException(
+                    HTTP_403_FORBIDDEN,
+                    f"{msg}. You do not have access to generate the download url for guid {guid}.",
+                )
+            elif err.response.status_code == 404:
+                raise HTTPException(
+                    HTTP_404_NOT_FOUND,
+                    f"{msg}. Record with guid {guid} was not found in indexd.",
+                )
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
-    response = {
-        #  XXX check for guid in MDS db
-        #  "guid": new_version_did,
-        "download_url": response.json()["url"]
-    }
-
+    response = {"guid": guid, "download_url": signed_download_url}
     return JSONResponse(response, HTTP_200_OK)
 
 
@@ -283,7 +289,6 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
         200: { "record": { indexd record }, "metadata": { MDS metadata } }
         404: if the key is not in indexd and not in MDS
     """
-    #  import pdb; pdb.set_trace()
     mds_key = guid
 
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
