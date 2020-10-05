@@ -49,20 +49,30 @@ def client():
     ]
 )
 def guid_mock(request):
+    """
+    Yields guid mock.
+    """
     yield request.param
 
 
 @pytest.fixture()
 def signed_url_mock():
+    """
+    Yields signed url mock.
+    """
     yield "https://mock-signed-url"
 
 
 @pytest.fixture()
 def download_endpoints(guid_mock):
+    """
+    Yields dictionary with guid_mock and download endpoints for mds and data
+    access service.
+    """
     yield {
         "guid_mock": guid_mock,
         "mds": f"/objects/{guid_mock}/download",
-        "fence": f"{config.DATA_ACCESS_SERVICE_ENDPOINT}/data/download/{guid_mock}",
+        "data_access": f"{config.DATA_ACCESS_SERVICE_ENDPOINT}/data/download/{guid_mock}",
     }
 
 

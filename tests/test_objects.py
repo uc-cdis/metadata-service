@@ -795,18 +795,21 @@ def test_get_object_not_in_indexd(client):
 
 
 @respx.mock
-def test_get_object_signed_download_url_for_fence_200(
+def test_get_object_signed_download_url_for_data_access_200(
     client, download_endpoints, signed_url_mock
 ):
     """
-    XXX
+    Test that mds returns a 200 containing the signed download url when the
+    data access service download endpoint returns a 200.
     """
-    fence_signed_download_get_request_mock = respx.get(
-        download_endpoints["fence"], status_code=200, content={"url": signed_url_mock}
+    data_access_signed_download_get_request_mock = respx.get(
+        download_endpoints["data_access"],
+        status_code=200,
+        content={"url": signed_url_mock},
     )
 
     resp = client.get(download_endpoints["mds"])
-    assert fence_signed_download_get_request_mock.called
+    assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 200, resp.text
     resp_json = resp.json()
     assert "guid" in resp_json
@@ -816,64 +819,68 @@ def test_get_object_signed_download_url_for_fence_200(
 
 
 @respx.mock
-def test_get_object_signed_download_url_for_fence_404(
+def test_get_object_signed_download_url_for_data_access_404(
     client, download_endpoints, signed_url_mock
 ):
     """
-    XXX
+    Test that mds returns a 404 when the data access service download endpoint
+    returns a 404.
     """
-    fence_signed_download_get_request_mock = respx.get(
-        download_endpoints["fence"], status_code=404
+    data_access_signed_download_get_request_mock = respx.get(
+        download_endpoints["data_access"], status_code=404
     )
 
     resp = client.get(download_endpoints["mds"])
-    assert fence_signed_download_get_request_mock.called
+    assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 404, resp.text
 
 
 @respx.mock
-def test_get_object_signed_download_url_for_fence_401(
+def test_get_object_signed_download_url_for_data_access_401(
     client, download_endpoints, signed_url_mock
 ):
     """
-    XXX
+    Test that mds returns a 403 when the data access service download endpoint
+    returns a 401.
     """
-    fence_signed_download_get_request_mock = respx.get(
-        download_endpoints["fence"], status_code=401
+    data_access_signed_download_get_request_mock = respx.get(
+        download_endpoints["data_access"], status_code=401
     )
 
     resp = client.get(download_endpoints["mds"])
-    assert fence_signed_download_get_request_mock.called
+    assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 403, resp.text
 
 
 @respx.mock
-def test_get_object_signed_download_url_for_fence_403(
+def test_get_object_signed_download_url_for_data_access_403(
     client, download_endpoints, signed_url_mock
 ):
     """
-    XXX
+    Test that mds returns a 403 when the data access service download endpoint
+    returns a 403.
     """
-    fence_signed_download_get_request_mock = respx.get(
-        download_endpoints["fence"], status_code=403
+    data_access_signed_download_get_request_mock = respx.get(
+        download_endpoints["data_access"], status_code=403
     )
 
     resp = client.get(download_endpoints["mds"])
-    assert fence_signed_download_get_request_mock.called
+    assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 403, resp.text
 
 
 @respx.mock
-def test_get_object_signed_download_url_for_fence_500(
+def test_get_object_signed_download_url_for_data_access_500(
     client, download_endpoints, signed_url_mock
 ):
     """
-    XXX
+    Test that mds returns a 500 when the data access service download endpoint
+    returns a 500.
     """
-    fence_signed_download_get_request_mock = respx.get(
-        download_endpoints["fence"], status_code=500
+    data_access_signed_download_get_request_mock = respx.get(
+        download_endpoints["data_access"], status_code=500
     )
 
     resp = client.get(download_endpoints["mds"])
-    assert fence_signed_download_get_request_mock.called
+    assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 500, resp.text

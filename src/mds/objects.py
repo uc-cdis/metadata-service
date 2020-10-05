@@ -232,7 +232,9 @@ async def get_object_signed_download_url(
     request: Request,
 ) -> JSONResponse:
     """
-    XXX add comments
+    Send a GET request to the data access service to generate a signed download
+    url for the given GUID or alias. Returns the generated signed download url
+    to the user.
 
     Args:
         guid (str): indexd GUID or alias
@@ -244,7 +246,7 @@ async def get_object_signed_download_url(
         )
         auth_header = str(request.headers.get("Authorization", ""))
         logger.debug(
-            f"Attempting to GET signed download url from fence for guid {guid}"
+            f"Attempting to GET signed download url from data access service for GUID or alias '{guid}'"
         )
         response = await request.app.async_client.get(
             endpoint, headers={"Authorization": auth_header}
@@ -252,22 +254,22 @@ async def get_object_signed_download_url(
         response.raise_for_status()
         signed_download_url = response.json().get("url")
     except httpx.HTTPError as err:
-        msg = f"Unable to get signed download url from fence for guid {guid}"
+        msg = f"Unable to get signed download url from data access service for GUID or alias '{guid}'"
         logger.error(f"{msg}\nException:\n{err}", exc_info=True)
         if err.response:
             logger.error(
-                f"fence response status code: {err.response.status_code}\n"
-                f"fence response text:\n{getattr(err.response, 'text')}"
+                f"data access service response status code: {err.response.status_code}\n"
+                f"data access service response text:\n{getattr(err.response, 'text')}"
             )
             if err.response.status_code in (401, 403):
                 raise HTTPException(
                     HTTP_403_FORBIDDEN,
-                    f"{msg}. You do not have access to generate the download url for guid {guid}.",
+                    f"{msg}. You do not have access to generate the download url for GUID or alias '{guid}'.",
                 )
             elif err.response.status_code == 404:
                 raise HTTPException(
                     HTTP_404_NOT_FOUND,
-                    f"{msg}. Record with guid {guid} was not found in indexd.",
+                    f"{msg}. Record with GUID or alias '{guid}' was not found in indexd.",
                 )
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
