@@ -74,6 +74,18 @@ components:
       - type
       title: ValidationError
       type: object
+    DownloadResponse:
+      description: "Signed download url response"
+      properties:
+        guid:
+          title: GUID
+          type: string
+        download_url:
+          title: Signed Download URL
+          type: string
+      title: DownloadResponse
+      type: object
+
   securitySchemes:
     HTTPBasic:
       scheme: basic
@@ -508,6 +520,27 @@ paths:
       security:
       - HTTPBearer: []
       summary: Create Object For Id
+      tags:
+      - Object
+  /objects/{guid}/download:
+    get:
+      description: "Proxy to data access service to return a signed download url for the given GUID/alias."
+      operationId: get_object_signed_download_url_objects__guid__get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadResponse'
+          description: Successful Response
+      summary: Get Signed Download URL
       tags:
       - Object
   /version:
