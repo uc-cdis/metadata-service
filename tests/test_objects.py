@@ -812,10 +812,8 @@ def test_get_object_signed_download_url_for_data_access_200(
     assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 200, resp.text
     resp_json = resp.json()
-    assert "guid" in resp_json
-    assert "download_url" in resp_json
-    assert resp_json["guid"] == download_endpoints["guid_mock"]
-    assert resp_json["download_url"] == signed_url_mock
+    assert "url" in resp_json
+    assert resp_json["url"] == signed_url_mock
 
 
 @respx.mock

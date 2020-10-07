@@ -281,7 +281,7 @@ async def get_object_signed_download_url(
                 )
         raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
 
-    response = {"guid": guid, "download_url": signed_download_url}
+    response = {"url": signed_download_url}
     return JSONResponse(response, HTTP_200_OK)
 
 
