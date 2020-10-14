@@ -515,12 +515,11 @@ paths:
         \ download\nurl for the given GUID or alias. Returns the generated signed\
         \ download url\nto the user.\n\nArgs:\n    guid (str): indexd GUID or alias\n\
         \    request (Request): starlette request (which contains reference to FastAPI\
-        \ app)\n\nReturns:\n    200: { \"guid\": GUID or alias, \"download_url\":\
-        \ signed download url }\n    404: if the data access service can not find\
-        \ GUID/alias in indexd\n    403: if the data access service returns a 401\
-        \ or a 403\n    500: if there is an error making the request to the data access\
-        \ service\n    or the data access service returns any other 400-range or 500-range\n\
-        \    error"
+        \ app)\n\nReturns:\n    200: { \"url\": signed download url }\n    404: if\
+        \ the data access service can not find GUID/alias in indexd\n    403: if the\
+        \ data access service returns a 401 or a 403\n    500: if there is an error\
+        \ making the request to the data access service\n    or the data access service\
+        \ returns any other 400-range or 500-range\n    error"
       operationId: get_object_signed_download_url_objects__guid__download_get
       parameters:
       - in: path
