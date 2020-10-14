@@ -241,7 +241,7 @@ async def get_object_signed_download_url(
         request (Request): starlette request (which contains reference to FastAPI app)
 
     Returns:
-        200: { "guid": GUID or alias, "download_url": signed download url }
+        200: { "url": signed download url }
         404: if the data access service can not find GUID/alias in indexd
         403: if the data access service returns a 401 or a 403
         500: if there is an error making the request to the data access service
