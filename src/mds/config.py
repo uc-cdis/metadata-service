@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy.engine.url import make_url, URL
 from starlette.config import Config
 from starlette.datastructures import CommaSeparatedStrings
@@ -10,6 +11,11 @@ class CommaSeparatedLogins(CommaSeparatedStrings):
         self._items = [item.split(":") for item in self._items]
 
 
+class InfoFilter(logging.Filter):
+    def filter(self, record):
+        return record.levelno in (logging.DEBUG, logging.INFO)
+
+
 config = Config(".env")
 
 # Server
@@ -18,6 +24,44 @@ DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 
+# Logging
+
+LOGGING_CONFIG = dict(
+    version=1,
+    disable_existing_loggers=False,
+    root={"level": "WARN", "handlers": ["console", "error_console"]},
+    loggers={
+        "mds": {
+            "level": "INFO",
+            "handlers": ["console", "error_console"],
+            "propagate": False,
+            "qualname": "mds",
+        }
+    },
+    handlers={
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "generic",
+            "stream": "ext://sys.stdout",
+            "filters": ["info"],
+        },
+        "error_console": {
+            #  XXX lookup this vs WARNING
+            "level": "WARN",
+            "class": "logging.StreamHandler",
+            "formatter": "generic",
+            "stream": "ext://sys.stderr",
+        },
+    },
+    filters={"info": {"()": InfoFilter}},
+    formatters={
+        "generic": {
+            "format": "%(asctime)s [%(process)d] [%(name)s] [%(levelname)s] %(message)s",
+            "datefmt": "[%Y-%m-%d %H:%M:%S %z]",
+            "class": "logging.Formatter",
+        }
+    },
+)
 
 # Database
 
@@ -27,6 +71,10 @@ DB_PORT = config("DB_PORT", cast=int, default=None)
 DB_USER = config("DB_USER", default=None)
 DB_PASSWORD = config("DB_PASSWORD", cast=Secret, default=None)
 DB_DATABASE = config("DB_DATABASE", default=None)
+
+if TESTING:
+    DB_DATABASE = "test_" + (DB_DATABASE or "mds")
+    TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
 
 DB_DSN = config(
     "DB_DSN",
@@ -68,9 +116,3 @@ INDEXING_SERVICE_ENDPOINT = config(
 DATA_ACCESS_SERVICE_ENDPOINT = config(
     "DATA_ACCESS_SERVICE_ENDPOINT", cast=str, default="http://fence-service"
 )
-
-if TESTING:
-    DB_DATABASE = "test_" + (DB_DATABASE or "mds")
-    TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
-    INDEXING_SERVICE_ENDPOINT = "http://localhost"
-    DATA_ACCESS_SERVICE_ENDPOINT = "http://localhost"
