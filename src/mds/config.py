@@ -26,18 +26,11 @@ URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 
 # Logging
 
-LOGGING_CONFIG = dict(
+DEFAULT_LOGGING_CONFIG = dict(
     version=1,
     disable_existing_loggers=False,
     root={"level": "WARN", "handlers": ["console", "error_console"]},
-    loggers={
-        "mds": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "mds",
-        }
-    },
+    loggers={},
     handlers={
         "console": {
             "class": "logging.StreamHandler",
@@ -46,7 +39,6 @@ LOGGING_CONFIG = dict(
             "filters": ["info"],
         },
         "error_console": {
-            #  XXX lookup this vs WARNING
             "level": "WARN",
             "class": "logging.StreamHandler",
             "formatter": "generic",
@@ -61,6 +53,17 @@ LOGGING_CONFIG = dict(
             "class": "logging.Formatter",
         }
     },
+)
+
+MDS_LOGGER_CONFIG = dict(
+    loggers={
+        "mds": {
+            "level": "DEBUG" if DEBUG else "INFO",
+            "handlers": ["console", "error_console"],
+            "propagate": False,
+            "qualname": "mds",
+        }
+    }
 )
 
 # Database

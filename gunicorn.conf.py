@@ -1,8 +1,14 @@
-from mds.config import LOGGING_CONFIG
+import copy
+from mds.config import DEFAULT_LOGGING_CONFIG
 
-error_and_access_log_config = dict(
-    #  XXX add gunicorn handler
+GUNICORN_LOGGERS_CONFIG = dict(
     loggers={
+        "gunicorn": {
+            "level": "INFO",
+            "handlers": ["console", "error_console"],
+            "propagate": False,
+            "qualname": "gunicorn",
+        },
         "gunicorn.error": {
             "level": "INFO",
             "handlers": ["console", "error_console"],
@@ -18,8 +24,6 @@ error_and_access_log_config = dict(
     },
 )
 
-gunicorn_logging_config = LOGGING_CONFIG.copy()
-gunicorn_logging_config.update(error_and_access_log_config)
-logconfig_dict = gunicorn_logging_config
-#  logconfig_dict = error_and_access_log_config
-print("Finished gunicorn.conf.py!")
+logging_config = copy.deepcopy(DEFAULT_LOGGING_CONFIG)
+logging_config.update(GUNICORN_LOGGERS_CONFIG)
+logconfig_dict = logging_config
