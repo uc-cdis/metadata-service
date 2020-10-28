@@ -11,9 +11,9 @@ class CommaSeparatedLogins(CommaSeparatedStrings):
         self._items = [item.split(":") for item in self._items]
 
 
-class InfoFilter(logging.Filter):
+class InfoOrLessFilter(logging.Filter):
     def filter(self, record):
-        return record.levelno in (logging.DEBUG, logging.INFO)
+        return record.levelno <= logging.INFO
 
 
 config = Config(".env")
@@ -45,7 +45,7 @@ DEFAULT_LOGGING_CONFIG = dict(
             "stream": "ext://sys.stderr",
         },
     },
-    filters={"info": {"()": InfoFilter}},
+    filters={"info": {"()": InfoOrLessFilter}},
     formatters={
         "generic": {
             "format": "%(asctime)s [%(process)d] [%(name)s] [%(levelname)s] %(message)s",
