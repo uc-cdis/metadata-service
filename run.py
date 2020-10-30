@@ -8,38 +8,16 @@ import os
 import sys
 import uvicorn
 import yaml
-import copy
+import cdislogging
 
 from mds.main import get_app
-from mds.config import DEFAULT_LOGGING_CONFIG
 
-UVICORN_LOGGERS_CONFIG = dict(
-    loggers={
-        "uvicorn": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "uvicorn",
-        },
-        "uvicorn.error": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "uvicorn.error",
-        },
-        "uvicorn.access": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "uvicorn.access",
-        },
-    },
-)
-logging_config = copy.deepcopy(DEFAULT_LOGGING_CONFIG)
-logging_config.update(UVICORN_LOGGERS_CONFIG)
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
+cdislogging.get_logger(None, log_level="warn")
+for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
+    cdislogging.get_logger(logger_name, log_level="info")
 
 if __name__ == "__main__":
     if sys.argv[-1] == "openapi":
@@ -50,4 +28,4 @@ if __name__ == "__main__":
             yaml.dump(schema, f, default_flow_style=False)
         print(f"Saved docs at {path}")
     else:
-        uvicorn.run("mds.asgi:app", reload=True, log_config=logging_config)
+        uvicorn.run("mds.asgi:app", reload=True, log_config=None)

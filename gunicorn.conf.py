@@ -1,29 +1,33 @@
-import copy
-from mds.config import DEFAULT_LOGGING_CONFIG
+import logging
+import gunicorn.glogging
+import cdislogging
 
-GUNICORN_LOGGERS_CONFIG = dict(
-    loggers={
-        "gunicorn": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "gunicorn",
-        },
-        "gunicorn.error": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "gunicorn.error",
-        },
-        "gunicorn.access": {
-            "level": "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "gunicorn.access",
-        },
-    },
-)
 
-logging_config = copy.deepcopy(DEFAULT_LOGGING_CONFIG)
-logging_config.update(GUNICORN_LOGGERS_CONFIG)
-logconfig_dict = logging_config
+class CDISLogger(gunicorn.glogging.Logger):
+    """
+    Initialize root and gunicorn loggers with cdislogging configuration.
+    """
+
+    @staticmethod
+    def _remove_handlers(logger):
+        """
+        Use Python's built-in logging module to remove all handlers associated
+        with logger (logging.Logger).
+        """
+        while logger.handlers:
+            logger.removeHandler(logger.handlers[0])
+
+    def __init__(self, cfg):
+        """
+        Apply cdislogging configuration after gunicorn has set up it's loggers.
+        """
+        super().__init__(cfg)
+
+        self._remove_handlers(logging.getLogger())
+        cdislogging.get_logger(None, log_level="warn")
+        for logger_name in ["gunicorn", "gunicorn.error", "gunicorn.access"]:
+            self._remove_handlers(logging.getLogger(logger_name))
+            cdislogging.get_logger(logger_name, log_level="info")
+
+
+logger_class = CDISLogger
