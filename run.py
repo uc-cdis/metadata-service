@@ -10,14 +10,17 @@ import uvicorn
 import yaml
 import cdislogging
 
+import mds.config
 from mds.main import get_app
 
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-cdislogging.get_logger(None, log_level="warn")
+cdislogging.get_logger(None, log_level="debug" if mds.config.DEBUG else "warn")
 for logger_name in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
-    cdislogging.get_logger(logger_name, log_level="info")
+    cdislogging.get_logger(
+        logger_name, log_level="debug" if mds.config.DEBUG else "info"
+    )
 
 if __name__ == "__main__":
     if sys.argv[-1] == "openapi":
