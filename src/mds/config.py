@@ -1,4 +1,3 @@
-import logging
 from sqlalchemy.engine.url import make_url, URL
 from starlette.config import Config
 from starlette.datastructures import CommaSeparatedStrings
@@ -11,11 +10,6 @@ class CommaSeparatedLogins(CommaSeparatedStrings):
         self._items = [item.split(":") for item in self._items]
 
 
-class InfoOrLessFilter(logging.Filter):
-    def filter(self, record):
-        return record.levelno <= logging.INFO
-
-
 config = Config(".env")
 
 # Server
@@ -24,47 +18,6 @@ DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 
-# Logging
-
-DEFAULT_LOGGING_CONFIG = dict(
-    version=1,
-    disable_existing_loggers=False,
-    root={"level": "WARN", "handlers": ["console", "error_console"]},
-    loggers={},
-    handlers={
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "generic",
-            "stream": "ext://sys.stdout",
-            "filters": ["info"],
-        },
-        "error_console": {
-            "level": "WARN",
-            "class": "logging.StreamHandler",
-            "formatter": "generic",
-            "stream": "ext://sys.stderr",
-        },
-    },
-    filters={"info": {"()": InfoOrLessFilter}},
-    formatters={
-        "generic": {
-            "format": "%(asctime)s [%(process)d] [%(name)s] [%(levelname)s] %(message)s",
-            "datefmt": "[%Y-%m-%d %H:%M:%S %z]",
-            "class": "logging.Formatter",
-        }
-    },
-)
-
-MDS_LOGGER_CONFIG = dict(
-    loggers={
-        "mds": {
-            "level": "DEBUG" if DEBUG else "INFO",
-            "handlers": ["console", "error_console"],
-            "propagate": False,
-            "qualname": "mds",
-        }
-    }
-)
 
 # Database
 
