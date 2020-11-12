@@ -285,6 +285,13 @@ async def get_object_signed_download_url(
     return JSONResponse(response, HTTP_200_OK)
 
 
+@mod.get("/objects/{guid:path}/latest")
+async def get_object_latest(guid: str, request: Request) -> JSONResponse:
+    """"""
+    response = await _get_object_helper(guid, request, latest=True)
+    return response
+
+
 @mod.get("/objects/{guid:path}")
 async def get_object(guid: str, request: Request) -> JSONResponse:
     """
@@ -299,12 +306,25 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
         200: { "record": { indexd record }, "metadata": { MDS metadata } }
         404: if the key is not in indexd and not in MDS
     """
+    response = await _get_object_helper(guid, request, latest=False)
+    return response
+
+
+async def _get_object_helper(
+    guid: str, request: Request, latest: bool = False
+) -> JSONResponse:
+    """"""
     mds_key = guid
 
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
     indexd_record = {}
     try:
-        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+        #  endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+        endpoint = (
+            config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
+            + f"/index/{guid}"
+            + ("/latest" if latest else "")
+        )
         response = await request.app.async_client.get(endpoint)
         response.raise_for_status()
 
