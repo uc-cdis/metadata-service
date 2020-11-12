@@ -885,32 +885,143 @@ def test_get_object_signed_download_url_for_data_access_500(
 
 
 @respx.mock
-def test_get_object_latest_for_indexd_200(client, get_objects_guid_latest_setup):
+def test_get_object_latest_when_resolving_guid_and_indexd_latest_returns_200(
+    client, latest_setup
+):
     """"""
-    latest_indexd_record_data = {
-        "did": get_objects_guid_latest_setup["latest_guid"],
-        "size": 42,
-    }
-    indexd_guid_latest_get_request_mock = respx.get(
-        get_objects_guid_latest_setup["indexd_endpoint"],
+    get_indexd_resolution_request_mock = respx.get(
+        latest_setup["indexd_resolution_endpoint_with_oldest_guid"],
         status_code=200,
-        content=latest_indexd_record_data,
+        content=latest_setup["indexd_oldest_record_data"],
+    )
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_latest_record_data"],
     )
 
-    resp = client.get(get_objects_guid_latest_setup["mds_endpoint"])
-    assert indexd_guid_latest_get_request_mock.called
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_resolution_request_mock.called
+    assert get_indexd_latest_request_mock.called
     assert resp.status_code == 200, resp.text
     assert resp.json() == {
-        "record": latest_indexd_record_data,
-        "metadata": get_objects_guid_latest_setup["mds_objects"]["latest"]["data"],
+        "record": latest_setup["indexd_latest_record_data"],
+        "metadata": latest_setup["mds_objects"]["latest"]["data"],
     }
 
 
-#  @respx.mock
-#  def test_get_object_latest_for_indexd_404(
-#  client, latest_endpoints, metadata_service_objects
-#  ):
-#  """
-#  """
-#  import pdb; pdb.set_trace()
-#  pass
+@respx.mock
+def test_get_object_latest_when_resolving_alias_and_indexd_latest_returns_different_record(
+    client, latest_setup
+):
+    """"""
+    get_indexd_resolution_request_mock = respx.get(
+        latest_setup["indexd_resolution_endpoint_with_alias"],
+        status_code=200,
+        content=latest_setup["indexd_oldest_record_data"],
+    )
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_latest_record_data"],
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_alias"])
+    assert get_indexd_resolution_request_mock.called
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_setup["indexd_latest_record_data"],
+        "metadata": latest_setup["mds_objects"]["latest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_resolving_alias_and_indexd_latest_returns_same_record(
+    client, latest_setup
+):
+    """"""
+    get_indexd_resolution_request_mock = respx.get(
+        latest_setup["indexd_resolution_endpoint_with_alias"],
+        status_code=200,
+        content=latest_setup["indexd_oldest_record_data"],
+    )
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_oldest_record_data"],
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_alias"])
+    assert get_indexd_resolution_request_mock.called
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_setup["indexd_oldest_record_data"],
+        "metadata": latest_setup["mds_objects"]["oldest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_resolving_guid_and_indexd_latest_returns_guid_not_in_mds(
+    client, latest_setup
+):
+    """"""
+    get_indexd_resolution_request_mock = respx.get(
+        latest_setup["indexd_resolution_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_oldest_record_data"],
+    )
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_non_mds_record_data"],
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_resolution_request_mock.called
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_setup["indexd_non_mds_record_data"],
+        "metadata": {},
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_resolution_returns_404_but_guid_in_mds(
+    client, latest_setup
+):
+    """"""
+    get_indexd_resolution_request_mock = respx.get(
+        latest_setup["indexd_resolution_endpoint_with_oldest_guid"],
+        status_code=404,
+    )
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=404,
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_resolution_request_mock.called
+    assert not get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": {},
+        "metadata": latest_setup["mds_objects"]["oldest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_resolution_returns_404_and_guid_not_in_mds(
+    client, latest_setup
+):
+    """"""
+    get_indexd_resolution_request_mock = respx.get(
+        latest_setup["indexd_resolution_endpoint_with_non_mds_guid"],
+        status_code=404,
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_non_mds_guid"])
+    assert get_indexd_resolution_request_mock.called
+    assert resp.status_code == 404, resp.text

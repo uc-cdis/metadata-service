@@ -317,33 +317,49 @@ async def _get_object_helper(
     mds_key = guid
 
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
+    indexd_did = None
     indexd_record = {}
     try:
-        #  endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
-        endpoint = (
-            config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-            + f"/index/{guid}"
-            + ("/latest" if latest else "")
-        )
+        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
         response = await request.app.async_client.get(endpoint)
         response.raise_for_status()
 
         # if the object is found in indexd, use the indexd did as MDS key
         indexd_record = response.json()
-        mds_key = indexd_record["did"]
+        mds_key = indexd_did = indexd_record["did"]
     except httpx.HTTPError as err:
         logger.debug(err)
         if err.response and err.response.status_code == 404:
-            logger.debug(
-                f"Could not find GUID or alias '{guid}' in indexd, querying the metadata database directly"
-            )
+            logger.debug(f"Could not find GUID or alias '{guid}' in indexd")
         else:
-            msg = f"Unable to query indexd for GUID or alias '{guid}', querying the metadata database directly"
+            msg = f"Unable to query indexd for GUID or alias '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+
+    if latest and indexd_did:
+        try:
+            endpoint = (
+                config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
+                + f"/index/{indexd_did}/latest"
+            )
+            response = await request.app.async_client.get(endpoint)
+            response.raise_for_status()
+
+            indexd_record = response.json()
+            mds_key = indexd_record["did"]
+        except httpx.HTTPError as err:
+            logger.debug(err)
+            if err.response and err.response.status_code == 404:
+                logger.debug(
+                    f"Could not find latest record for GUID '{guid}' in indexd"
+                )
+            else:
+                msg = f"Unable to query indexd for latest record for GUID '{guid}'"
+                logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
     # query the metadata database
     mds_metadata = {}
     try:
+        logger.debug(f"Querying the metadata database directly for key '{mds_key}'")
         mds_metadata = await get_metadata(mds_key)
     except HTTPException as err:
         logger.debug(err)

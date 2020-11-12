@@ -101,13 +101,39 @@ def guid_pair_mock(request):
     yield request.param
 
 
+@pytest.fixture(params=["test_alias", "testAlias", "test-alias-123"])
+def alias_mock(request):
+    """"""
+    yield request.param
+
+
 @pytest.fixture()
-def get_objects_guid_latest_setup(client, guid_pair_mock):
+def latest_setup(client, guid_pair_mock, alias_mock):
+    non_mds_guid = "3507f4e5-e6f7-4ffa-b9fa-c82d0c16de91"
     setup = {
         "oldest_guid": guid_pair_mock["oldest"],
         "latest_guid": guid_pair_mock["latest"],
-        "mds_endpoint": f"/objects/{guid_pair_mock['oldest']}/latest",
-        "indexd_endpoint": f"{config.INDEXING_SERVICE_ENDPOINT}/index/{guid_pair_mock['oldest']}/latest",
+        "non_mds_guid": non_mds_guid,
+        "alias": alias_mock,
+        "mds_latest_endpoint_with_oldest_guid": f"/objects/{guid_pair_mock['oldest']}/latest",
+        "mds_latest_endpoint_with_non_mds_guid": f"/objects/{non_mds_guid}/latest",
+        "mds_latest_endpoint_with_alias": f"/objects/{alias_mock}/latest",
+        "indexd_resolution_endpoint_with_oldest_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_pair_mock['oldest']}",
+        "indexd_resolution_endpoint_with_non_mds_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/{non_mds_guid}",
+        "indexd_resolution_endpoint_with_alias": f"{config.INDEXING_SERVICE_ENDPOINT}/{alias_mock}",
+        "indexd_latest_endpoint_with_oldest_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/index/{guid_pair_mock['oldest']}/latest",
+        "indexd_oldest_record_data": {
+            "did": guid_pair_mock["oldest"],
+            "size": 314,
+        },
+        "indexd_latest_record_data": {
+            "did": guid_pair_mock["latest"],
+            "size": 42,
+        },
+        "indexd_non_mds_record_data": {
+            "did": non_mds_guid,
+            "size": 271,
+        },
         "mds_objects": {
             "oldest": {"guid": guid_pair_mock["oldest"], "data": dict(a=1, b=2)},
             "latest": {"guid": guid_pair_mock["latest"], "data": dict(a=3, b=4)},
