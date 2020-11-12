@@ -882,3 +882,35 @@ def test_get_object_signed_download_url_for_data_access_500(
     resp = client.get(download_endpoints["mds"])
     assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 500, resp.text
+
+
+@respx.mock
+def test_get_object_latest_for_indexd_200(client, get_objects_guid_latest_setup):
+    """"""
+    latest_indexd_record_data = {
+        "did": get_objects_guid_latest_setup["latest_guid"],
+        "size": 42,
+    }
+    indexd_guid_latest_get_request_mock = respx.get(
+        get_objects_guid_latest_setup["indexd_endpoint"],
+        status_code=200,
+        content=latest_indexd_record_data,
+    )
+
+    resp = client.get(get_objects_guid_latest_setup["mds_endpoint"])
+    assert indexd_guid_latest_get_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_indexd_record_data,
+        "metadata": get_objects_guid_latest_setup["mds_objects"]["latest"]["data"],
+    }
+
+
+#  @respx.mock
+#  def test_get_object_latest_for_indexd_404(
+#  client, latest_endpoints, metadata_service_objects
+#  ):
+#  """
+#  """
+#  import pdb; pdb.set_trace()
+#  pass

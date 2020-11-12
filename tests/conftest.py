@@ -77,6 +77,57 @@ def download_endpoints(guid_mock):
 
 
 @pytest.fixture(
+    params=[
+        {
+            "oldest": "934a05a1-993c-4ae0-bfd9-ae9239bba21d",
+            "latest": "2c9975f7-ec98-42fc-a703-a2ce88b1dbcf",
+        },
+        {
+            "oldest": "dg.TEST/fd851a55-3d0b-485d-b1c9-66acb8791de7",
+            "latest": "dg.TEST/19010a4e-53f9-4a27-b69f-26fc73089a52",
+        },
+        {
+            "oldest": "e900cb8b-eb4f-4fb8-af74-e3e02515a224",
+            "latest": "dg.TEST/ddcd4f3a-9450-4e85-bd5c-39d958617a5c",
+        },
+        {
+            "oldest": "dg.TEST/00bff671-5fc6-490b-9c38-f07a41655c1f",
+            "latest": "438f82ac-1f7e-4b94-8ac1-ca7e55ada5de",
+        },
+    ]
+)
+def guid_pair_mock(request):
+    """"""
+    yield request.param
+
+
+@pytest.fixture()
+def get_objects_guid_latest_setup(client, guid_pair_mock):
+    setup = {
+        "oldest_guid": guid_pair_mock["oldest"],
+        "latest_guid": guid_pair_mock["latest"],
+        "mds_endpoint": f"/objects/{guid_pair_mock['oldest']}/latest",
+        "indexd_endpoint": f"{config.INDEXING_SERVICE_ENDPOINT}/index/{guid_pair_mock['oldest']}/latest",
+        "mds_objects": {
+            "oldest": {"guid": guid_pair_mock["oldest"], "data": dict(a=1, b=2)},
+            "latest": {"guid": guid_pair_mock["latest"], "data": dict(a=3, b=4)},
+        },
+    }
+    #  for mds_object in mds_objects.values():
+    #  client.post("/metadata/" + mds_object["key"], json=mds_object["data"]).raise_for_status()
+    for mds_object in setup["mds_objects"].values():
+        client.post(
+            "/metadata/" + mds_object["guid"], json=mds_object["data"]
+        ).raise_for_status()
+
+    #  yield mds_objects
+    yield setup
+
+    for mds_object in setup["mds_objects"].values():
+        client.delete("/metadata/" + mds_object["guid"]).raise_for_status()
+
+
+@pytest.fixture(
     scope="function",
     params=[
         # guid w/ prefix
