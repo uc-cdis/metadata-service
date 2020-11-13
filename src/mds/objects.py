@@ -288,8 +288,38 @@ async def get_object_signed_download_url(
 @mod.get("/objects/{guid:path}/latest")
 async def get_object_latest(guid: str, request: Request) -> JSONResponse:
     """"""
-    response = await _get_object_helper(guid, request, latest=True)
-    return response
+    mds_key = guid
+    indexd_record = {}
+
+    try:
+        endpoint = (
+            config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid}/latest"
+        )
+        response = await request.app.async_client.get(endpoint)
+        response.raise_for_status()
+
+        # if the object is found in indexd, use the indexd did as MDS key
+        indexd_record = response.json()
+        mds_key = indexd_record["did"]
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response and err.response.status_code == 404:
+            logger.debug(f"Could not find latest record for GUID '{guid}' in indexd")
+        else:
+            msg = f"Unable to query indexd for latest record for GUID '{guid}'"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+
+    mds_metadata = await _get_metadata(mds_key)
+
+    if not indexd_record and not mds_metadata:
+        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
+
+    response = {
+        "record": indexd_record,
+        "metadata": mds_metadata,
+    }
+
+    return JSONResponse(response, HTTP_200_OK)
 
 
 @mod.get("/objects/{guid:path}")
@@ -306,18 +336,9 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
         200: { "record": { indexd record }, "metadata": { MDS metadata } }
         404: if the key is not in indexd and not in MDS
     """
-    response = await _get_object_helper(guid, request, latest=False)
-    return response
-
-
-async def _get_object_helper(
-    guid: str, request: Request, latest: bool = False
-) -> JSONResponse:
-    """"""
     mds_key = guid
 
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
-    indexd_did = None
     indexd_record = {}
     try:
         endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
@@ -326,7 +347,7 @@ async def _get_object_helper(
 
         # if the object is found in indexd, use the indexd did as MDS key
         indexd_record = response.json()
-        mds_key = indexd_did = indexd_record["did"]
+        mds_key = indexd_record["did"]
     except httpx.HTTPError as err:
         logger.debug(err)
         if err.response and err.response.status_code == 404:
@@ -335,27 +356,21 @@ async def _get_object_helper(
             msg = f"Unable to query indexd for GUID or alias '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
-    if latest and indexd_did:
-        try:
-            endpoint = (
-                config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-                + f"/index/{indexd_did}/latest"
-            )
-            response = await request.app.async_client.get(endpoint)
-            response.raise_for_status()
+    mds_metadata = await _get_metadata(mds_key)
 
-            indexd_record = response.json()
-            mds_key = indexd_record["did"]
-        except httpx.HTTPError as err:
-            logger.debug(err)
-            if err.response and err.response.status_code == 404:
-                logger.debug(
-                    f"Could not find latest record for GUID '{guid}' in indexd"
-                )
-            else:
-                msg = f"Unable to query indexd for latest record for GUID '{guid}'"
-                logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+    if not indexd_record and not mds_metadata:
+        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
 
+    response = {
+        "record": indexd_record,
+        "metadata": mds_metadata,
+    }
+
+    return JSONResponse(response, HTTP_200_OK)
+
+
+async def _get_metadata(mds_key: str) -> dict:
+    """"""
     # query the metadata database
     mds_metadata = {}
     try:
@@ -368,16 +383,7 @@ async def _get_object_helper(
         else:
             msg = f"Unable to query key '{mds_key}', returning empty metadata"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
-
-    if not indexd_record and not mds_metadata:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
-
-    response = {
-        "record": indexd_record,
-        "metadata": mds_metadata,
-    }
-
-    return JSONResponse(response, HTTP_200_OK)
+    return mds_metadata
 
 
 async def _create_aliases_for_record(

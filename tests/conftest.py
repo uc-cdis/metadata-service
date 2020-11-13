@@ -86,14 +86,6 @@ def download_endpoints(guid_mock):
             "oldest": "dg.TEST/fd851a55-3d0b-485d-b1c9-66acb8791de7",
             "latest": "dg.TEST/19010a4e-53f9-4a27-b69f-26fc73089a52",
         },
-        {
-            "oldest": "e900cb8b-eb4f-4fb8-af74-e3e02515a224",
-            "latest": "dg.TEST/ddcd4f3a-9450-4e85-bd5c-39d958617a5c",
-        },
-        {
-            "oldest": "dg.TEST/00bff671-5fc6-490b-9c38-f07a41655c1f",
-            "latest": "438f82ac-1f7e-4b94-8ac1-ca7e55ada5de",
-        },
     ]
 )
 def guid_pair_mock(request):
@@ -101,27 +93,14 @@ def guid_pair_mock(request):
     yield request.param
 
 
-@pytest.fixture(params=["test_alias", "testAlias", "test-alias-123"])
-def alias_mock(request):
-    """"""
-    yield request.param
-
-
 @pytest.fixture()
-def latest_setup(client, guid_pair_mock, alias_mock):
+def latest_setup(client, guid_pair_mock):
     non_mds_guid = "3507f4e5-e6f7-4ffa-b9fa-c82d0c16de91"
     setup = {
-        "oldest_guid": guid_pair_mock["oldest"],
-        "latest_guid": guid_pair_mock["latest"],
-        "non_mds_guid": non_mds_guid,
-        "alias": alias_mock,
         "mds_latest_endpoint_with_oldest_guid": f"/objects/{guid_pair_mock['oldest']}/latest",
         "mds_latest_endpoint_with_non_mds_guid": f"/objects/{non_mds_guid}/latest",
-        "mds_latest_endpoint_with_alias": f"/objects/{alias_mock}/latest",
-        "indexd_resolution_endpoint_with_oldest_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_pair_mock['oldest']}",
-        "indexd_resolution_endpoint_with_non_mds_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/{non_mds_guid}",
-        "indexd_resolution_endpoint_with_alias": f"{config.INDEXING_SERVICE_ENDPOINT}/{alias_mock}",
         "indexd_latest_endpoint_with_oldest_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/index/{guid_pair_mock['oldest']}/latest",
+        "indexd_latest_endpoint_with_non_mds_guid": f"{config.INDEXING_SERVICE_ENDPOINT}/index/{non_mds_guid}/latest",
         "indexd_oldest_record_data": {
             "did": guid_pair_mock["oldest"],
             "size": 314,
@@ -139,14 +118,12 @@ def latest_setup(client, guid_pair_mock, alias_mock):
             "latest": {"guid": guid_pair_mock["latest"], "data": dict(a=3, b=4)},
         },
     }
-    #  for mds_object in mds_objects.values():
-    #  client.post("/metadata/" + mds_object["key"], json=mds_object["data"]).raise_for_status()
+
     for mds_object in setup["mds_objects"].values():
         client.post(
             "/metadata/" + mds_object["guid"], json=mds_object["data"]
         ).raise_for_status()
 
-    #  yield mds_objects
     yield setup
 
     for mds_object in setup["mds_objects"].values():
