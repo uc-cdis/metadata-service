@@ -89,12 +89,19 @@ def download_endpoints(guid_mock):
     ]
 )
 def guid_pair_mock(request):
-    """"""
+    """
+    Yields oldest/latest pair of guids that are intended to be used such that
+    they have the same baseid in indexd.
+    """
     yield request.param
 
 
 @pytest.fixture()
 def latest_setup(client, guid_pair_mock):
+    """
+    Yields both indexd latest endpoints and associated records, and mds latest
+    endpoints and associated persisted objects.
+    """
     non_mds_guid = "3507f4e5-e6f7-4ffa-b9fa-c82d0c16de91"
     setup = {
         "mds_latest_endpoint_with_oldest_guid": f"/objects/{guid_pair_mock['oldest']}/latest",

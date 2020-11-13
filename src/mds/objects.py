@@ -287,7 +287,22 @@ async def get_object_signed_download_url(
 
 @mod.get("/objects/{guid:path}/latest")
 async def get_object_latest(guid: str, request: Request) -> JSONResponse:
-    """"""
+    """
+    Attempt to fetch the latest version of the provided guid/key from indexd.
+    If the provided guid/key is found in indexd, return the indexd record and
+    metadata object associated with the latest guid fetched from indexd. If the
+    provided guid/key is not found in indexd, return the metadata object
+    associated with the provided guid/key.
+
+    Args:
+        guid (str): indexd GUID or MDS key. alias is NOT supported because the
+            corresponding endpoint in indexd does not accept alias
+        request (Request): starlette request (which contains reference to FastAPI app)
+
+    Returns:
+        200: { "record": { indexd record }, "metadata": { MDS metadata } }
+        404: if the key is not in indexd and not in MDS
+    """
     mds_key = guid
     indexd_record = {}
 
@@ -370,8 +385,15 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
 
 
 async def _get_metadata(mds_key: str) -> dict:
-    """"""
-    # query the metadata database
+    """
+    Query the metadata database for mds_key.
+
+    Args:
+        mds_key (str): key used to query the metadata database
+
+    Returns:
+        dict: the object queried from the metadata database
+    """
     mds_metadata = {}
     try:
         logger.debug(f"Querying the metadata database directly for key '{mds_key}'")
