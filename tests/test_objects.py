@@ -882,3 +882,140 @@ def test_get_object_signed_download_url_for_data_access_500(
     resp = client.get(download_endpoints["mds"])
     assert data_access_signed_download_get_request_mock.called
     assert resp.status_code == 500, resp.text
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_returns_different_guid_and_different_guid_in_mds(
+    client, latest_setup
+):
+    """
+    Test that mds returns a 200 containing an indexd record and mds object
+    associated with the guid returned from indexd's latest endpoint (in this
+    case, that latest guid returned from indexd is different to the oldest guid
+    initially provided to the mds latest endpoint).
+    """
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_latest_record_data"],
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_setup["indexd_latest_record_data"],
+        "metadata": latest_setup["mds_objects"]["latest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_returns_same_guid_and_same_guid_in_mds(
+    client, latest_setup
+):
+    """
+    Test that mds returns a 200 containing an indexd record and mds object
+    associated with the guid initially provided to the mds latest endpoint (in
+    this case, indexd's latest endpoint returns a guid that is the same as the
+    one intially provided to the mds latest endpoint).
+    """
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_oldest_record_data"],
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_setup["indexd_oldest_record_data"],
+        "metadata": latest_setup["mds_objects"]["oldest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_returns_guid_not_in_mds(client, latest_setup):
+    """
+    Test that mds returns a 200 containing an indexd record associated with the
+    guid returned from the indexd latest endpoint and an empty metadata object
+    (in this case, the indexd latest endpoint returns a guid that is not a key
+    in the mds database).
+    """
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=200,
+        content=latest_setup["indexd_non_mds_record_data"],
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": latest_setup["indexd_non_mds_record_data"],
+        "metadata": {},
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_returns_404_but_guid_in_mds(
+    client, latest_setup
+):
+    """
+    Test that mds returns a 200 containing an empty indexd record and a
+    metadata object associated with the guid/key intially provided to the mds
+    latest endpoint (in this case, indexd's latest endpoint returns a 404).
+    """
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=404,
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": {},
+        "metadata": latest_setup["mds_objects"]["oldest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_returns_500_but_guid_in_mds(
+    client, latest_setup
+):
+    """
+    Test that mds returns a 200 containing an empty indexd record and a
+    metadata object associated with the guid/key intially provided to the mds
+    latest endpoint (in this case, indexd's latest endpoint returns a 500).
+    """
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_oldest_guid"],
+        status_code=500,
+    )
+
+    resp = client.get(latest_setup["mds_latest_endpoint_with_oldest_guid"])
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {
+        "record": {},
+        "metadata": latest_setup["mds_objects"]["oldest"]["data"],
+    }
+
+
+@respx.mock
+def test_get_object_latest_when_indexd_returns_404_and_guid_not_in_mds(
+    client, latest_setup
+):
+    """
+    Test that mds returns a 404 when indexd's latest endpoint returns a 404 and
+    the guid/key intially provided to the mds latest endpoint is not in the mds
+    database.
+    """
+    get_indexd_latest_request_mock = respx.get(
+        latest_setup["indexd_latest_endpoint_with_non_mds_guid"],
+        status_code=404,
+    )
+    resp = client.get(latest_setup["mds_latest_endpoint_with_non_mds_guid"])
+    assert get_indexd_latest_request_mock.called
+    assert resp.status_code == 404, resp.text

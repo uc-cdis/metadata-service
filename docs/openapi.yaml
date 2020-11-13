@@ -543,6 +543,41 @@ paths:
       summary: Get Object Signed Download Url
       tags:
       - Object
+  /objects/{guid}/latest:
+    get:
+      description: "Attempt to fetch the latest version of the provided guid/key from\
+        \ indexd.\nIf the provided guid/key is found in indexd, return the indexd\
+        \ record and\nmetadata object associated with the latest guid fetched from\
+        \ indexd. If the\nprovided guid/key is not found in indexd, return the metadata\
+        \ object\nassociated with the provided guid/key.\n\nArgs:\n    guid (str):\
+        \ indexd GUID or MDS key. alias is NOT supported because the\n        corresponding\
+        \ endpoint in indexd does not accept alias\n    request (Request): starlette\
+        \ request (which contains reference to FastAPI app)\n\nReturns:\n    200:\
+        \ { \"record\": { indexd record }, \"metadata\": { MDS metadata } }\n    404:\
+        \ if the key is not in indexd and not in MDS"
+      operationId: get_object_latest_objects__guid__latest_get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Object Latest
+      tags:
+      - Object
   /version:
     get:
       operationId: get_version_version_get

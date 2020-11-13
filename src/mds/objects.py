@@ -285,6 +285,58 @@ async def get_object_signed_download_url(
     return JSONResponse(response, HTTP_200_OK)
 
 
+@mod.get("/objects/{guid:path}/latest")
+async def get_object_latest(guid: str, request: Request) -> JSONResponse:
+    """
+    Attempt to fetch the latest version of the provided guid/key from indexd.
+    If the provided guid/key is found in indexd, return the indexd record and
+    metadata object associated with the latest guid fetched from indexd. If the
+    provided guid/key is not found in indexd, return the metadata object
+    associated with the provided guid/key.
+
+    Args:
+        guid (str): indexd GUID or MDS key. alias is NOT supported because the
+            corresponding endpoint in indexd does not accept alias
+        request (Request): starlette request (which contains reference to FastAPI app)
+
+    Returns:
+        200: { "record": { indexd record }, "metadata": { MDS metadata } }
+        404: if the key is not in indexd and not in MDS
+    """
+    mds_key = guid
+    indexd_record = {}
+
+    try:
+        endpoint = (
+            config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid}/latest"
+        )
+        response = await request.app.async_client.get(endpoint)
+        response.raise_for_status()
+
+        # if the object is found in indexd, use the indexd did as MDS key
+        indexd_record = response.json()
+        mds_key = indexd_record["did"]
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response and err.response.status_code == 404:
+            logger.debug(f"Could not find latest record for GUID '{guid}' in indexd")
+        else:
+            msg = f"Unable to query indexd for latest record for GUID '{guid}'"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+
+    mds_metadata = await _get_metadata(mds_key)
+
+    if not indexd_record and not mds_metadata:
+        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
+
+    response = {
+        "record": indexd_record,
+        "metadata": mds_metadata,
+    }
+
+    return JSONResponse(response, HTTP_200_OK)
+
+
 @mod.get("/objects/{guid:path}")
 async def get_object(guid: str, request: Request) -> JSONResponse:
     """
@@ -314,24 +366,12 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
     except httpx.HTTPError as err:
         logger.debug(err)
         if err.response and err.response.status_code == 404:
-            logger.debug(
-                f"Could not find GUID or alias '{guid}' in indexd, querying the metadata database directly"
-            )
+            logger.debug(f"Could not find GUID or alias '{guid}' in indexd")
         else:
-            msg = f"Unable to query indexd for GUID or alias '{guid}', querying the metadata database directly"
+            msg = f"Unable to query indexd for GUID or alias '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
-    # query the metadata database
-    mds_metadata = {}
-    try:
-        mds_metadata = await get_metadata(mds_key)
-    except HTTPException as err:
-        logger.debug(err)
-        if err.status_code == 404:
-            logger.debug(f"Could not find key '{mds_key}', returning empty metadata")
-        else:
-            msg = f"Unable to query key '{mds_key}', returning empty metadata"
-            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+    mds_metadata = await _get_metadata(mds_key)
 
     if not indexd_record and not mds_metadata:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
@@ -342,6 +382,30 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
     }
 
     return JSONResponse(response, HTTP_200_OK)
+
+
+async def _get_metadata(mds_key: str) -> dict:
+    """
+    Query the metadata database for mds_key.
+
+    Args:
+        mds_key (str): key used to query the metadata database
+
+    Returns:
+        dict: the object queried from the metadata database
+    """
+    mds_metadata = {}
+    try:
+        logger.debug(f"Querying the metadata database directly for key '{mds_key}'")
+        mds_metadata = await get_metadata(mds_key)
+    except HTTPException as err:
+        logger.debug(err)
+        if err.status_code == 404:
+            logger.debug(f"Could not find key '{mds_key}', returning empty metadata")
+        else:
+            msg = f"Unable to query key '{mds_key}', returning empty metadata"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+    return mds_metadata
 
 
 async def _create_aliases_for_record(
