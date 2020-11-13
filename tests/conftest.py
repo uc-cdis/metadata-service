@@ -130,27 +130,13 @@ def latest_setup(client, guid_pair_mock):
         client.delete("/metadata/" + mds_object["guid"]).raise_for_status()
 
 
-@pytest.fixture(
-    scope="function",
-    params=[
-        # guid w/ prefix
-        {
-            "mock_guid": "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        },
-        # guid w/ no prefix
-        {
-            "mock_guid": "87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        },
-    ],
-)
-def valid_upload_file_patcher(client, request):
+@pytest.fixture(scope="function")
+def valid_upload_file_patcher(client, guid_mock, signed_url_mock):
     patches = []
 
     data_upload_mocked_reponse = {
-        "guid": request.param.get("mock_guid"),
-        "url": request.param.get("mock_signed_url"),
+        "guid": guid_mock,
+        "url": signed_url_mock,
     }
     data_upload_mock = respx.post(
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload",
@@ -159,16 +145,14 @@ def valid_upload_file_patcher(client, request):
         alias="data_upload",
     )
     data_upload_guid_mock = respx.get(
-        config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/")
-        + f"/data/upload/{request.param.get('mock_guid')}",
+        config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload/{guid_mock}",
         status_code=200,
         content=data_upload_mocked_reponse,
         alias="data_upload_guid",
     )
 
     create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-        + f"/index/{request.param.get('mock_guid')}/aliases",
+        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid_mock}/aliases",
         status_code=200,
         alias="create_aliases",
     )
@@ -193,28 +177,20 @@ def valid_upload_file_patcher(client, request):
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
     }
 
-    client.delete(f"/metadata/{request.param.get('mock_guid')}")
+    client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
 
 
-@pytest.fixture(
-    scope="function",
-    params=[
-        {
-            "mock_guid": "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        }
-    ],
-)
-def no_authz_upload_file_patcher(client, request):
+@pytest.fixture(scope="function")
+def no_authz_upload_file_patcher(client, guid_mock, signed_url_mock):
     """
     Same as valid_upload_file_patcher except /data/upload requests are mocked
     as returning a 403 for invalid authz
     """
     patches = []
 
-    data_upload_mocked_reponse = {"guid": request.param.get("mock_guid")}
+    data_upload_mocked_reponse = {"guid": guid_mock}
     data_upload_mock = respx.post(
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload",
         status_code=403,
@@ -222,16 +198,14 @@ def no_authz_upload_file_patcher(client, request):
         alias="data_upload",
     )
     data_upload_guid_mock = respx.get(
-        config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/")
-        + f"/data/upload/{request.param.get('mock_guid')}",
+        config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload/{guid_mock}",
         status_code=403,
         content=data_upload_mocked_reponse,
         alias="data_upload_guid",
     )
 
     create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-        + f"/index/{request.param.get('mock_guid')}/aliases",
+        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid_mock}/aliases",
         status_code=200,
         alias="create_aliases",
     )
@@ -256,21 +230,13 @@ def no_authz_upload_file_patcher(client, request):
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
     }
 
-    client.delete(f"/metadata/{request.param.get('mock_guid')}")
+    client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
 
 
-@pytest.fixture(
-    scope="function",
-    params=[
-        {
-            "mock_guid": "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        }
-    ],
-)
-def no_authz_create_aliases_patcher(client, request):
+@pytest.fixture(scope="function")
+def no_authz_create_aliases_patcher(client, guid_mock, signed_url_mock):
     """
     Same as valid_upload_file_patcher except /aliases requests are mocked
     as returning a 403 for invalid authz
@@ -278,8 +244,8 @@ def no_authz_create_aliases_patcher(client, request):
     patches = []
 
     data_upload_mocked_reponse = {
-        "guid": request.param.get("mock_guid"),
-        "url": request.param.get("mock_signed_url"),
+        "guid": guid_mock,
+        "url": signed_url_mock,
     }
     data_upload_mock = respx.post(
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload",
@@ -289,8 +255,7 @@ def no_authz_create_aliases_patcher(client, request):
     )
 
     create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-        + f"/index/{request.param.get('mock_guid')}/aliases",
+        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid_mock}/aliases",
         status_code=403,
         alias="create_aliases",
     )
@@ -314,22 +279,13 @@ def no_authz_create_aliases_patcher(client, request):
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
     }
 
-    client.delete(f"/metadata/{request.param.get('mock_guid')}")
+    client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
 
 
-@pytest.fixture(
-    scope="function",
-    params=[
-        # guid w/ prefix
-        {
-            "mock_guid": "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        }
-    ],
-)
-def upload_failure_file_patcher(client, request):
+@pytest.fixture(scope="function")
+def upload_failure_file_patcher(client, guid_mock):
     """
     Same as valid_upload_file_patcher except /data/upload requests are mocked
     as returning a 500
@@ -345,8 +301,7 @@ def upload_failure_file_patcher(client, request):
     )
 
     create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-        + f"/index/{request.param.get('mock_guid')}/aliases",
+        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid_mock}/aliases",
         status_code=200,
         alias="create_aliases",
     )
@@ -370,22 +325,13 @@ def upload_failure_file_patcher(client, request):
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
     }
 
-    client.delete(f"/metadata/{request.param.get('mock_guid')}")
+    client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
 
 
-@pytest.fixture(
-    scope="function",
-    params=[
-        # guid w/ prefix
-        {
-            "mock_guid": "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        }
-    ],
-)
-def create_aliases_failure_patcher(client, request):
+@pytest.fixture(scope="function")
+def create_aliases_failure_patcher(client, guid_mock, signed_url_mock):
     """
     Same as valid_upload_file_patcher except /aliases requests are mocked
     as returning a 500
@@ -393,8 +339,8 @@ def create_aliases_failure_patcher(client, request):
     patches = []
 
     data_upload_mocked_reponse = {
-        "guid": request.param.get("mock_guid"),
-        "url": request.param.get("mock_signed_url"),
+        "guid": guid_mock,
+        "url": signed_url_mock,
     }
     data_upload_mock = respx.post(
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload",
@@ -404,8 +350,7 @@ def create_aliases_failure_patcher(client, request):
     )
 
     create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-        + f"/index/{request.param.get('mock_guid')}/aliases",
+        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid_mock}/aliases",
         status_code=500,
         alias="create_aliases",
     )
@@ -429,22 +374,13 @@ def create_aliases_failure_patcher(client, request):
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
     }
 
-    client.delete(f"/metadata/{request.param.get('mock_guid')}")
+    client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
 
 
-@pytest.fixture(
-    scope="function",
-    params=[
-        # guid w/ prefix
-        {
-            "mock_guid": "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
-            "mock_signed_url": "https://mock-signed-url",
-        }
-    ],
-)
-def create_aliases_duplicate_patcher(client, request):
+@pytest.fixture(scope="function")
+def create_aliases_duplicate_patcher(client, guid_mock, signed_url_mock):
     """
     Same as valid_upload_file_patcher except /aliases requests are mocked
     as returning a 500
@@ -452,8 +388,8 @@ def create_aliases_duplicate_patcher(client, request):
     patches = []
 
     data_upload_mocked_reponse = {
-        "guid": request.param.get("mock_guid"),
-        "url": request.param.get("mock_signed_url"),
+        "guid": guid_mock,
+        "url": signed_url_mock,
     }
     data_upload_mock = respx.post(
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload",
@@ -463,8 +399,7 @@ def create_aliases_duplicate_patcher(client, request):
     )
 
     create_aliases_mock = respx.post(
-        config.INDEXING_SERVICE_ENDPOINT.rstrip("/")
-        + f"/index/{request.param.get('mock_guid')}/aliases",
+        config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index/{guid_mock}/aliases",
         status_code=409,
         alias="create_aliases",
     )
@@ -488,6 +423,6 @@ def create_aliases_duplicate_patcher(client, request):
         "data_upload_mocked_reponse": data_upload_mocked_reponse,
     }
 
-    client.delete(f"/metadata/{request.param.get('mock_guid')}")
+    client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
