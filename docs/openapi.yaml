@@ -543,6 +543,31 @@ paths:
       summary: Get Object Signed Download Url
       tags:
       - Object
+  /objects/{guid}/latest:
+    get:
+      operationId: get_object_latest_objects__guid__latest_get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Object Latest
+      tags:
+      - Object
   /version:
     get:
       operationId: get_version_version_get
