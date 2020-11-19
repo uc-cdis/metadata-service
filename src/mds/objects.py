@@ -3,7 +3,7 @@ from enum import Enum
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from fastapi import HTTPException, APIRouter, Security
+from fastapi import HTTPException, APIRouter, Security, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 from pydantic import BaseModel
@@ -22,7 +22,7 @@ from starlette.status import (
 
 from . import config, logger
 from .models import Metadata
-from .query import get_metadata
+from .query import search_metadata, get_metadata
 
 mod = APIRouter()
 
@@ -224,6 +224,64 @@ async def create_object_for_id(
     }
 
     return JSONResponse(response, HTTP_201_CREATED)
+
+
+@mod.get("/objects")
+async def get_objects(
+    request: Request,
+    data: bool = Query(
+        False,
+        description="Switch to returning a list of GUIDs (false), "
+        "or GUIDs mapping to their metadata (true).",
+    ),
+    limit: int = Query(
+        10, description="Maximum number of records returned. (max: 2000)"
+    ),
+    offset: int = Query(0, description="Return results at this given offset."),
+    _request_paths: str = Query(
+        "*", description="Return results at this given offset."
+    ),
+) -> JSONResponse:
+    """
+    XXX comments
+    """
+    #  XXX just pass kwargs?
+    metadata_objects = await search_metadata(
+        request, data=data, limit=limit, offset=offset
+    )
+
+    try:
+        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index"
+        response = await request.app.async_client.get(
+            endpoint, params=request.query_params
+        )
+        response.raise_for_status()
+
+        records = response.json()
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response and err.response.status_code == 404:
+            #  XXX better error message
+            msg = f"Got a 404 from indexd's /index endpoint :("
+            logger.debug(msg)
+            raise HTTPException(
+                HTTP_404_NOT_FOUND,
+                msg,
+            )
+        else:
+            #  XXX better message
+            msg = f"Unable to get successful response from indexd's /index endpoint"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            raise
+    records = {r["did"]: r for r in records["records"]}
+
+    #  import pdb; pdb.set_trace()
+    response = {
+        guid: {"record": records[guid], "metadata": o}
+        for guid, o in metadata_objects.items()
+        if guid in records
+    }
+    return response
 
 
 @mod.get("/objects/{guid:path}/download")
