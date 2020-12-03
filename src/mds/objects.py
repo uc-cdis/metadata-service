@@ -7,6 +7,7 @@ from fastapi import HTTPException, APIRouter, Security, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 from pydantic import BaseModel
+from starlette.datastructures import QueryParams
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -22,7 +23,7 @@ from starlette.status import (
 
 from . import config, logger
 from .models import Metadata
-from .query import search_metadata, get_metadata
+from .query import search_metadata_helper, get_metadata
 
 mod = APIRouter()
 
@@ -229,6 +230,7 @@ async def create_object_for_id(
 @mod.get("/objects")
 async def get_objects(
     request: Request,
+    #  XXX how to handle this being False
     data: bool = Query(
         False,
         description="Switch to returning a list of GUIDs (false), "
@@ -245,19 +247,36 @@ async def get_objects(
     """
     XXX comments
     """
+
+    #  import pdb; pdb.set_trace()
+    mds_query_params = {
+        k[len("metadata.") :]: v
+        for k, v in request.query_params.items()
+        if k.startswith("metadata.")
+    }
+    #  mds_query_params = {}
+    #  for k, v in request.query_params.multi_items():
+    #  queries.setdefault(key, []).append(value)
+
     #  XXX just pass kwargs?
-    metadata_objects = await search_metadata(
-        request, data=data, limit=limit, offset=offset
+    metadata_objects = await search_metadata_helper(
+        mds_query_params, data=data, limit=limit, offset=offset
     )
 
     try:
         endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index"
+        indexd_query_params = {
+            k[len("record.") :]: v
+            for k, v in request.query_params.items()
+            if k.startswith("record.")
+        }
+        indexd_query_params["limit"] = limit
         response = await request.app.async_client.get(
-            endpoint, params=request.query_params
+            endpoint, params=indexd_query_params
         )
         response.raise_for_status()
 
-        records = response.json()
+        records = {r["did"]: r for r in response.json()["records"]}
     except httpx.HTTPError as err:
         logger.debug(err)
         if err.response and err.response.status_code == 404:
@@ -272,9 +291,10 @@ async def get_objects(
             #  XXX better message
             msg = f"Unable to get successful response from indexd's /index endpoint"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            #  XXX would 400-range error be more appropriate?
             raise
-    records = {r["did"]: r for r in records["records"]}
 
+    #  XXX need to handle data=False
     #  import pdb; pdb.set_trace()
     response = {
         guid: {"record": records[guid], "metadata": o}

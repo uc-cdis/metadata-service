@@ -20,6 +20,28 @@ async def search_metadata(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
 ):
+    """
+    XXX comments
+    """
+    return search_metadata_helper(
+        request.query_params, data=data, limit=limit, offset=offset
+    )
+
+
+#  XXX rename/update docstring
+async def search_metadata_helper(
+    #  request: Request,
+    query_params: dict,
+    data: bool = Query(
+        False,
+        description="Switch to returning a list of GUIDs (false), "
+        "or GUIDs mapping to their metadata (true).",
+    ),
+    limit: int = Query(
+        10, description="Maximum number of records returned. (max: 2000)"
+    ),
+    offset: int = Query(0, description="Return results at this given offset."),
+):
     """Search the metadata.
 
     Without filters, this will return all data. Add filters as query strings like this:
@@ -60,12 +82,14 @@ async def search_metadata(
     """
     limit = min(limit, 2000)
     queries = {}
-    for key, value in request.query_params.multi_items():
+    #  for key, value in request.query_params.multi_items():
+    for key, value in query_params.items():
         if key not in {"data", "limit", "offset"}:
             queries.setdefault(key, []).append(value)
 
     def add_filter(query):
         for path, values in queries.items():
+            #  import pdb; pdb.set_trace()
             query = query.where(
                 db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
             )
