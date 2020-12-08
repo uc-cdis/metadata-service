@@ -6,7 +6,7 @@ from asyncpg import UniqueViolationError
 from fastapi import HTTPException, APIRouter, Security, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 from starlette.datastructures import QueryParams
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -240,27 +240,31 @@ async def get_objects(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
-    _request_paths: str = Query(
-        "*", description="Return results at this given offset."
-    ),
+    #  XXX description
+    filter: Json = Query(Json(), description="The filters!"),
 ) -> JSONResponse:
     """
     XXX comments
     """
 
     #  import pdb; pdb.set_trace()
-    mds_query_params = {
-        k[len("metadata.") :]: v
-        for k, v in request.query_params.items()
-        if k.startswith("metadata.")
-    }
-    #  mds_query_params = {}
+    #  mds_query_params = {
+    #  k[len("metadata.") :]: v
+    #  for k, v in request.query_params.items()
+    #  if k.startswith("metadata.")
+    #  }
+    #  queries = {}
     #  for k, v in request.query_params.multi_items():
     #  queries.setdefault(key, []).append(value)
 
     #  XXX just pass kwargs?
     metadata_objects = await search_metadata_helper(
-        mds_query_params, data=data, limit=limit, offset=offset
+        #  mds_query_params, data=data, limit=limit, offset=offset
+        data=data,
+        limit=limit,
+        offset=offset,
+        filter=filter
+        #  data=data, limit=limit, offset=offset, filters=filter
     )
 
     try:
@@ -291,16 +295,19 @@ async def get_objects(
             #  XXX better message
             msg = f"Unable to get successful response from indexd's /index endpoint"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
-            #  XXX would 400-range error be more appropriate?
+            #  XXX would 400-range error be more appropriate? or maybe only return mds objects?
             raise
 
     #  XXX need to handle data=False
     #  import pdb; pdb.set_trace()
-    response = {
-        guid: {"record": records[guid], "metadata": o}
-        for guid, o in metadata_objects.items()
-        if guid in records
-    }
+    if type(metadata_objects) is dict:
+        response = {
+            guid: {"record": records[guid], "metadata": o}
+            for guid, o in metadata_objects.items()
+            if guid in records
+        }
+    else:
+        response = metadata_objects
     return response
 
 

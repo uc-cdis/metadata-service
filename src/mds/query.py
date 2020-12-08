@@ -1,4 +1,8 @@
+import operator
+
 from fastapi import HTTPException, Query, APIRouter
+from pydantic import Json
+from sqlalchemy.sql import column
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
 
@@ -8,6 +12,7 @@ mod = APIRouter()
 
 
 @mod.get("/metadata")
+#  XXX fix tests
 async def search_metadata(
     request: Request,
     data: bool = Query(
@@ -23,15 +28,17 @@ async def search_metadata(
     """
     XXX comments
     """
-    return search_metadata_helper(
+    #  XXX return await
+    response = await search_metadata_helper(
         request.query_params, data=data, limit=limit, offset=offset
     )
+    return response
 
 
 #  XXX rename/update docstring
 async def search_metadata_helper(
     #  request: Request,
-    query_params: dict,
+    #  query_params: dict,
     data: bool = Query(
         False,
         description="Switch to returning a list of GUIDs (false), "
@@ -41,6 +48,8 @@ async def search_metadata_helper(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    #  XXX description
+    filter: Json = Query(Json(), description="The filters!"),
 ):
     """Search the metadata.
 
@@ -81,18 +90,43 @@ async def search_metadata_helper(
 
     """
     limit = min(limit, 2000)
-    queries = {}
+    #  queries = {}
     #  for key, value in request.query_params.multi_items():
-    for key, value in query_params.items():
-        if key not in {"data", "limit", "offset"}:
-            queries.setdefault(key, []).append(value)
+    #  for key, value in query_params.items():
+    #  if key not in {"data", "limit", "offset"}:
+    #  queries.setdefault(key, []).append(value)
+    filter_operators = {"eq": operator.eq, "in": operator.contains}
 
+    #  XXX should maybe default query
     def add_filter(query):
-        for path, values in queries.items():
-            #  import pdb; pdb.set_trace()
-            query = query.where(
-                db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-            )
+        #  for path, values in queries.items():
+        #  query = query.where(
+        #  db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
+        #  )
+        for _filter in filter:
+            if _filter["op"] == "eq":
+                query = query.where(
+                    Metadata.data[list(_filter["name"].split("."))].astext
+                    == _filter["val"]
+                )
+            elif _filter["op"] == "has":
+                query = query.where(
+                    Metadata.data[list(_filter["name"].split("."))].has_key(
+                        _filter["val"]
+                    )
+                    #  XXX from sqlalchemy for line below: NotImplementedError: Operator 'contains' is not supported on this expression
+                    #  _filter['val'] in Metadata.data[list(_filter['name'].split("."))]
+                )
+            elif _filter["op"] == "any":
+                array_func = db.func.jsonb_array_elements_text(
+                    Metadata.data[list(_filter["name"].split("."))]
+                ).alias()
+                query = (
+                    db.select(Metadata)
+                    .select_from(Metadata)
+                    .select_from(array_func)
+                    .where(column(array_func.name).like(_filter["val"]))
+                )
         return query.offset(offset).limit(limit)
 
     if data:
