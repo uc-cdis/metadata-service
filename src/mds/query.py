@@ -2,7 +2,9 @@ import operator
 
 from fastapi import HTTPException, Query, APIRouter
 from pydantic import Json
-from sqlalchemy.sql import column
+import sqlalchemy
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql.operators import ColumnOperators
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
 
@@ -95,7 +97,18 @@ async def search_metadata_helper(
     #  for key, value in query_params.items():
     #  if key not in {"data", "limit", "offset"}:
     #  queries.setdefault(key, []).append(value)
-    filter_operators = {"eq": operator.eq, "in": operator.contains}
+    filter_operators = {
+        "any": (None, None),
+        "eq": ColumnOperators.__eq__,
+        "ne": ColumnOperators.__ne__,
+        #  "gte": ColumnOperators.__gte__,
+        #  XXX check how mongoDB filters for null (does it use it, if an object doesn't have a given key, is that considered null, etc.)
+        "is": ColumnOperators.is_,
+        "is_not": ColumnOperators.isnot,
+        "like": (ColumnOperators.like, str),
+        #  "like": (ColumnOperators.like, str,
+    }
+    #  import pdb; pdb.set_trace()
 
     #  XXX should maybe default query
     def add_filter(query):
@@ -104,29 +117,42 @@ async def search_metadata_helper(
         #  db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
         #  )
         for _filter in filter:
-            if _filter["op"] == "eq":
-                query = query.where(
-                    Metadata.data[list(_filter["name"].split("."))].astext
-                    == _filter["val"]
-                )
-            elif _filter["op"] == "has":
-                query = query.where(
-                    Metadata.data[list(_filter["name"].split("."))].has_key(
-                        _filter["val"]
+            json_object = Metadata.data[list(_filter["name"].split("."))]
+            operator = filter_operators[_filter["op"]]
+            other = sqlalchemy.cast(_filter["val"], JSONB)
+            if type(operator) is tuple:
+                if operator[0] is None:
+                    #  XXX not necessarily going to always be text
+                    #  json_object = db.func.jsonb_array_elements_text(Metadata.data[list(_filter["name"].split("."))]).alias()
+                    #  XXX going to have to do this recursively
+                    #  operator = filter_operators[_filter["val"]["op"]]
+                    #  operator = filter_operators[_filter["val"]["op"]][0]
+                    #  other = _filter["val"]["val"]
+
+                    #  XXX handle duplicates
+                    #  XXX any and has have to be used with other scalar operation
+                    #  (i.e. (_resource_paths,:any,(,:like,"/programs/*")). whether
+                    #  there is a key for the scalar comparator might determine
+                    #  whether to use jsonb_array_elements
+                    array_func = db.func.jsonb_array_elements_text(
+                        Metadata.data[list(_filter["name"].split("."))]
+                    ).alias()
+                    query = (
+                        db.select(Metadata)
+                        .select_from(Metadata)
+                        .select_from(array_func)
+                        .where(sqlalchemy.column(array_func.name).like(_filter["val"]))
                     )
-                    #  XXX from sqlalchemy for line below: NotImplementedError: Operator 'contains' is not supported on this expression
-                    #  _filter['val'] in Metadata.data[list(_filter['name'].split("."))]
-                )
-            elif _filter["op"] == "any":
-                array_func = db.func.jsonb_array_elements_text(
-                    Metadata.data[list(_filter["name"].split("."))]
-                ).alias()
-                query = (
-                    db.select(Metadata)
-                    .select_from(Metadata)
-                    .select_from(array_func)
-                    .where(column(array_func.name).like(_filter["val"]))
-                )
+                    return query.offset(offset).limit(limit)
+
+                else:
+                    if len(operator) > 1 and operator[1] is str:
+                        json_object = json_object.astext
+                        operator = operator[0]
+                        other = _filter["val"]
+
+            query = query.where(operator(json_object, other))
+
         return query.offset(offset).limit(limit)
 
     if data:
