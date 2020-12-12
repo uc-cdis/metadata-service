@@ -3,7 +3,7 @@ import operator
 from fastapi import HTTPException, Query, APIRouter
 from pydantic import Json
 import sqlalchemy
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.sql.operators import ColumnOperators
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
@@ -97,18 +97,31 @@ async def search_metadata_helper(
     #  for key, value in query_params.items():
     #  if key not in {"data", "limit", "offset"}:
     #  queries.setdefault(key, []).append(value)
+    #  XXX using __op__?
     filter_operators = {
-        "any": (None, None),
+        #  "all": (None, None),
+        #  "any": (None, None),
+        "all": None,
+        "any": None,
         "eq": ColumnOperators.__eq__,
         "ne": ColumnOperators.__ne__,
-        #  "gte": ColumnOperators.__gte__,
+        "gt": ColumnOperators.__gt__,
+        "gte": ColumnOperators.__ge__,
+        "lt": ColumnOperators.__lt__,
+        "lte": ColumnOperators.__le__,
         #  XXX check how mongoDB filters for null (does it use it, if an object doesn't have a given key, is that considered null, etc.)
+        #  XXX in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (OR (score, :eq, 1), (score, :eq, 2)))
+        #  "in": ColumnOperators.in_,
+        #  XXX what does SQL IS mean?
         "is": ColumnOperators.is_,
         "is_not": ColumnOperators.isnot,
-        "like": (ColumnOperators.like, str),
-        #  "like": (ColumnOperators.like, str,
+        #  "like": (ColumnOperators.like, str),
+        "like": ColumnOperators.like,
+        #  "like": (ColumnOperators.like, str),
     }
-    #  import pdb; pdb.set_trace()
+    textual_operators = ["like"]
+    other_not_to_be_cast = ["like", "in"]
+    other_type = {"in": ARRAY}
 
     #  XXX should maybe default query
     def add_filter(query):
@@ -116,40 +129,83 @@ async def search_metadata_helper(
         #  query = query.where(
         #  db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
         #  )
+
+        #  XXX make this an optional url query param
         for _filter in filter:
             json_object = Metadata.data[list(_filter["name"].split("."))]
             operator = filter_operators[_filter["op"]]
             other = sqlalchemy.cast(_filter["val"], JSONB)
-            if type(operator) is tuple:
-                if operator[0] is None:
-                    #  XXX not necessarily going to always be text
-                    #  json_object = db.func.jsonb_array_elements_text(Metadata.data[list(_filter["name"].split("."))]).alias()
-                    #  XXX going to have to do this recursively
-                    #  operator = filter_operators[_filter["val"]["op"]]
-                    #  operator = filter_operators[_filter["val"]["op"]][0]
-                    #  other = _filter["val"]["val"]
+            #  XXX this could be used for has_key (e.g. for does have bears key: (teams, :any, (,:eq, "bears")))
+            if _filter["op"] == "any":
 
-                    #  XXX handle duplicates
-                    #  XXX any and has have to be used with other scalar operation
-                    #  (i.e. (_resource_paths,:any,(,:like,"/programs/*")). whether
-                    #  there is a key for the scalar comparator might determine
-                    #  whether to use jsonb_array_elements
-                    array_func = db.func.jsonb_array_elements_text(
-                        Metadata.data[list(_filter["name"].split("."))]
-                    ).alias()
-                    query = (
-                        db.select(Metadata)
-                        .select_from(Metadata)
-                        .select_from(array_func)
-                        .where(sqlalchemy.column(array_func.name).like(_filter["val"]))
-                    )
-                    return query.offset(offset).limit(limit)
+                #  XXX handle duplicates
+                #  XXX any and has have to be used with other scalar operation
+                #  (i.e. (_resource_paths,:any,(,:like,"/programs/*")). whether
+                #  there is a key for the scalar comparator might determine
+                #  whether to use jsonb_array_elements
 
-                else:
-                    if len(operator) > 1 and operator[1] is str:
-                        json_object = json_object.astext
-                        operator = operator[0]
-                        other = _filter["val"]
+                #  e = sqlalchemy.exists(query.select('*').select_from(f).where(f.like('%')))
+                #  e = sqlalchemy.exists(query.select(f.name).select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
+                #  e = sqlalchemy.exists(query.select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
+                #  e = sqlalchemy.exists(query.select(sqlalchemy.text(f.name)).select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
+                #  e = sqlalchemy.exists(db.all().select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
+                #  e = sqlalchemy.exists(db.select(f.name).select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
+
+                #  works
+                #  e = sqlalchemy.exists(db.select('*').select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
+
+                other = sqlalchemy.cast(_filter["val"]["val"], JSONB)
+                f = db.func.jsonb_array_elements
+                if _filter["val"]["op"] in textual_operators:
+                    f = db.func.jsonb_array_elements_text
+
+                if _filter["val"]["op"] in other_not_to_be_cast:
+                    other = _filter["val"]["val"]
+
+                #  if _filter["val"]["op"] in other_type:
+                #  other = sqlalchemy.cast(_filter["val"]["val"], other_type[_filter["val"]["op"]])
+
+                f = f(Metadata.data[list(_filter["name"].split("."))]).alias()
+                operator = filter_operators[_filter["val"]["op"]]
+
+                e = sqlalchemy.exists(
+                    db.select("*")
+                    .select_from(f)
+                    .where(operator(sqlalchemy.column(f.name), other))
+                )
+
+                query = query.where(e)
+
+                return query.offset(offset).limit(limit)
+
+            elif _filter["op"] == "all":
+                count_f = db.func.jsonb_array_length(json_object)
+                f = db.func.jsonb_array_elements
+
+                if _filter["val"]["op"] in textual_operators:
+                    f = db.func.jsonb_array_elements_text
+                f = f(json_object).alias()
+
+                operator = filter_operators[_filter["val"]["op"]]
+
+                if _filter["val"]["op"] in other_not_to_be_cast:
+                    other = _filter["val"]["val"]
+
+                sq = (
+                    db.select([db.func.count()])
+                    .select_from(f)
+                    .where(operator(sqlalchemy.column(f.name), other))
+                )
+                query = query.where(count_f == sq)
+
+                return query.offset(offset).limit(limit)
+
+            #  elif _filter["op"] == "is":
+
+            if _filter["op"] == "like":
+                json_object = json_object.astext
+                operator = operator[0]
+                other = _filter["val"]
 
             query = query.where(operator(json_object, other))
 
