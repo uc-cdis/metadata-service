@@ -98,9 +98,8 @@ async def search_metadata_helper(
     #  if key not in {"data", "limit", "offset"}:
     #  queries.setdefault(key, []).append(value)
     #  XXX using __op__?
+    #  XXX aggregate functions (e.g size, max, etc.)
     filter_operators = {
-        #  "all": (None, None),
-        #  "any": (None, None),
         "all": None,
         "any": None,
         "eq": ColumnOperators.__eq__,

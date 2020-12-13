@@ -241,6 +241,7 @@ async def get_objects(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
+    #  XXX how to name this variable something other than filter
     filter: Json = Query(Json(), description="The filters!"),
 ) -> JSONResponse:
     """
@@ -267,44 +268,38 @@ async def get_objects(
         #  data=data, limit=limit, offset=offset, filters=filter
     )
 
+    records = {}
     try:
-        endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/index"
-        indexd_query_params = {
-            k[len("record.") :]: v
-            for k, v in request.query_params.items()
-            if k.startswith("record.")
-        }
-        indexd_query_params["limit"] = limit
-        response = await request.app.async_client.get(
-            endpoint, params=indexd_query_params
+        endpoint_path = "/bulk/documents"
+        full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
+        response = await request.app.async_client.post(
+            full_endpoint, json=list(metadata_objects.keys())
         )
         response.raise_for_status()
-
-        records = {r["did"]: r for r in response.json()["records"]}
+        records = {r["did"]: r for r in response.json()}
     except httpx.HTTPError as err:
-        logger.debug(err)
-        if err.response and err.response.status_code == 404:
-            #  XXX better error message
-            msg = f"Got a 404 from indexd's /index endpoint :("
-            logger.debug(msg)
-            raise HTTPException(
-                HTTP_404_NOT_FOUND,
-                msg,
+        logger.debug(err, exc_info=True)
+        #  logger.debug(err)
+        if err.response:
+            #  logger.error(f"indexd `POST /bulk/documents` endpoint returned a {err.response.status_code} HTTP status code")
+            logger.error(
+                "indexd `POST %s` endpoint returned a %s HTTP status code",
+                endpoint_path,
+                err.response.status_code,
             )
         else:
-            #  XXX better message
-            msg = f"Unable to get successful response from indexd's /index endpoint"
-            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
-            #  XXX would 400-range error be more appropriate? or maybe only return mds objects?
-            raise
+            logger.error(
+                "Unable to get a response from indexd `POST %s` endpoint", endpoint_path
+            )
+            #  XXX exception info needed?
+            #  logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
     #  XXX need to handle data=False
     #  import pdb; pdb.set_trace()
     if type(metadata_objects) is dict:
         response = {
-            guid: {"record": records[guid], "metadata": o}
+            guid: {"record": records[guid] if guid in records else {}, "metadata": o}
             for guid, o in metadata_objects.items()
-            if guid in records
         }
     else:
         response = metadata_objects
