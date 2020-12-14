@@ -7,7 +7,6 @@ from fastapi import HTTPException, APIRouter, Security, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 from pydantic import BaseModel, Json
-from starlette.datastructures import QueryParams
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -23,7 +22,7 @@ from starlette.status import (
 
 from . import config, logger
 from .models import Metadata
-from .query import search_metadata_helper, get_metadata
+from .query import get_metadata, search_metadata_helper
 
 mod = APIRouter()
 
@@ -231,6 +230,7 @@ async def create_object_for_id(
 async def get_objects(
     request: Request,
     #  XXX how to handle this being False
+    #  XXX what is Query?
     data: bool = Query(
         False,
         description="Switch to returning a list of GUIDs (false), "
@@ -242,7 +242,8 @@ async def get_objects(
     offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
     #  XXX how to name this variable something other than filter
-    filter: Json = Query(Json(), description="The filters!"),
+    #  filter: Json = Query(Json(), description="The filters!"),
+    filter: str = Query("", description="The filters!"),
 ) -> JSONResponse:
     """
     XXX comments
@@ -279,9 +280,7 @@ async def get_objects(
         records = {r["did"]: r for r in response.json()}
     except httpx.HTTPError as err:
         logger.debug(err, exc_info=True)
-        #  logger.debug(err)
         if err.response:
-            #  logger.error(f"indexd `POST /bulk/documents` endpoint returned a {err.response.status_code} HTTP status code")
             logger.error(
                 "indexd `POST %s` endpoint returned a %s HTTP status code",
                 endpoint_path,
@@ -291,8 +290,6 @@ async def get_objects(
             logger.error(
                 "Unable to get a response from indexd `POST %s` endpoint", endpoint_path
             )
-            #  XXX exception info needed?
-            #  logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
     #  XXX need to handle data=False
     #  import pdb; pdb.set_trace()

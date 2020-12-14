@@ -1,9 +1,9 @@
-import operator
+import json
 
 from fastapi import HTTPException, Query, APIRouter
 from pydantic import Json
-import sqlalchemy
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy import cast, column, exists
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.operators import ColumnOperators
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
@@ -15,6 +15,7 @@ mod = APIRouter()
 
 @mod.get("/metadata")
 #  XXX fix tests
+#  XXX maybe translate old way to use filter argument here?
 async def search_metadata(
     request: Request,
     data: bool = Query(
@@ -26,32 +27,6 @@ async def search_metadata(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
-):
-    """
-    XXX comments
-    """
-    #  XXX return await
-    response = await search_metadata_helper(
-        request.query_params, data=data, limit=limit, offset=offset
-    )
-    return response
-
-
-#  XXX rename/update docstring
-async def search_metadata_helper(
-    #  request: Request,
-    #  query_params: dict,
-    data: bool = Query(
-        False,
-        description="Switch to returning a list of GUIDs (false), "
-        "or GUIDs mapping to their metadata (true).",
-    ),
-    limit: int = Query(
-        10, description="Maximum number of records returned. (max: 2000)"
-    ),
-    offset: int = Query(0, description="Return results at this given offset."),
-    #  XXX description
-    filter: Json = Query(Json(), description="The filters!"),
 ):
     """Search the metadata.
 
@@ -91,51 +66,89 @@ async def search_metadata_helper(
         {"a": {"b": {"c": "333", "d": 4}}}
 
     """
+    return await search_metadata_helper(
+        #  request.query_params, data=data, limit=limit, offset=offset
+        data=data,
+        limit=limit,
+        offset=offset,
+        filter={},
+    )
+
+
+#  XXX rename/update docstring
+async def search_metadata_helper(
+    data: bool = Query(
+        False,
+        description="Switch to returning a list of GUIDs (false), "
+        "or GUIDs mapping to their metadata (true).",
+    ),
+    limit: int = Query(
+        10, description="Maximum number of records returned. (max: 2000)"
+    ),
+    offset: int = Query(0, description="Return results at this given offset."),
+    #  XXX description
+    #  XXX how to name this variable something other than filter
+    #  filter: Json = Query(Json(), description="The filters!"),
+    filter: str = Query("", description="The filters!"),
+):
+    """
+    XXX comments
+    """
     limit = min(limit, 2000)
-    #  queries = {}
-    #  for key, value in request.query_params.multi_items():
-    #  for key, value in query_params.items():
-    #  if key not in {"data", "limit", "offset"}:
-    #  queries.setdefault(key, []).append(value)
     #  XXX using __op__?
     #  XXX aggregate functions (e.g size, max, etc.)
     filter_operators = {
-        "all": None,
-        "any": None,
-        "eq": ColumnOperators.__eq__,
-        "ne": ColumnOperators.__ne__,
-        "gt": ColumnOperators.__gt__,
-        "gte": ColumnOperators.__ge__,
-        "lt": ColumnOperators.__lt__,
-        "lte": ColumnOperators.__le__,
+        ":all": None,
+        ":any": None,
+        ":eq": ColumnOperators.__eq__,
+        ":ne": ColumnOperators.__ne__,
+        ":gt": ColumnOperators.__gt__,
+        ":gte": ColumnOperators.__ge__,
+        ":lt": ColumnOperators.__lt__,
+        ":lte": ColumnOperators.__le__,
         #  XXX check how mongoDB filters for null (does it use it, if an object doesn't have a given key, is that considered null, etc.)
         #  XXX in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (OR (score, :eq, 1), (score, :eq, 2)))
-        #  "in": ColumnOperators.in_,
+        #  ":in": ColumnOperators.in_,
         #  XXX what does SQL IS mean?
-        "is": ColumnOperators.is_,
-        "is_not": ColumnOperators.isnot,
-        #  "like": (ColumnOperators.like, str),
-        "like": ColumnOperators.like,
-        #  "like": (ColumnOperators.like, str),
+        ":is": ColumnOperators.is_,
+        ":is_not": ColumnOperators.isnot,
+        ":like": ColumnOperators.like,
     }
-    textual_operators = ["like"]
-    other_not_to_be_cast = ["like", "in"]
-    other_type = {"in": ARRAY}
+    textual_operators = [":like"]
+    other_not_to_be_cast = [":like"]
+
+    #  XXX comments
+    def parantheses_to_json(s):
+        if not s:
+            return {}
+        #  XXX what if only one is a parantheses?
+        if s[0] != "(" and s[-1] != ")":
+            try:
+                return json.loads(s)
+            except:
+                return s
+
+        f = s[1:-1].split(",", 2)
+        #  f = {"name": f[0], "op": f[1].strip(":"), "val": parantheses_to_json(f[2])}
+        f = {"name": f[0], "op": f[1], "val": parantheses_to_json(f[2])}
+        return f
+
+    filter = [parantheses_to_json(filter)]
 
     #  XXX should maybe default query
+    #  XXX comments
     def add_filter(query):
-        #  for path, values in queries.items():
-        #  query = query.where(
-        #  db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-        #  )
 
         #  XXX make this an optional url query param
         for _filter in filter:
+            if not _filter:
+                continue
+
             json_object = Metadata.data[list(_filter["name"].split("."))]
             operator = filter_operators[_filter["op"]]
-            other = sqlalchemy.cast(_filter["val"], JSONB)
+            other = cast(_filter["val"], JSONB)
             #  XXX this could be used for has_key (e.g. for does have bears key: (teams, :any, (,:eq, "bears")))
-            if _filter["op"] == "any":
+            if _filter["op"] == ":any":
 
                 #  XXX handle duplicates
                 #  XXX any and has have to be used with other scalar operation
@@ -143,17 +156,7 @@ async def search_metadata_helper(
                 #  there is a key for the scalar comparator might determine
                 #  whether to use jsonb_array_elements
 
-                #  e = sqlalchemy.exists(query.select('*').select_from(f).where(f.like('%')))
-                #  e = sqlalchemy.exists(query.select(f.name).select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
-                #  e = sqlalchemy.exists(query.select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
-                #  e = sqlalchemy.exists(query.select(sqlalchemy.text(f.name)).select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
-                #  e = sqlalchemy.exists(db.all().select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
-                #  e = sqlalchemy.exists(db.select(f.name).select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
-
-                #  works
-                #  e = sqlalchemy.exists(db.select('*').select_from(f).where(sqlalchemy.column(f.name).like(_filter['val'])))
-
-                other = sqlalchemy.cast(_filter["val"]["val"], JSONB)
+                other = cast(_filter["val"]["val"], JSONB)
                 f = db.func.jsonb_array_elements
                 if _filter["val"]["op"] in textual_operators:
                     f = db.func.jsonb_array_elements_text
@@ -161,23 +164,21 @@ async def search_metadata_helper(
                 if _filter["val"]["op"] in other_not_to_be_cast:
                     other = _filter["val"]["val"]
 
-                #  if _filter["val"]["op"] in other_type:
-                #  other = sqlalchemy.cast(_filter["val"]["val"], other_type[_filter["val"]["op"]])
-
                 f = f(Metadata.data[list(_filter["name"].split("."))]).alias()
                 operator = filter_operators[_filter["val"]["op"]]
 
-                e = sqlalchemy.exists(
+                e = exists(
+                    #  XXX select 1
                     db.select("*")
                     .select_from(f)
-                    .where(operator(sqlalchemy.column(f.name), other))
+                    .where(operator(column(f.name), other))
                 )
 
                 query = query.where(e)
 
                 return query.offset(offset).limit(limit)
 
-            elif _filter["op"] == "all":
+            elif _filter["op"] == ":all":
                 count_f = db.func.jsonb_array_length(json_object)
                 f = db.func.jsonb_array_elements
 
@@ -193,7 +194,7 @@ async def search_metadata_helper(
                 sq = (
                     db.select([db.func.count()])
                     .select_from(f)
-                    .where(operator(sqlalchemy.column(f.name), other))
+                    .where(operator(column(f.name), other))
                 )
                 query = query.where(count_f == sq)
 
@@ -201,9 +202,8 @@ async def search_metadata_helper(
 
             #  elif _filter["op"] == "is":
 
-            if _filter["op"] == "like":
+            if _filter["op"] in textual_operators:
                 json_object = json_object.astext
-                operator = operator[0]
                 other = _filter["val"]
 
             query = query.where(operator(json_object, other))
