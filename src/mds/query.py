@@ -112,7 +112,6 @@ async def search_metadata(
     )
 
 
-#  XXX rename/update docstring
 async def search_metadata_helper(
     data: bool = Query(
         False,
@@ -131,30 +130,81 @@ async def search_metadata_helper(
     """
     XXX comments
     """
-    #  import pdb; pdb.set_trace()
-
     limit = min(limit, 2000)
-    #  XXX using __op__?
-    #  XXX aggregate functions (e.g size, max, etc.)
-    filter_operators = {
-        ":all": None,
-        ":any": None,
-        ":eq": ColumnOperators.__eq__,
-        ":ne": ColumnOperators.__ne__,
-        ":gt": ColumnOperators.__gt__,
-        ":gte": ColumnOperators.__ge__,
-        ":lt": ColumnOperators.__lt__,
-        ":lte": ColumnOperators.__le__,
-        #  XXX check how mongoDB filters for null (does it use it, if an object doesn't have a given key, is that considered null, etc.)
-        #  XXX in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (OR (score, :eq, 1), (score, :eq, 2)))
-        #  ":in": ColumnOperators.in_,
+
+    #  XXX get_any_sql_clause could possibly be used for a :has_key operation
+    #  w/ a little more work (e.g. does teams object {} have "bears" key:
+    #  (teams,:any,(,:eq,"bears"))) (jsonb_object_keys
+    #  https://www.postgresql.org/docs/9.5/functions-json.html#FUNCTIONS-JSON-OP-TABLE)
+    def get_any_sql_clause(target_json_object, scalar_operator_name, scalar_other):
+        if (
+            "type" in operators[scalar_operator_name]
+            and operators[scalar_operator_name]["type"] == "text"
+        ):
+            f = db.func.jsonb_array_elements_text
+        else:
+            f = db.func.jsonb_array_elements
+            scalar_other = cast(scalar_other, JSONB)
+
+        f = f(target_json_object).alias()
+
+        return exists(
+            #  XXX select 1
+            db.select("*")
+            .select_from(f)
+            .where(
+                operators[scalar_operator_name]["sql_comparator"](
+                    column(f.name), scalar_other
+                )
+            )
+        )
+
+    def get_all_sql_clause(target_json_object, scalar_operator_name, scalar_other):
+        if (
+            "type" in operators[scalar_operator_name]
+            and operators[scalar_operator_name]["type"] == "text"
+        ):
+            f = db.func.jsonb_array_elements_text
+        else:
+            f = db.func.jsonb_array_elements
+            scalar_other = cast(scalar_other, JSONB)
+
+        f = f(target_json_object).alias()
+        count_f = db.func.jsonb_array_length(target_json_object)
+
+        return ColumnOperators.__eq__(
+            count_f,
+            db.select([db.func.count()])
+            .select_from(f)
+            .where(
+                operators[scalar_operator_name]["sql_comparator"](
+                    column(f.name), scalar_other
+                )
+            ),
+        )
+
+    #  XXX aggregate operators might be nice (e.g size, max, etc.)
+    operators = {
+        ":eq": {"sql_comparator": ColumnOperators.__eq__},
+        ":ne": {"sql_comparator": ColumnOperators.__ne__},
+        ":gt": {"sql_comparator": ColumnOperators.__gt__},
+        ":gte": {"sql_comparator": ColumnOperators.__ge__},
+        ":lt": {"sql_comparator": ColumnOperators.__lt__},
+        ":lte": {"sql_comparator": ColumnOperators.__le__},
+        #  XXX not working
         #  XXX what does SQL IS mean?
-        ":is": ColumnOperators.is_,
-        ":is_not": ColumnOperators.isnot,
-        ":like": ColumnOperators.like,
+        #  XXX check how mongoDB filters for null (does it use it?, if an object
+        #  doesn't have a given key, is that considered null? etc.)
+        ":is": {"sql_comparator": ColumnOperators.is_},
+        #  XXX in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (or(score,:eq,1),(score,:eq,2)))
+        #  ":in": ColumnOperators.in_,
+        ":like": {
+            "type": "text",
+            "sql_comparator": ColumnOperators.like,
+        },
+        ":all": {"sql_clause": get_all_sql_clause},
+        ":any": {"sql_clause": get_any_sql_clause},
     }
-    textual_operators = [":like"]
-    other_not_to_be_cast = [":like"]
 
     def fun_parser(s):
         #  grammar = Grammar(
@@ -265,99 +315,30 @@ async def search_metadata_helper(
 
     filter = [parantheses_to_json(filter)]
 
-    #  XXX should maybe default query
-    #  XXX comments
-    def add_filter(query):
+    def add_filter(target_key, operator_name, other):
+        json_object = Metadata.data[list(target_key.split("."))]
+        if type(other) is dict:
+            return operators[operator_name]["sql_clause"](
+                json_object, other["op"], other["val"]
+            )
 
-        #  XXX make this an optional url query param
-        for _filter in filter:
-            if not _filter:
-                continue
+        if (
+            "type" in operators[operator_name]
+            and operators[operator_name]["type"] == "text"
+        ):
+            json_object = json_object.astext
+        else:
+            other = cast(other, JSONB)
 
-            json_object = Metadata.data[list(_filter["name"].split("."))]
-            operator = filter_operators[_filter["op"]]
-            other = cast(_filter["val"], JSONB)
-            #  XXX this could be used for has_key (e.g. for does have bears key: (teams, :any, (,:eq, "bears")))
-            if _filter["op"] == ":any":
-
-                #  XXX handle duplicates
-                #  XXX any and has have to be used with other scalar operation
-                #  (i.e. (_resource_paths,:any,(,:like,"/programs/*")). whether
-                #  there is a key for the scalar comparator might determine
-                #  whether to use jsonb_array_elements
-
-                other = cast(_filter["val"]["val"], JSONB)
-                f = db.func.jsonb_array_elements
-                if _filter["val"]["op"] in textual_operators:
-                    f = db.func.jsonb_array_elements_text
-
-                if _filter["val"]["op"] in other_not_to_be_cast:
-                    other = _filter["val"]["val"]
-
-                f = f(Metadata.data[list(_filter["name"].split("."))]).alias()
-                operator = filter_operators[_filter["val"]["op"]]
-
-                e = exists(
-                    #  XXX select 1
-                    db.select("*")
-                    .select_from(f)
-                    .where(operator(column(f.name), other))
-                )
-
-                query = query.where(e)
-
-                return query.offset(offset).limit(limit)
-
-            elif _filter["op"] == ":all":
-                count_f = db.func.jsonb_array_length(json_object)
-                f = db.func.jsonb_array_elements
-
-                if _filter["val"]["op"] in textual_operators:
-                    f = db.func.jsonb_array_elements_text
-                f = f(json_object).alias()
-
-                operator = filter_operators[_filter["val"]["op"]]
-
-                if _filter["val"]["op"] in other_not_to_be_cast:
-                    other = _filter["val"]["val"]
-
-                sq = (
-                    db.select([db.func.count()])
-                    .select_from(f)
-                    .where(operator(column(f.name), other))
-                )
-                query = query.where(count_f == sq)
-
-                return query.offset(offset).limit(limit)
-
-            #  elif _filter["op"] == "is":
-
-            if _filter["op"] in textual_operators:
-                json_object = json_object.astext
-                other = _filter["val"]
-
-            query = query.where(operator(json_object, other))
-            #  query = query.where(db.or_(operator(json_object, other), ColumnOperators.__eq__(json_object, cast("cats_rock", JSONB))))
-            #  query = query.where(db.and_(operator(json_object, other), ColumnOperators.__eq__(json_object, cast("cats_rock", JSONB))))
-            #  query = query.where(
-            #  db.and_(
-            #  db.or_(
-            #  operator(json_object, other),
-            #  operator(json_object, "cats_rock"),
-            #  ),
-            #  db.or_(
-            #  operator(json_object, "%"),
-            #  )
-            #  )
-            #  )
-
-        return query.offset(offset).limit(limit)
+        return operators[operator_name]["sql_comparator"](json_object, other)
 
     if data:
-        return {
-            metadata.guid: metadata.data
-            for metadata in await add_filter(Metadata.query).gino.all()
-        }
+        query = Metadata.query
+        if filter[0]:
+            query = query.where(
+                add_filter(filter[0]["name"], filter[0]["op"], filter[0]["val"])
+            )
+        return {metadata.guid: metadata.data for metadata in await query.gino.all()}
     else:
         return [
             row[0]
