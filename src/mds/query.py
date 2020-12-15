@@ -1,7 +1,6 @@
 import json
 
 from fastapi import HTTPException, Query, APIRouter
-from pydantic import Json
 from sqlalchemy import cast, column, exists
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.operators import ColumnOperators
@@ -9,6 +8,7 @@ from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
 
 from parsimonious.grammar import Grammar
+from parsimonious.nodes import NodeVisitor
 
 from .models import db, Metadata
 
@@ -17,7 +17,6 @@ mod = APIRouter()
 
 @mod.get("/metadata")
 #  XXX fix tests
-#  XXX maybe translate old way to use filter argument here?
 async def search_metadata(
     request: Request,
     data: bool = Query(
@@ -74,37 +73,20 @@ async def search_metadata(
         if key not in {"data", "limit", "offset"}:
             queries.setdefault(key, []).append(value)
 
-    #  def add_filter(query):
     def add_filters():
         filter_param = "(and"
         for path, values in queries.items():
             filter_param += ",(or"
             for v in values:
-                filter_param += f",({path},:like,{v})"
-                #  query = query.where(
-                #  db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-                #  db.or_(Metadata.data[list(path.split("."))].astext == v)
-                #  )
+                #  to maintain backwards compatibility, use :like because it's
+                #  a textual operator.
+                #  XXX will need to escape %
+                filter_param += f',({path},:like,"{v}")'
             filter_param += ")"
         filter_param += ")"
         return filter_param
-        #  return query.offset(offset).limit(limit)
-
-    #  if data:
-    #  return {
-    #  metadata.guid: metadata.data
-    #  for metadata in await add_filter(Metadata.query).gino.all()
-    #  }
-    #  else:
-    #  return [
-    #  row[0]
-    #  for row in await add_filter(db.select([Metadata.guid]))
-    #  .gino.return_model(False)
-    #  .all()
-    #  ]
 
     return await search_metadata_helper(
-        #  request.query_params, data=data, limit=limit, offset=offset
         data=data,
         limit=limit,
         offset=offset,
@@ -124,7 +106,6 @@ async def search_metadata_helper(
     offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
     #  XXX how to name this variable something other than filter
-    #  filter: Json = Query(Json(), description="The filters!"),
     filter: str = Query("", description="The filters!"),
 ):
     """
@@ -206,31 +187,19 @@ async def search_metadata_helper(
         ":any": {"sql_clause": get_any_sql_clause},
     }
 
-    def fun_parser(s):
-        #  grammar = Grammar(
-        #  """
-        #  bold_text  = bold_open text bold_close
-        #  text       = ~"[A-Z 0-9]*"i
-        #  bold_open  = "(("
-        #  bold_close = "))"
-        #  """)
+    def parse_filter(filter_string):
+        if not filter_string:
+            return
 
-        # '(and,(or,(fun_fact,:like,rhinos_rock),(fun_fact,:like,cats_rock)),(or,(_uploader_id,:like,57)))'
-        #  (_uploader_id,:eq,“57”)
-        #  (or,(_uploader_id,:like,57))
-
-        #  compound_filter = open boolean separator scalar_filter close
-        #  boolean         = "and"
-        #  json_value      = "57" / "rhinosrock" / "catsrock"
-        #  json_value      = ~"[A-Z 0-9_]*"i
+        #  https://github.com/erikrose/parsimonious/pull/23/files
         grammar = Grammar(
             """
         boolean_filter = scalar_filter / (open boolean (separator (scalar_filter / boolean_filter))+ close)
         boolean         = "and" / "or"
         scalar_filter   = open json_key separator operator separator (json_value / scalar_filter) close
-        json_key        = ~"[A-Z 0-9_]*"i
+        json_key        = ~"[A-Z 0-9_.]*"i
         #  json_value      = "57" / "rhinosrock" / "catsrock"
-        operator        = ":eq" / ":any"
+        operator        = ":eq" / ":ne" / ":gt" / ":gte" / ":lt" / ":lte" / ":is" / ":like" / ":all" / ":any"
         open            = "("
         close           = ")"
         separator       = ","
@@ -247,41 +216,41 @@ async def search_metadata_helper(
         digit1to9 = ~"[1-9]"
         digit = ~"[0-9]"
 
-        #  string = ~"\"[^\"]*\""
-        #  string = ~"[\".*\"]"
-        #  string = ~"\".*\""
-        #  doubleString   = ~'"([^"]|(\"))*"'
         doubleString   = ~'"([^"])*"'
         """
         )
-        #  o = grammar.parse('(fun_fact,:eq,"rhinos_rock")')
-        #  o = grammar.parse('(and,(or,(fun_fact,:eq,"rhinosrock"),(funfact,:eq,"catsrock")),(or,(uploaderid,:eq,57)))')
-        #  import pdb; pdb.set_trace()
+        #  print(
+        #  grammar.parse(filter_string)
+        #  )
+        return grammar.parse(filter_string)
 
-        #  json_value = "\"57\""
-        #  print(grammar.parse('((bold stuff))'))
-        #  print(grammar.parse('(_uploader_id,:eq,57)'))
-        #  print(grammar.parse('(_uploader_id,:eq,true)'))
-        #  print(grammar.parse('(_uploader_id,:eq,false)'))
-        #  print(grammar.parse('(_uploader_id,:eq,null)'))
-        #  print(grammar.parse('(fun_fact,:eq,"rhinos_rock")'))
-        #  print(grammar.parse('(uploader,:eq,"57")'))
-        #  print(grammar.parse('(uploader,:eq,"57")'))
-        #  print(grammar.parse('(paths,:any,(,:eq,57))'))
-        #  print(grammar.parse('(and,(uploader,:eq,57))'))
-        #  print(grammar.parse('(or,(uploader,:eq,57))'))
-        #  print(grammar.parse('(and,(or,(funfact,:eq,rhinosrock),(funfact,:eq,catsrock)),(or,(uploaderid,:eq,57)))'))
-        print(
-            grammar.parse(
-                '(and,(or,(fun_fact,:eq,"rhinosrock"),(funfact,:eq,"catsrock")),(or,(uploaderid,:eq,57)))'
-            )
-        )
+    class FilterVisitor(NodeVisitor):
+        def visit_scalar_filter(self, node, visited_children):
+            #  import pdb; pdb.set_trace()
+            (
+                _,
+                json_key,
+                _,
+                operator,
+                _,
+                json_value_or_scalar_filter,
+                _,
+            ) = visited_children
+            #  print(json_key, operator, json_value_or_scalar_filter)
+            #  for node in (json_key, operator, json_value_or_scalar_filter):
+            #  print(node.text)
+            print(json_key)
+            return (json_key, operator, json_value_or_scalar_filter)
 
-        #  print(grammar.parse('(paths,:eq,(,:eq,57))'))
-        #  print(grammar.parse('(and,(uploader,:eq,57))'))
-        #  print(grammar.parse('(,:eq,57)'))
+        def generic_visit(self, node, visited_children):
+            """ The generic visit method. """
+            #  return visited_children or node       #  return section.text
+            return visited_children or node
 
-    fun_parser(filter)
+    filter_tree = parse_filter(filter)
+    if filter_tree:
+        filter_tree_visitor = FilterVisitor()
+        filter_tree_visitor.visit(filter_tree)
 
     #  XXX comments
     def parantheses_to_json(s):
@@ -298,18 +267,6 @@ async def search_metadata_helper(
             f = s[1:-1].split(",", 2)
             f = {"name": f[0], "op": f[1], "val": parantheses_to_json(f[2])}
             return f
-
-        #  XXX DRY with boolean_operators = ["or", "and"]
-        #  scalar_operator_pattern = r'\({json_key_pattern}*,{operator_pattern},{json_value_pattern}\)'
-        #  compund_operator_pattern = r'\({json_key_pattern}*,{operator_pattern},({scalar_value_pattern}|{json_value_pattern})\)'
-        #  #  filter_pattern = r'\({{and|or}{,filter_pattern}+}|{compund_operator}\)'
-        #  boolean_filters_pattern = r'\({{and|or}{,compund_operator}+}\)'
-        #  filter_pattern = r''
-        #  r‘\((and|or)(,\([.+]]\))\)’
-        #  if s.startswith('(or'):
-        #  return {"or": [parantheses_to_json(s[3:-1])]}
-        #  if s.startswith('(and'):
-        #  return {"and": parantheses_to_json(s[4:-1])}
 
         return scalar_to_json(s)
 
@@ -332,12 +289,31 @@ async def search_metadata_helper(
 
         return operators[operator_name]["sql_comparator"](json_object, other)
 
+    def get_clause(node):
+        if node is None:
+            return
+
+        #  boolean = getattr("boolean", node)
+        boolean = getattr(node, "boolean")
+        if boolean is not None:
+            if boolean == "and":
+                return db.and_(get_clause(c) for c in node.children)
+            elif boolean == "or":
+                return db.or_(get_clause(c) for c in node.children)
+            raise
+
+        return add_filter(node.json_key, node.operator, node.json_value)
+
     if data:
         query = Metadata.query
         if filter[0]:
             query = query.where(
                 add_filter(filter[0]["name"], filter[0]["op"], filter[0]["val"])
             )
+
+        #  if filter_tree:
+        #  query = query.where(get_clause(filter_tree))
+
         return {metadata.guid: metadata.data for metadata in await query.gino.all()}
     else:
         return [
