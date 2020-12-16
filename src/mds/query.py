@@ -113,11 +113,117 @@ async def search_metadata_helper(
     filter: str = Query("", description="Filters to apply."),
 ):
     """
-    XXX comments
+    Helper to search for metadata objects based on filters provided in filter
+    param.
+
+    The filtering functionality was primarily driven by the requirement that a
+    user be able to get all objects having an authz resource matching a
+    user-supplied pattern at any index in the "_resource_paths" array. For
+    example, given the following metadata objects:
+
+    {
+        "0": {
+            "message": "hello",
+            "_uploader_id": "100",
+            "_resource_paths": [
+                "/programs/a",
+                "/programs/b"
+            ],
+            "pet": "dog"
+        },
+        "1": {
+            "message": "greetings",
+            "_uploader_id": "101",
+            "_resource_paths": [
+                "/open",
+                "/programs/c/projects/a"
+            ],
+            "pet": "ferret",
+            "sport": "soccer"
+        },
+        "2": {
+            "message": "morning",
+            "_uploader_id": "102",
+            "_resource_paths": [
+                "/programs/d",
+                "/programs/e"
+            ],
+            "counts": [42, 42, 42],
+            "pet": "ferret",
+            "sport": "soccer"
+        },
+        "3": {
+            "message": "evening",
+            "_uploader_id": "103",
+            "_resource_paths": [
+                "/programs/f/projects/a",
+                "/admin"
+            ],
+            "counts": [1, 3, 5],
+            "pet": "ferret",
+            "sport": "basketball"
+        }
+    }
+
+    how do we design a filtering interface that allows the user to get all
+    objects having an authz string matching the pattern
+    "/programs/%/projects/%" at any index in its "_resource_paths" array? (%
+    has been used as the wildcard so far because that's what Postgres uses as
+    the wildcard for LIKE) In this case, the "1" and "3" objects should be
+    returned.
+
+    The filter syntax that was arrived at ending up following the syntax
+    specified by a Node JS implementation
+    (https://www.npmjs.com/package/json-api#filtering) of the JSON:API
+    specification (https://jsonapi.org/).
+
+    The format for this syntax is filter=(field_name,operator,value), in which
+    the field_name is a json key without quotes, operator is one of :eq, :ne,
+    :gt, :gte, :lt, :lte, :like, :all, :any (see operators dict), and value is
+    a typed json value against which the operator is run.
+
+    Examples:
+
+        - GET /objects?filter=(message,:eq,"morning") returns "2"
+        - GET /objects?filter=(counts.1,:eq,3) returns "3"
+
+    Compound expressions are supported:
+
+        - GET /objects?filter=(_resource_paths,:any,(,:like,"/programs/%/projects/%"))
+          returns "1" and "3"
+        - GET /objects?filter=(counts,:all,(,:eq,42))
+          returns "2"
+
+    Boolean expressions are also supported:
+
+        - GET /objects?filter=(or,(_uploader_id,:eq,"101"),(_uploader_id,:eq,"102"))
+          returns "1" and "2"
+        - GET /objects?filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello"))
+          returns "0", "1", and "2"
+
     """
     limit = min(limit, 2000)
 
     def add_filter(target_key, operator_name, other):
+        """
+        XXX need a better name for other variable. with a scalar filter, other
+        is the value that the target value is compared against
+
+        e.g. for the following requests, the arguments to add_filter:
+            * `GET /objects?filter=(_uploader_id,:eq,"57")`
+                - target_key is 'uploader_id'
+                - operator_name is ':eq'
+                - other is '57'
+            * `GET /objects?filter=(count,:gte,16)`
+                - target_key is 'count'
+                - operator_name is ':gte'
+                - other is 16 (note this is a python int)
+            * `GET /objects?filter=(_resource_paths,:any,(,:like,"/programs/foo/%"))`
+                - target_key is '_resource_paths'
+                - operator_name is ':any'
+                - other is {'name': '', 'op': ':like', 'val': '/programs/foo/%'}
+        """
+
         json_object = Metadata.data[list(target_key.split("."))]
 
         if type(other) is dict:
@@ -134,13 +240,15 @@ async def search_metadata_helper(
         ):
             json_object = json_object.astext
         else:
+            #  this is necessary to differentiate between strings, booleans, numbers,
+            #  etc. in JSON
             other = cast(other, JSONB)
 
         return operators[operator_name]["sql_comparator"](json_object, other)
 
     #  XXX get_any_sql_clause could possibly be used for a :has_key operation
     #  w/ a little more work (e.g. does teams object {} have "bears" key:
-    #  (teams,:any,(,:eq,"bears"))) (jsonb_object_keys
+    #  (teams,:any,(,:eq,"bears"))) (would need to use jsonb_object_keys
     #  https://www.postgresql.org/docs/9.5/functions-json.html#FUNCTIONS-JSON-OP-TABLE)
     def get_any_sql_clause(target_json_object, scalar_operator_name, scalar_other):
         if (
@@ -218,7 +326,12 @@ async def search_metadata_helper(
         if not filter_string:
             return
 
-        #  https://github.com/erikrose/parsimonious/pull/23/files
+        #  XXX invalid filter param can result in a 500
+        #  e.g. `GET objects?filter=(_uploader_id,:eq"57")` (missing second comma)
+
+        #  json_value and below taken from https://github.com/erikrose/parsimonious/pull/23/files
+        #  XXX need to allow for escaped strings
+        #  XXX need some cleaning up
         grammar = Grammar(
             """
         filter           = scalar_filter / boolean_filter
@@ -230,12 +343,12 @@ async def search_metadata_helper(
         scalar_filter   = open json_key separator operator separator json_value_or_scalar_filter close
         json_value_or_scalar_filter = json_value / scalar_filter
         json_key        = ~"[A-Z 0-9_.]*"i
-        operator        = ":eq" / ":ne" / ":gt" / ":gte" / ":lt" / ":lte" / ":is" / ":like" / ":all" / ":any"
+        operator        = ":eq" / ":ne" / ":gte" / ":gt" / ":lte" / ":lt" / ":is" / ":like" / ":all" / ":any"
         open            = "("
         close           = ")"
         separator       = ","
 
-        json_value = true_false_null / number / doubleString
+        json_value = true_false_null / number / double_string
         true_false_null = "true" / "false" / "null"
         number = (int frac exp) / (int exp) / (int frac) / int
         int = "-"? ((digit1to9 digits) / digit)
@@ -246,7 +359,7 @@ async def search_metadata_helper(
         digit1to9 = ~"[1-9]"
         digit = ~"[0-9]"
 
-        doubleString   = ~'"([^"])*"'
+        double_string   = ~'"([^"])*"'
         """
         )
         return grammar.parse(filter_string)
@@ -301,6 +414,7 @@ async def search_metadata_helper(
         def generic_visit(self, node, visited_children):
             return visited_children or node
 
+    #  XXX better name
     def get_clause(filter_dict):
         if not filter_dict:
             return
@@ -328,12 +442,21 @@ async def search_metadata_helper(
         query = Metadata.query
         if filter_dict:
             query = query.where(get_clause(filter_dict))
-        return {metadata.guid: metadata.data for metadata in await query.gino.all()}
+        return {
+            metadata.guid: metadata.data
+            for metadata in await query.offset(offset).limit(limit).gino.all()
+        }
     else:
         query = db.select([Metadata.guid])
         if filter_dict:
             query = query.where(get_clause(filter_dict))
-        return [row[0] for row in await query.gino.return_model(False).all()]
+        return [
+            row[0]
+            for row in await query.offset(offset)
+            .limit(limit)
+            .gino.return_model(False)
+            .all()
+        ]
 
 
 @mod.get("/metadata/{guid:path}")

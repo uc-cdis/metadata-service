@@ -6,7 +6,7 @@ from asyncpg import UniqueViolationError
 from fastapi import HTTPException, APIRouter, Security, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
-from pydantic import BaseModel, Json
+from pydantic import BaseModel
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -255,31 +255,33 @@ async def get_objects(
     )
 
     records = {}
-    try:
-        endpoint_path = "/bulk/documents"
-        full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
-        guids = (
-            list(metadata_objects.keys())
-            if hasattr(metadata_objects, "keys")
-            else metadata_objects
-        )
-        #  XXX /bulk/documents endpoint in indexd currently doesn't support
-        #  filters
-        response = await request.app.async_client.post(full_endpoint, json=guids)
-        response.raise_for_status()
-        records = {r["did"]: r for r in response.json()}
-    except httpx.HTTPError as err:
-        logger.debug(err, exc_info=True)
-        if err.response:
-            logger.error(
-                "indexd `POST %s` endpoint returned a %s HTTP status code",
-                endpoint_path,
-                err.response.status_code,
+    if metadata_objects:
+        try:
+            endpoint_path = "/bulk/documents"
+            full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
+            guids = (
+                list(metadata_objects.keys())
+                if hasattr(metadata_objects, "keys")
+                else metadata_objects
             )
-        else:
-            logger.error(
-                "Unable to get a response from indexd `POST %s` endpoint", endpoint_path
-            )
+            #  XXX /bulk/documents endpoint in indexd currently doesn't support
+            #  filters
+            response = await request.app.async_client.post(full_endpoint, json=guids)
+            response.raise_for_status()
+            records = {r["did"]: r for r in response.json()}
+        except httpx.HTTPError as err:
+            logger.debug(err, exc_info=True)
+            if err.response:
+                logger.error(
+                    "indexd `POST %s` endpoint returned a %s HTTP status code",
+                    endpoint_path,
+                    err.response.status_code,
+                )
+            else:
+                logger.error(
+                    "Unable to get a response from indexd `POST %s` endpoint",
+                    endpoint_path,
+                )
 
     if type(metadata_objects) is dict:
         response = {
