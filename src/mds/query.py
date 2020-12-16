@@ -74,16 +74,20 @@ async def search_metadata(
             queries.setdefault(key, []).append(value)
 
     def add_filters():
-        filter_param = "(and"
-        for path, values in queries.items():
-            filter_param += ",(or"
-            for v in values:
-                #  to maintain backwards compatibility, use :like because it's
-                #  a textual operator.
-                #  XXX will need to escape %
-                filter_param += f',({path},:like,"{v}")'
+        filter_param = ""
+
+        if queries:
+            filter_param = "(and"
+            for path, values in queries.items():
+                filter_param += ",(or"
+                for v in values:
+                    #  to maintain backwards compatibility, use :like because it's
+                    #  a textual operator.
+                    #  XXX will need to escape %
+                    filter_param += f',({path},:like,"{v}")'
+                filter_param += ")"
             filter_param += ")"
-        filter_param += ")"
+
         return filter_param
 
     return await search_metadata_helper(
@@ -111,6 +115,7 @@ async def search_metadata_helper(
     """
     XXX comments
     """
+    #  import pdb; pdb.set_trace()
     limit = min(limit, 2000)
 
     def add_filter(target_key, operator_name, other):
@@ -205,6 +210,7 @@ async def search_metadata_helper(
     }
 
     def parse_filter(filter_string):
+        #  import pdb; pdb.set_trace()
         if not filter_string:
             return
 
@@ -347,24 +353,24 @@ async def search_metadata_helper(
     #  import pdb; pdb.set_trace()
 
     #  XXX comments
-    def parantheses_to_json(s):
-        def scalar_to_json(s):
-            if not s:
-                return {}
-            #  XXX what if only one is a parantheses?
-            if s[0] != "(" and s[-1] != ")":
-                try:
-                    return json.loads(s)
-                except:
-                    return s
+    #  def parantheses_to_json(s):
+    #  def scalar_to_json(s):
+    #  if not s:
+    #  return {}
+    #  #  XXX what if only one is a parantheses?
+    #  if s[0] != "(" and s[-1] != ")":
+    #  try:
+    #  return json.loads(s)
+    #  except:
+    #  return s
 
-            f = s[1:-1].split(",", 2)
-            f = {"name": f[0], "op": f[1], "val": parantheses_to_json(f[2])}
-            return f
+    #  f = s[1:-1].split(",", 2)
+    #  f = {"name": f[0], "op": f[1], "val": parantheses_to_json(f[2])}
+    #  return f
 
-        return scalar_to_json(s)
+    #  return scalar_to_json(s)
 
-    filter = [parantheses_to_json(filter)]
+    #  filter = [parantheses_to_json(filter)]
 
     def get_clause(filter_dict):
         if not filter_dict:
@@ -382,7 +388,6 @@ async def search_metadata_helper(
         #  raise
 
         if len(filter_dict) == 1:
-            #  import pdb; pdb.set_trace()
             boolean = list(filter_dict.keys())[0]
 
             boolean_operand_clauses = (get_clause(c) for c in filter_dict[boolean])
@@ -392,29 +397,18 @@ async def search_metadata_helper(
                 return db.or_(boolean_operand_clauses)
             raise
 
-        #  return add_filter(node.json_key, node.operator, node.json_value)
         return add_filter(filter_dict["name"], filter_dict["op"], filter_dict["val"])
 
     if data:
         query = Metadata.query
-        #  if filter[0]:
-        #  query = query.where(
-        #  add_filter(filter[0]["name"], filter[0]["op"], filter[0]["val"])
-        #  )
-
-        #  query = Metadata.query.where(root_sql_clause)
-
         if filter_dict:
             query = query.where(get_clause(filter_dict))
-
         return {metadata.guid: metadata.data for metadata in await query.gino.all()}
     else:
-        return [
-            row[0]
-            for row in await add_filter(db.select([Metadata.guid]))
-            .gino.return_model(False)
-            .all()
-        ]
+        query = db.select([Metadata.guid])
+        if filter_dict:
+            query = query.where(get_clause(filter_dict))
+        return [row[0] for row in await query.gino.return_model(False).all()]
 
 
 @mod.get("/metadata/{guid:path}")
