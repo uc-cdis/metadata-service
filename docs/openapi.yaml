@@ -409,6 +409,63 @@ paths:
       tags:
       - Index
   /objects:
+    get:
+      description: XXX comments
+      operationId: get_objects_objects_get
+      parameters:
+      - description: Switch to returning a list of GUIDs (false), or GUIDs mapping
+          to their metadata (true).
+        in: query
+        name: data
+        required: false
+        schema:
+          default: false
+          description: Switch to returning a list of GUIDs (false), or GUIDs mapping
+            to their metadata (true).
+          title: Data
+          type: boolean
+      - description: 'Maximum number of records returned. (max: 2000)'
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 10
+          description: 'Maximum number of records returned. (max: 2000)'
+          title: Limit
+          type: integer
+      - description: Return results at this given offset.
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          description: Return results at this given offset.
+          title: Offset
+          type: integer
+      - description: Filters to apply.
+        in: query
+        name: filter
+        required: false
+        schema:
+          default: ''
+          description: Filters to apply.
+          title: Filter
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Objects
+      tags:
+      - Object
     post:
       description: "Create object placeholder and attach metadata, return Upload url\
         \ to the user.\n\nArgs:\n    body (CreateObjInput): input body for create\
