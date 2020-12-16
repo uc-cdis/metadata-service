@@ -229,8 +229,8 @@ async def create_object_for_id(
 @mod.get("/objects")
 async def get_objects(
     request: Request,
-    #  XXX how to handle this being False
-    #  XXX what is Query?
+    #  XXX would be nice to be able to specify whether to return indexd records
+    #  (e.g GET objects?data=metadata would only return mds objects)
     data: bool = Query(
         False,
         description="Switch to returning a list of GUIDs (false), "
@@ -241,41 +241,31 @@ async def get_objects(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
-    #  XXX how to name this variable something other than filter
-    #  filter: Json = Query(Json(), description="The filters!"),
-    filter: str = Query("", description="The filters!"),
+    #  XXX how to name this python variable something other than filter but
+    #  still have client use "filter" as URL query param? (bc filter is already
+    #  built in to Python)
+    filter: str = Query("", description="Filters to apply."),
 ) -> JSONResponse:
     """
     XXX comments
     """
 
-    #  import pdb; pdb.set_trace()
-    #  mds_query_params = {
-    #  k[len("metadata.") :]: v
-    #  for k, v in request.query_params.items()
-    #  if k.startswith("metadata.")
-    #  }
-    #  queries = {}
-    #  for k, v in request.query_params.multi_items():
-    #  queries.setdefault(key, []).append(value)
-
-    #  XXX just pass kwargs?
     metadata_objects = await search_metadata_helper(
-        #  mds_query_params, data=data, limit=limit, offset=offset
-        data=data,
-        limit=limit,
-        offset=offset,
-        filter=filter
-        #  data=data, limit=limit, offset=offset, filters=filter
+        data=data, limit=limit, offset=offset, filter=filter
     )
 
     records = {}
     try:
         endpoint_path = "/bulk/documents"
         full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
-        response = await request.app.async_client.post(
-            full_endpoint, json=list(metadata_objects.keys())
+        guids = (
+            list(metadata_objects.keys())
+            if hasattr(metadata_objects, "keys")
+            else metadata_objects
         )
+        #  XXX /bulk/documents endpoint in indexd currently doesn't support
+        #  filters
+        response = await request.app.async_client.post(full_endpoint, json=guids)
         response.raise_for_status()
         records = {r["did"]: r for r in response.json()}
     except httpx.HTTPError as err:
@@ -291,8 +281,6 @@ async def get_objects(
                 "Unable to get a response from indexd `POST %s` endpoint", endpoint_path
             )
 
-    #  XXX need to handle data=False
-    #  import pdb; pdb.set_trace()
     if type(metadata_objects) is dict:
         response = {
             guid: {"record": records[guid] if guid in records else {}, "metadata": o}

@@ -16,7 +16,6 @@ mod = APIRouter()
 
 
 @mod.get("/metadata")
-#  XXX fix tests
 async def search_metadata(
     request: Request,
     data: bool = Query(
@@ -81,9 +80,9 @@ async def search_metadata(
             for path, values in queries.items():
                 filter_param += ",(or"
                 for v in values:
-                    #  to maintain backwards compatibility, use :like because it's
-                    #  a textual operator.
-                    #  XXX will need to escape %
+                    #  to maintain backwards compatibility for this endpoint,
+                    #  use :like instead of :eq because SQL LIKE is a textual
+                    #  operator. XXX will need to escape %
                     filter_param += f',({path},:like,"{v}")'
                 filter_param += ")"
             filter_param += ")"
@@ -109,18 +108,22 @@ async def search_metadata_helper(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
-    #  XXX how to name this variable something other than filter
-    filter: str = Query("", description="The filters!"),
+    #  XXX how to name this python variable something other than filter but
+    #  still have client use "filter" as URL query param?
+    filter: str = Query("", description="Filters to apply."),
 ):
     """
     XXX comments
     """
-    #  import pdb; pdb.set_trace()
     limit = min(limit, 2000)
 
     def add_filter(target_key, operator_name, other):
         json_object = Metadata.data[list(target_key.split("."))]
+
         if type(other) is dict:
+            #  since other isn't a primitive type, it means that this is a compound
+            #  operator
+            #  (e.g. GET objects?filter=(_resource_paths,:any,(,:like,"/programs/%")) )
             return operators[operator_name]["sql_clause"](
                 json_object, other["op"], other["val"]
             )
@@ -163,6 +166,8 @@ async def search_metadata_helper(
         )
 
     def get_all_sql_clause(target_json_object, scalar_operator_name, scalar_other):
+        #  XXX should DRY duplication between get_any_sql_clause and
+        #  get_all_sql_clause functions
         if (
             "type" in operators[scalar_operator_name]
             and operators[scalar_operator_name]["type"] == "text"
@@ -194,12 +199,12 @@ async def search_metadata_helper(
         ":gte": {"sql_comparator": ColumnOperators.__ge__},
         ":lt": {"sql_comparator": ColumnOperators.__lt__},
         ":lte": {"sql_comparator": ColumnOperators.__le__},
-        #  XXX not working
+        #  XXX :is is not working
         #  XXX what does SQL IS mean?
         #  XXX check how mongoDB filters for null (does it use it?, if an object
         #  doesn't have a given key, is that considered null? etc.)
         ":is": {"sql_comparator": ColumnOperators.is_},
-        #  XXX in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (or(score,:eq,1),(score,:eq,2)))
+        #  XXX :in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (or(score,:eq,1),(score,:eq,2)))
         #  ":in": ColumnOperators.in_,
         ":like": {
             "type": "text",
@@ -210,12 +215,10 @@ async def search_metadata_helper(
     }
 
     def parse_filter(filter_string):
-        #  import pdb; pdb.set_trace()
         if not filter_string:
             return
 
         #  https://github.com/erikrose/parsimonious/pull/23/files
-        #  parantheses get their own list, even if they only have one element
         grammar = Grammar(
             """
         filter           = scalar_filter / boolean_filter
@@ -246,47 +249,27 @@ async def search_metadata_helper(
         doubleString   = ~'"([^"])*"'
         """
         )
-        #  print(
-        #  grammar.parse(filter_string)
-        #  )
         return grammar.parse(filter_string)
 
     class FilterVisitor(NodeVisitor):
-        #  def visit_boolean_filter(self, node, visited_children):
-        #  pass
-
         def visit_filter(self, node, visited_children):
             return visited_children[0]
 
         def visit_boolean_filter(self, node, visited_children):
             _, boolean, boolean_operands, _ = visited_children
             return {boolean: boolean_operands}
-            #  import pdb; pdb.set_trace()
-            #  return db.and_(c for c in visited_children if c.expr_name == "scalar_filter")
-            #  return db.and_(c for c in visited_children)
-            #  return db.and_(c for c in visited_children[0])
-
-            #  if boolean == "and":
-            #  return db.and_(clause for clause in boolean_operands)
-            #  elif boolean == "or":
-            #  return db.or_(clause for clause in boolean_operands)
-            #  else:
-            #  raise
 
         def visit_boolean(self, node, visited_children):
             return node.text
 
         def visit_boolean_operand(self, node, visited_children):
-            #  return node.text
             _, scalar_filter_or_boolean_filter = visited_children
             return scalar_filter_or_boolean_filter
 
         def visit_scalar_filter_or_boolean_filter(self, node, visited_children):
-            #  import pdb; pdb.set_trace()
             return visited_children[0]
 
         def visit_scalar_filter(self, node, visited_children):
-            #  import pdb; pdb.set_trace()
             (
                 _,
                 json_key,
@@ -297,30 +280,11 @@ async def search_metadata_helper(
                 _,
             ) = visited_children
 
-            #  return node.text
-            #  print(json_key, operator, json_value_or_scalar_filter)
-            #  for node in (json_key, operator, json_value_or_scalar_filter):
-            #  print(node.text)
-            #  print(json_key)
-
-            #  import pdb; pdb.set_trace()
-
-            #  return (json_key, operator, json_value_or_scalar_filter)
-            #  return (json_key.text, operator[0].text, json_value_or_scalar_filter[0][0].text)
-
-            #  XXX need try around json.loads() ?
-            #  import pdb; pdb.set_trace()
-            #  return { "name": json_key.text, "op": operator[0].text, "val": json.loads(json_value_or_scalar_filter[0][0].text) }
-            #  import pdb; pdb.set_trace()
-            #  return { "name": json_key.text, "op": operator.text, "val": json.loads(json_value_or_scalar_filter.text) }
-
             return {
                 "name": json_key,
                 "op": operator,
                 "val": json_value_or_scalar_filter,
             }
-
-            #  return add_filter(json_key, operator, json_value_or_scalar_filter)
 
         def visit_json_value_or_scalar_filter(self, node, visited_children):
             return visited_children[0]
@@ -335,62 +299,17 @@ async def search_metadata_helper(
             return json.loads(node.text)
 
         def generic_visit(self, node, visited_children):
-            """ The generic visit method. """
-            #  return visited_children or node       #  return section.text
-            #  import pdb; pdb.set_trace()
-            #  return visited_children or node if node.expr_name not in ["open", "close", "separator"] else None
             return visited_children or node
-            #  return node
-
-    filter_tree = parse_filter(filter)
-    filter_dict = {}
-    #  import pdb; pdb.set_trace()
-    if filter_tree:
-        #  pass
-        filter_tree_visitor = FilterVisitor()
-        #  root_sql_clause = filter_tree_visitor.visit(filter_tree)
-        filter_dict = filter_tree_visitor.visit(filter_tree)
-    #  import pdb; pdb.set_trace()
-
-    #  XXX comments
-    #  def parantheses_to_json(s):
-    #  def scalar_to_json(s):
-    #  if not s:
-    #  return {}
-    #  #  XXX what if only one is a parantheses?
-    #  if s[0] != "(" and s[-1] != ")":
-    #  try:
-    #  return json.loads(s)
-    #  except:
-    #  return s
-
-    #  f = s[1:-1].split(",", 2)
-    #  f = {"name": f[0], "op": f[1], "val": parantheses_to_json(f[2])}
-    #  return f
-
-    #  return scalar_to_json(s)
-
-    #  filter = [parantheses_to_json(filter)]
 
     def get_clause(filter_dict):
         if not filter_dict:
             return
 
-        #  boolean = getattr("boolean", node)
-        #  expression_name = getattr(node, "expr_name")
-        #  if expression_name
-
-        #  if boolean is not None:
-        #  if boolean == "and":
-        #  return db.and_(get_clause(c) for c in node.children)
-        #  elif boolean == "or":
-        #  return db.or_(get_clause(c) for c in node.children)
-        #  raise
-
         if len(filter_dict) == 1:
             boolean = list(filter_dict.keys())[0]
 
             boolean_operand_clauses = (get_clause(c) for c in filter_dict[boolean])
+            #  XXX define these boolean operators in one place
             if boolean == "and":
                 return db.and_(boolean_operand_clauses)
             elif boolean == "or":
@@ -398,6 +317,12 @@ async def search_metadata_helper(
             raise
 
         return add_filter(filter_dict["name"], filter_dict["op"], filter_dict["val"])
+
+    filter_tree = parse_filter(filter)
+    filter_dict = {}
+    if filter_tree:
+        filter_tree_visitor = FilterVisitor()
+        filter_dict = filter_tree_visitor.visit(filter_tree)
 
     if data:
         query = Metadata.query
