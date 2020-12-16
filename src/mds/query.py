@@ -254,18 +254,18 @@ async def search_metadata_helper(
 
         def visit_boolean_filter(self, node, visited_children):
             _, boolean, boolean_operands, _ = visited_children
-            #  return { boolean: boolean_operands }
+            return {boolean: boolean_operands}
             #  import pdb; pdb.set_trace()
             #  return db.and_(c for c in visited_children if c.expr_name == "scalar_filter")
             #  return db.and_(c for c in visited_children)
             #  return db.and_(c for c in visited_children[0])
 
-            if boolean == "and":
-                return db.and_(clause for clause in boolean_operands)
-            elif boolean == "or":
-                return db.or_(clause for clause in boolean_operands)
-            else:
-                raise
+            #  if boolean == "and":
+            #  return db.and_(clause for clause in boolean_operands)
+            #  elif boolean == "or":
+            #  return db.or_(clause for clause in boolean_operands)
+            #  else:
+            #  raise
 
         def visit_boolean(self, node, visited_children):
             return node.text
@@ -308,9 +308,13 @@ async def search_metadata_helper(
             #  import pdb; pdb.set_trace()
             #  return { "name": json_key.text, "op": operator.text, "val": json.loads(json_value_or_scalar_filter.text) }
 
-            #  return { "name": json_key, "op": operator, "val": json_value_or_scalar_filter }
+            return {
+                "name": json_key,
+                "op": operator,
+                "val": json_value_or_scalar_filter,
+            }
 
-            return add_filter(json_key, operator, json_value_or_scalar_filter)
+            #  return add_filter(json_key, operator, json_value_or_scalar_filter)
 
         def visit_json_value_or_scalar_filter(self, node, visited_children):
             return visited_children[0]
@@ -333,12 +337,14 @@ async def search_metadata_helper(
             #  return node
 
     filter_tree = parse_filter(filter)
+    filter_dict = {}
     #  import pdb; pdb.set_trace()
     if filter_tree:
         #  pass
         filter_tree_visitor = FilterVisitor()
-        root_sql_clause = filter_tree_visitor.visit(filter_tree)
-        #  import pdb; pdb.set_trace()
+        #  root_sql_clause = filter_tree_visitor.visit(filter_tree)
+        filter_dict = filter_tree_visitor.visit(filter_tree)
+    #  import pdb; pdb.set_trace()
 
     #  XXX comments
     def parantheses_to_json(s):
@@ -360,34 +366,46 @@ async def search_metadata_helper(
 
     filter = [parantheses_to_json(filter)]
 
-    def get_clause(node):
-        if not node:
+    def get_clause(filter_dict):
+        if not filter_dict:
             return
 
         #  boolean = getattr("boolean", node)
-        expression_name = getattr(node, "expr_name")
+        #  expression_name = getattr(node, "expr_name")
         #  if expression_name
 
-        if boolean is not None:
+        #  if boolean is not None:
+        #  if boolean == "and":
+        #  return db.and_(get_clause(c) for c in node.children)
+        #  elif boolean == "or":
+        #  return db.or_(get_clause(c) for c in node.children)
+        #  raise
+
+        if len(filter_dict) == 1:
+            #  import pdb; pdb.set_trace()
+            boolean = list(filter_dict.keys())[0]
+
+            boolean_operand_clauses = (get_clause(c) for c in filter_dict[boolean])
             if boolean == "and":
-                return db.and_(get_clause(c) for c in node.children)
+                return db.and_(boolean_operand_clauses)
             elif boolean == "or":
-                return db.or_(get_clause(c) for c in node.children)
+                return db.or_(boolean_operand_clauses)
             raise
 
-        return add_filter(node.json_key, node.operator, node.json_value)
+        #  return add_filter(node.json_key, node.operator, node.json_value)
+        return add_filter(filter_dict["name"], filter_dict["op"], filter_dict["val"])
 
     if data:
-        #  query = Metadata.query
+        query = Metadata.query
         #  if filter[0]:
         #  query = query.where(
         #  add_filter(filter[0]["name"], filter[0]["op"], filter[0]["val"])
         #  )
 
-        query = Metadata.query.where(root_sql_clause)
+        #  query = Metadata.query.where(root_sql_clause)
 
-        #  if filter_tree:
-        #  query = query.where(get_clause(filter_tree))
+        if filter_dict:
+            query = query.where(get_clause(filter_dict))
 
         return {metadata.guid: metadata.data for metadata in await query.gino.all()}
     else:
