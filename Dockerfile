@@ -1,4 +1,4 @@
-FROM python:3.7-alpine as base
+FROM quay.io/cdis/python:3.7-alpine as base
 
 FROM base as builder
 RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev make postgresql-dev git curl
