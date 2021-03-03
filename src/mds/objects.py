@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_200_OK,
     HTTP_201_CREATED,
+    HTTP_204_NO_CONTENT,
     HTTP_409_CONFLICT,
     HTTP_400_BAD_REQUEST,
     HTTP_401_UNAUTHORIZED,
@@ -382,6 +383,52 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
     }
 
     return JSONResponse(response, HTTP_200_OK)
+
+
+@mod.delete("/objects/{guid:path}")
+async def delete_object(guid: str, request: Request) -> JSONResponse:
+    """
+    Delete the metadata for the specified object. Remove the object from
+    existing bucket location(s) by proxying to fence DELETE /data/file_id.
+    Uses the response status code from fence to determine whether user has
+    permission to delete metadata.
+
+    Args:
+        guid (str): indexd GUID or alias, or MDS key
+        request (Request): starlette request (which contains reference to FastAPI app)
+    Returns:
+        204: if record and metadata are deleted
+        403: if fence returns a 403 unauthorized response
+        500: if fence does not return 204 or 403 or there is an error deleting metadata
+    """
+    try:
+        fence_endpoint = (
+            config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + "/data/" + guid
+        )
+        auth_header = str(request.headers.get("Authorization", ""))
+        headers = {"Authorization": auth_header}
+        logger.debug(f"Attempting DELETE {fence_endpoint}\n" f"{auth_header}")
+        response = await request.app.async_client.get(
+            endpoint, headers={"Authorization": auth_header}
+        )
+        response.raise_for_status()
+        fence_response = await request.app.async_client.delete(
+            fence_endpoint, headers=headers
+        )
+        fence_response.raise_for_status()
+        await (
+            Metadata.delete.where(Metadata.guid == guid)
+            .returning(*Metadata)
+            .gino.first()
+        )
+        return JSONResponse({}, HTTP_204_NO_CONTENT)
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response:
+            raise HTTPException(
+                fence_response.status_code, {"fence_response": fence_response.text}
+            )
+        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 async def _get_metadata(mds_key: str) -> dict:
