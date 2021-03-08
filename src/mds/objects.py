@@ -255,15 +255,11 @@ async def get_objects(
     )
 
     records = {}
-    if metadata_objects:
+    if data and metadata_objects:
         try:
             endpoint_path = "/bulk/documents"
             full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
-            guids = (
-                list(metadata_objects.keys())
-                if hasattr(metadata_objects, "keys")
-                else metadata_objects
-            )
+            guids = list(metadata_objects.keys())
             #  XXX /bulk/documents endpoint in indexd currently doesn't support
             #  filters
             response = await request.app.async_client.post(full_endpoint, json=guids)
@@ -283,7 +279,7 @@ async def get_objects(
                     endpoint_path,
                 )
 
-    if type(metadata_objects) is dict:
+    if data:
         response = {
             guid: {"record": records[guid] if guid in records else {}, "metadata": o}
             for guid, o in metadata_objects.items()
