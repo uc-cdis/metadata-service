@@ -259,7 +259,7 @@ async def get_objects(
         try:
             endpoint_path = "/bulk/documents"
             full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
-            guids = list(metadata_objects.keys())
+            guids = list(guid for guid, _ in metadata_objects)
             #  XXX /bulk/documents endpoint in indexd currently doesn't support
             #  filters
             response = await request.app.async_client.post(full_endpoint, json=guids)
@@ -281,8 +281,10 @@ async def get_objects(
 
     if data:
         response = {
-            guid: {"record": records[guid] if guid in records else {}, "metadata": o}
-            for guid, o in metadata_objects.items()
+            "items": [
+                {"record": records[guid] if guid in records else {}, "metadata": o}
+                for guid, o in metadata_objects
+            ]
         }
     else:
         response = metadata_objects

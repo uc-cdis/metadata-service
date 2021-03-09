@@ -5,10 +5,11 @@ from sqlalchemy import cast, column, exists
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql.operators import ColumnOperators
 from starlette.requests import Request
-from starlette.status import HTTP_404_NOT_FOUND
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
 from parsimonious.grammar import Grammar
 from parsimonious.nodes import NodeVisitor
+from parsimonious.exceptions import IncompleteParseError, ParseError, VisitationError
 
 from .models import db, Metadata
 
@@ -263,7 +264,6 @@ async def search_metadata_helper(
         f = f(target_json_object).alias()
 
         return exists(
-            #  XXX select 1
             db.select("*")
             .select_from(f)
             .where(
@@ -274,8 +274,6 @@ async def search_metadata_helper(
         )
 
     def get_all_sql_clause(target_json_object, scalar_operator_name, scalar_other):
-        #  XXX should DRY duplication between get_any_sql_clause and
-        #  get_all_sql_clause functions
         if (
             "type" in operators[scalar_operator_name]
             and operators[scalar_operator_name]["type"] == "text"
@@ -432,20 +430,25 @@ async def search_metadata_helper(
 
         return add_filter(filter_dict["name"], filter_dict["op"], filter_dict["val"])
 
-    filter_tree = parse_filter(filter)
-    filter_dict = {}
-    if filter_tree:
-        filter_tree_visitor = FilterVisitor()
-        filter_dict = filter_tree_visitor.visit(filter_tree)
+    try:
+        filter_tree = parse_filter(filter)
+        filter_dict = {}
+        if filter_tree:
+            filter_tree_visitor = FilterVisitor()
+            filter_dict = filter_tree_visitor.visit(filter_tree)
+    except (IncompleteParseError, ParseError, VisitationError):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"filter URL query param syntax is invalid"
+        )
 
     if data:
         query = Metadata.query
         if filter_dict:
             query = query.where(get_clause(filter_dict))
-        return {
-            metadata.guid: metadata.data
+        return [
+            (metadata.guid, metadata.data)
             for metadata in await query.offset(offset).limit(limit).gino.all()
-        }
+        ]
     else:
         query = db.select([Metadata.guid])
         if filter_dict:
