@@ -18,9 +18,9 @@ The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged w
 
 Install required software:
 
-*   [PostgreSQL](PostgreSQL) 9.6 or above
-*   [Python](https://www.python.org/downloads/) 3.7 or above
-*   [Poetry](https://poetry.eustace.io/docs/#installation)
+* [PostgreSQL](PostgreSQL) 9.6 or above
+* [Python](https://www.python.org/downloads/) 3.7 or above
+* [Poetry](https://poetry.eustace.io/docs/#installation)
 
 Then use `poetry install` to install the dependencies. Before that,
 a [virtualenv](https://virtualenv.pypa.io/) is recommended.
@@ -78,19 +78,13 @@ docker-compose up
 Run database schema migration as well:
 
 ```bash
-docker-compose exec mds poetry run alembic upgrade head
-```
-
-Create test database:
-
-```bash
-docker-compose exec db createdb -U mds test_mds
+docker-compose exec app alembic upgrade head
 ```
 
 Run tests:
 
 ```bash
-docker-compose exec mds poetry run pytest --cov=src --cov=migrations/versions tests
+docker-compose exec app pytest --cov=src --cov=migrations/versions tests
 ```
 
 ## Deployment
