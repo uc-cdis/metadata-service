@@ -73,29 +73,25 @@ async def search_metadata(
         if key not in {"data", "limit", "offset"}:
             queries.setdefault(key, []).append(value)
 
-    def add_filters():
-        filter_param = ""
+    def add_filter(query):
+        for path, values in queries.items():
+            query = query.where(
+                db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
+            )
+        return query.offset(offset).limit(limit)
 
-        if queries:
-            filter_param = "(and"
-            for path, values in queries.items():
-                filter_param += ",(or"
-                for v in values:
-                    #  to maintain backwards compatibility for this endpoint,
-                    #  use :like instead of :eq because SQL LIKE is a textual
-                    #  operator. XXX will need to escape %
-                    filter_param += f',({path},:like,"{v}")'
-                filter_param += ")"
-            filter_param += ")"
-
-        return filter_param
-
-    return await search_metadata_helper(
-        data=data,
-        limit=limit,
-        offset=offset,
-        filter=add_filters(),
-    )
+    if data:
+        return {
+            metadata.guid: metadata.data
+            for metadata in await add_filter(Metadata.query).gino.all()
+        }
+    else:
+        return [
+            row[0]
+            for row in await add_filter(db.select([Metadata.guid]))
+            .gino.return_model(False)
+            .all()
+        ]
 
 
 async def search_metadata_helper(
