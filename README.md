@@ -2,8 +2,7 @@
 
 [![Docker release](https://img.shields.io/github/v/release/uc-cdis/metadata-service?logo=docker&logoColor=white)](https://quay.io/repository/cdis/metadata-service)
 [![GitHub workflow](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/CI%20Workflow?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3A%22CI+Workflow%22)
-[![Codacy coverage](https://img.shields.io/codacy/coverage/5acc2d70109f451ab8047b2691ffcffe?logo=codacy)](https://www.codacy.com/gh/uc-cdis/metadata-service)
-[![Codacy grade](https://img.shields.io/codacy/grade/5acc2d70109f451ab8047b2691ffcffe?logo=codacy)](https://www.codacy.com/gh/uc-cdis/metadata-service)
+[![Coverage Status](https://coveralls.io/repos/github/uc-cdis/metadata-service/badge.svg?branch=master)](https://coveralls.io/github/uc-cdis/metadata-service?branch=master)
 [![Dependabot Badge](https://img.shields.io/badge/Dependabot-active-brightgreen?logo=dependabot)](https://dependabot.com/)
 [![License](https://img.shields.io/github/license/uc-cdis/metadata-service?logo=apache)](https://github.com/uc-cdis/metadata-service/blob/master/LICENSE)
 
