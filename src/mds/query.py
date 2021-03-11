@@ -105,8 +105,6 @@ async def search_metadata_helper(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
-    #  XXX how to name this python variable something other than filter but
-    #  still have client use "filter" as URL query param?
     filter: str = Query("", description="Filters to apply."),
 ):
     """
@@ -201,34 +199,34 @@ async def search_metadata_helper(
     """
     limit = min(limit, 2000)
 
-    def add_filter(target_key, operator_name, other):
+    def add_filter(target_key, operator_name, right_operand):
         """
-        XXX need a better name for other variable. with a scalar filter, other
-        is the value that the target value is compared against
+        with a scalar filter, right_operand is the value that the target value
+        is compared against
 
         e.g. for the following requests, the arguments to add_filter:
             * `GET /objects?filter=(_uploader_id,:eq,"57")`
                 - target_key is 'uploader_id'
                 - operator_name is ':eq'
-                - other is '57'
+                - right_operand is '57'
             * `GET /objects?filter=(count,:gte,16)`
                 - target_key is 'count'
                 - operator_name is ':gte'
-                - other is 16 (note this is a python int)
+                - right_operand is 16 (note this is a python int)
             * `GET /objects?filter=(_resource_paths,:any,(,:like,"/programs/foo/%"))`
                 - target_key is '_resource_paths'
                 - operator_name is ':any'
-                - other is {'name': '', 'op': ':like', 'val': '/programs/foo/%'}
+                - right_operand is {'name': '', 'op': ':like', 'val': '/programs/foo/%'}
         """
 
         json_object = Metadata.data[list(target_key.split("."))]
 
-        if type(other) is dict:
-            #  since other isn't a primitive type, it means that this is a compound
+        if type(right_operand) is dict:
+            #  since right_operand isn't a primitive type, it means that this is a compound
             #  operator
             #  (e.g. GET objects?filter=(_resource_paths,:any,(,:like,"/programs/%")) )
             return operators[operator_name]["sql_clause"](
-                json_object, other["op"], other["val"]
+                json_object, right_operand["op"], right_operand["val"]
             )
 
         if (
@@ -239,15 +237,18 @@ async def search_metadata_helper(
         else:
             #  this is necessary to differentiate between strings, booleans, numbers,
             #  etc. in JSON
-            other = cast(other, JSONB)
+            right_operand = cast(right_operand, JSONB)
 
-        return operators[operator_name]["sql_comparator"](json_object, other)
+        return operators[operator_name]["sql_comparator"](json_object, right_operand)
 
-    #  XXX get_any_sql_clause could possibly be used for a :has_key operation
-    #  w/ a little more work (e.g. does teams object {} have "bears" key:
-    #  (teams,:any,(,:eq,"bears"))) (would need to use jsonb_object_keys
-    #  https://www.postgresql.org/docs/9.5/functions-json.html#FUNCTIONS-JSON-OP-TABLE)
+    #  XXX docstring needs more detail
     def get_any_sql_clause(target_json_object, scalar_operator_name, scalar_other):
+        """
+        get_any_sql_clause could possibly be used for a :has_key operation w/ a
+        little more work (e.g. does teams object {} have "bears" key:
+        (teams,:any,(,:eq,"bears"))) (would need to use jsonb_object_keys
+        https://www.postgresql.org/docs/9.5/functions-json.html#FUNCTIONS-JSON-OP-TABLE)
+        """
         if (
             "type" in operators[scalar_operator_name]
             and operators[scalar_operator_name]["type"] == "text"
@@ -293,7 +294,6 @@ async def search_metadata_helper(
             ),
         )
 
-    #  XXX aggregate operators might be nice (e.g size, max, etc.)
     operators = {
         ":eq": {"sql_comparator": ColumnOperators.__eq__},
         ":ne": {"sql_comparator": ColumnOperators.__ne__},
@@ -301,13 +301,6 @@ async def search_metadata_helper(
         ":gte": {"sql_comparator": ColumnOperators.__ge__},
         ":lt": {"sql_comparator": ColumnOperators.__lt__},
         ":lte": {"sql_comparator": ColumnOperators.__le__},
-        #  XXX :is is not working
-        #  XXX what does SQL IS mean?
-        #  XXX check how mongoDB filters for null (does it use it?, if an object
-        #  doesn't have a given key, is that considered null? etc.)
-        ":is": {"sql_comparator": ColumnOperators.is_},
-        #  XXX :in is probably unnecessary (i.e. instead of (score, :in, [1, 2]) do (or(score,:eq,1),(score,:eq,2)))
-        #  ":in": ColumnOperators.in_,
         ":like": {
             "type": "text",
             "sql_comparator": ColumnOperators.like,
@@ -320,31 +313,33 @@ async def search_metadata_helper(
         if not filter_string:
             return
 
-        #  XXX invalid filter param can result in a 500
-        #  e.g. `GET objects?filter=(_uploader_id,:eq"57")` (missing second comma)
-
-        #  json_value and below taken from https://github.com/erikrose/parsimonious/pull/23/files
-        #  XXX need to allow for escaped strings
-        #  XXX need some cleaning up
+        #  json_value and below was taken from
+        #  https://github.com/erikrose/parsimonious/pull/23/files
         grammar = Grammar(
             """
-        filter           = scalar_filter / boolean_filter
+        filter           = scalar_filter / compound_filter / boolean_filter
         boolean_filter   = open boolean boolean_operands close
         boolean          = "and" / "or"
         boolean_operands = boolean_operand+
-        boolean_operand = separator scalar_filter_or_boolean_filter
-        scalar_filter_or_boolean_filter = scalar_filter / boolean_filter
-        scalar_filter   = open json_key separator operator separator json_value_or_scalar_filter close
+        boolean_operand = separator specific_filter
+        specific_filter = scalar_filter / compound_filter / boolean_filter
+        scalar_filter   = open json_key separator scalar_operator separator json_value close
+        compound_filter   = open json_key separator compound_operator separator scalar_filter close
         json_value_or_scalar_filter = json_value / scalar_filter
+
         json_key        = ~"[A-Z 0-9_.]*"i
-        operator        = ":eq" / ":ne" / ":gte" / ":gt" / ":lte" / ":lt" / ":is" / ":like" / ":all" / ":any"
+        scalar_operator = ":eq" / ":ne" / ":gte" / ":gt" / ":lte" / ":lt" / ":like"
+        compound_operator = ":all" / ":any"
         open            = "("
         close           = ")"
         separator       = ","
 
-        json_value = true_false_null / number / double_string
+        json_value = double_string / true_false_null / number
+
+        double_string   = ~'"([^"])*"'
         true_false_null = "true" / "false" / "null"
         number = (int frac exp) / (int exp) / (int frac) / int
+
         int = "-"? ((digit1to9 digits) / digit)
         frac = "." digits
         exp = e digits
@@ -352,8 +347,6 @@ async def search_metadata_helper(
         e = "e+" / "e-" / "e" / "E+" / "E-" / "E"
         digit1to9 = ~"[1-9]"
         digit = ~"[0-9]"
-
-        double_string   = ~'"([^"])*"'
         """
         )
         return grammar.parse(filter_string)
@@ -370,10 +363,10 @@ async def search_metadata_helper(
             return node.text
 
         def visit_boolean_operand(self, node, visited_children):
-            _, scalar_filter_or_boolean_filter = visited_children
-            return scalar_filter_or_boolean_filter
+            _, specific_filter = visited_children
+            return specific_filter
 
-        def visit_scalar_filter_or_boolean_filter(self, node, visited_children):
+        def visit_specific_filter(self, node, visited_children):
             return visited_children[0]
 
         def visit_scalar_filter(self, node, visited_children):
@@ -383,14 +376,31 @@ async def search_metadata_helper(
                 _,
                 operator,
                 _,
-                json_value_or_scalar_filter,
+                json_value,
                 _,
             ) = visited_children
 
             return {
                 "name": json_key,
                 "op": operator,
-                "val": json_value_or_scalar_filter,
+                "val": json_value,
+            }
+
+        def visit_compound_filter(self, node, visited_children):
+            (
+                _,
+                json_key,
+                _,
+                operator,
+                _,
+                scalar_filter,
+                _,
+            ) = visited_children
+
+            return {
+                "name": json_key,
+                "op": operator,
+                "val": scalar_filter,
             }
 
         def visit_json_value_or_scalar_filter(self, node, visited_children):
@@ -399,7 +409,10 @@ async def search_metadata_helper(
         def visit_json_key(self, node, visited_children):
             return node.text
 
-        def visit_operator(self, node, visited_children):
+        def visit_scalar_operator(self, node, visited_children):
+            return node.text
+
+        def visit_compound_operator(self, node, visited_children):
             return node.text
 
         def visit_json_value(self, node, visited_children):
@@ -408,16 +421,16 @@ async def search_metadata_helper(
         def generic_visit(self, node, visited_children):
             return visited_children or node
 
-    #  XXX better name
-    def get_clause(filter_dict):
+    def get_sqlalchemy_clause(filter_dict):
         if not filter_dict:
             return
 
         if len(filter_dict) == 1:
             boolean = list(filter_dict.keys())[0]
 
-            boolean_operand_clauses = (get_clause(c) for c in filter_dict[boolean])
-            #  XXX define these boolean operators in one place
+            boolean_operand_clauses = (
+                get_sqlalchemy_clause(c) for c in filter_dict[boolean]
+            )
             if boolean == "and":
                 return db.and_(boolean_operand_clauses)
             elif boolean == "or":
@@ -440,7 +453,7 @@ async def search_metadata_helper(
     if data:
         query = Metadata.query
         if filter_dict:
-            query = query.where(get_clause(filter_dict))
+            query = query.where(get_sqlalchemy_clause(filter_dict))
         return [
             (metadata.guid, metadata.data)
             for metadata in await query.offset(offset).limit(limit).gino.all()
@@ -448,7 +461,7 @@ async def search_metadata_helper(
     else:
         query = db.select([Metadata.guid])
         if filter_dict:
-            query = query.where(get_clause(filter_dict))
+            query = query.where(get_sqlalchemy_clause(filter_dict))
         return [
             row[0]
             for row in await query.offset(offset)
