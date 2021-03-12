@@ -1,0 +1,43 @@
+{
+    "0": {
+        "message": "hello",
+        "_uploader_id": "100",
+        "_resource_paths": [
+            "/programs/a",
+            "/programs/b"
+        ],
+        "pet": "dog"
+    },
+    "1": {
+        "message": "greetings",
+        "_uploader_id": "101",
+        "_resource_paths": [
+            "/open",
+            "/programs/c/projects/a"
+        ],
+        "pet": "ferret",
+        "sport": "soccer"
+    },
+    "2": {
+        "message": "morning",
+        "_uploader_id": "102",
+        "_resource_paths": [
+            "/programs/d",
+            "/programs/e"
+        ],
+        "counts": [42, 42, 42],
+        "pet": "ferret",
+        "sport": "soccer"
+    },
+    "3": {
+        "message": "evening",
+        "_uploader_id": "103",
+        "_resource_paths": [
+            "/programs/f/projects/a",
+            "/admin"
+        ],
+        "counts": [1, 3, 5],
+        "pet": "ferret",
+        "sport": "basketball"
+    }
+}
