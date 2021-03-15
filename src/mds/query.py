@@ -94,18 +94,12 @@ async def search_metadata(
         ]
 
 
+#  XXX move long docstring to objects.py
 async def search_metadata_helper(
-    data: bool = Query(
-        False,
-        description="Switch to returning a list of GUIDs (false), "
-        "or GUIDs mapping to their metadata (true).",
-    ),
-    limit: int = Query(
-        10, description="Maximum number of records returned. (max: 2000)"
-    ),
-    offset: int = Query(0, description="Return results at this given offset."),
-    #  XXX description
-    filter: str = Query("", description="Filters to apply."),
+    data: bool = False,
+    page: int = 0,
+    limit: int = 10,
+    filter: str = "",
 ):
     """
     Helper to search for metadata objects based on filters provided in filter
@@ -197,16 +191,27 @@ async def search_metadata_helper(
           returns "0", "1", and "2"
 
     """
+    #  XXX change to 1024
     limit = min(limit, 2000)
 
     def add_filter(target_key, operator_name, right_operand):
         """
-        with a scalar filter, right_operand is the value that the target value
-        is compared against
+        Wrapper around operators dict. Decides if a scalar or compound operator
+        needs to be instantiated based on right_operand.
+
+        Args:
+        target_key (str): the json key which we are filtering based on
+
+        operator_name (str): the name of the operator (leading colon included)
+
+        right_operand (str, bool, int, float, dict): With a scalar filter (i.e.
+        when it's not a dict), the value that the target value is compared
+        against.  With a compound filter (i.e. when it's a dict), the nested
+        filter that's run on the target key.
 
         e.g. for the following requests, the arguments to add_filter:
             * `GET /objects?filter=(_uploader_id,:eq,"57")`
-                - target_key is 'uploader_id'
+                - target_key is '_uploader_id'
                 - operator_name is ':eq'
                 - right_operand is '57'
             * `GET /objects?filter=(count,:gte,16)`
@@ -217,6 +222,9 @@ async def search_metadata_helper(
                 - target_key is '_resource_paths'
                 - operator_name is ':any'
                 - right_operand is {'name': '', 'op': ':like', 'val': '/programs/foo/%'}
+
+        Returns:
+            SQLAlchemy object
         """
 
         json_object = Metadata.data[list(target_key.split("."))]
@@ -241,12 +249,26 @@ async def search_metadata_helper(
 
         return operators[operator_name]["sql_comparator"](json_object, right_operand)
 
-    #  XXX docstring needs more detail
-    def get_any_sql_clause(target_json_object, scalar_operator_name, scalar_other):
+    def get_any_sql_clause(target_json_key, scalar_operator_name, scalar_right_operand):
         """
-        get_any_sql_clause could possibly be used for a :has_key operation w/ a
-        little more work (e.g. does teams object {} have "bears" key:
-        (teams,:any,(,:eq,"bears"))) (would need to use jsonb_object_keys
+        Generate a SQLAlchemy clause that corresponds to the :any operation.
+
+        Args:
+            target_json_key (str): the json key pointing to the array which we
+            are filtering based on
+
+            scalar_operator_name (str): the name of the operator (leading colon
+            included) (see operators dict for a list of valid operators)
+
+            scalar_right_operand (str, bool, int, float, dict): the value that
+            each element in the target_json_key array is compared against
+
+        Returns:
+            SQLAlchemy clause corresponding to the :any operation.
+
+        Note: get_any_sql_clause could possibly be used for a :has_key
+        operation w/ a little more work (e.g. does teams object {} have "bears"
+        key: (teams,:any,(,:eq,"bears"))) (would need to use jsonb_object_keys
         https://www.postgresql.org/docs/9.5/functions-json.html#FUNCTIONS-JSON-OP-TABLE)
         """
         if (
@@ -256,21 +278,37 @@ async def search_metadata_helper(
             f = db.func.jsonb_array_elements_text
         else:
             f = db.func.jsonb_array_elements
-            scalar_other = cast(scalar_other, JSONB)
+            scalar_right_operand = cast(scalar_right_operand, JSONB)
 
-        f = f(target_json_object).alias()
+        f = f(target_json_key).alias()
 
         return exists(
             db.select("*")
             .select_from(f)
             .where(
                 operators[scalar_operator_name]["sql_comparator"](
-                    column(f.name), scalar_other
+                    column(f.name), scalar_right_operand
                 )
             )
         )
 
-    def get_all_sql_clause(target_json_object, scalar_operator_name, scalar_other):
+    def get_all_sql_clause(target_json_key, scalar_operator_name, scalar_right_operand):
+        """
+        Generate a SQLAlchemy clause that corresponds to the :all operation.
+
+        Args:
+            target_json_key (str): the json key pointing to the array which we
+            are filtering based on
+
+            scalar_operator_name (str): the name of the operator (leading colon
+            included) (see operators dict for a list of valid operators)
+
+            scalar_right_operand (str, bool, int, float, dict): the value that
+            each element in the target_json_key array is compared against
+
+        Returns:
+            SQLAlchemy clause corresponding to the :all operation.
+        """
         if (
             "type" in operators[scalar_operator_name]
             and operators[scalar_operator_name]["type"] == "text"
@@ -278,10 +316,10 @@ async def search_metadata_helper(
             f = db.func.jsonb_array_elements_text
         else:
             f = db.func.jsonb_array_elements
-            scalar_other = cast(scalar_other, JSONB)
+            scalar_right_operand = cast(scalar_right_operand, JSONB)
 
-        f = f(target_json_object).alias()
-        count_f = db.func.jsonb_array_length(target_json_object)
+        f = f(target_json_key).alias()
+        count_f = db.func.jsonb_array_length(target_json_key)
 
         return ColumnOperators.__eq__(
             count_f,
@@ -289,7 +327,7 @@ async def search_metadata_helper(
             .select_from(f)
             .where(
                 operators[scalar_operator_name]["sql_comparator"](
-                    column(f.name), scalar_other
+                    column(f.name), scalar_right_operand
                 )
             ),
         )
@@ -310,6 +348,17 @@ async def search_metadata_helper(
     }
 
     def parse_filter(filter_string):
+        """
+        Parse filter_string and return an abstract syntax tree representation.
+
+        Args:
+            filter_string (str): the filter string to parse
+            (e.g. '(_uploader_id,:eq,"57")' )
+
+        Returns:
+            A parsimonious abstract syntax tree representation of
+            filter_string.
+        """
         if not filter_string:
             return
 
@@ -403,6 +452,7 @@ async def search_metadata_helper(
                 "val": scalar_filter,
             }
 
+        #  XXX no longer used, remove
         def visit_json_value_or_scalar_filter(self, node, visited_children):
             return visited_children[0]
 
@@ -422,6 +472,49 @@ async def search_metadata_helper(
             return visited_children or node
 
     def get_sqlalchemy_clause(filter_dict):
+        """
+        Return a SQLAlchemy WHERE clause representing filter_dict.
+
+        Args:
+            filter_dict(dict):
+
+            when filter_dict is a scalar:
+            {
+                "name": "_resource_paths.1",
+                "op": ":like",
+                "val": "/programs/%"
+            }
+
+            when filter_dict is a compound:
+            {
+                "name": "_resource_paths",
+                "op": ":any",
+                "val": {
+                    "name": "",
+                    "op": ":like",
+                    "val": "/programs/%"
+                }
+            }
+
+            when filter_dict is a boolean compound:
+            {
+                "or": [
+                    {
+                        "name": "_uploader_id",
+                        "op": ":eq",
+                        "val": "101"
+                    },
+                    {
+                        "name": "_uploader_id",
+                        "op": ":eq",
+                        "val": "102"
+                    }
+                ]
+            }
+
+        Returns:
+            A SQLAlchemy WHERE clause representing filter_dict.
+        """
         if not filter_dict:
             return
 
@@ -456,7 +549,7 @@ async def search_metadata_helper(
             query = query.where(get_sqlalchemy_clause(filter_dict))
         return [
             (metadata.guid, metadata.data)
-            for metadata in await query.offset(offset).limit(limit).gino.all()
+            for metadata in await query.offset(page * limit).limit(limit).gino.all()
         ]
     else:
         query = db.select([Metadata.guid])
@@ -464,7 +557,7 @@ async def search_metadata_helper(
             query = query.where(get_sqlalchemy_clause(filter_dict))
         return [
             row[0]
-            for row in await query.offset(offset)
+            for row in await query.offset(page * limit)
             .limit(limit)
             .gino.return_model(False)
             .all()

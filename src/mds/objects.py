@@ -229,21 +229,17 @@ async def create_object_for_id(
 @mod.get("/objects")
 async def get_objects(
     request: Request,
-    #  XXX would be nice to be able to specify whether to return indexd records
-    #  (e.g GET objects?data=metadata would only return mds objects)
     data: bool = Query(
         False,
         description="Switch to returning a list of GUIDs (false), "
         "or GUIDs mapping to their metadata (true).",
     ),
+    #  XXX description
+    page: int = Query(0, description="paginate"),
     limit: int = Query(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
-    offset: int = Query(0, description="Return results at this given offset."),
     #  XXX description
-    #  XXX how to name this python variable something other than filter but
-    #  still have client use "filter" as URL query param? (bc filter is already
-    #  built in to Python)
     filter: str = Query("", description="Filters to apply."),
 ) -> JSONResponse:
     """
@@ -251,7 +247,7 @@ async def get_objects(
     """
 
     metadata_objects = await search_metadata_helper(
-        data=data, limit=limit, offset=offset, filter=filter
+        data=data, page=page, limit=limit, filter=filter
     )
 
     records = {}
