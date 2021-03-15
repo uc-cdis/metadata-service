@@ -424,6 +424,15 @@ paths:
             to their metadata (true).
           title: Data
           type: boolean
+      - description: paginate
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 0
+          description: paginate
+          title: Page
+          type: integer
       - description: 'Maximum number of records returned. (max: 2000)'
         in: query
         name: limit
@@ -432,15 +441,6 @@ paths:
           default: 10
           description: 'Maximum number of records returned. (max: 2000)'
           title: Limit
-          type: integer
-      - description: Return results at this given offset.
-        in: query
-        name: offset
-        required: false
-        schema:
-          default: 0
-          description: Return results at this given offset.
-          title: Offset
           type: integer
       - description: Filters to apply.
         in: query
