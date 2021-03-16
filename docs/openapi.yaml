@@ -475,14 +475,14 @@ paths:
             15 objects beginning at index 15 will be returned).
           title: Page
           type: integer
-      - description: 'Maximum number of records returned (max: 2000). Also used with
+      - description: 'Maximum number of objects returned (max: 1024). Also used with
           page to determine page size.'
         in: query
         name: limit
         required: false
         schema:
           default: 10
-          description: 'Maximum number of records returned (max: 2000). Also used
+          description: 'Maximum number of objects returned (max: 1024). Also used
             with page to determine page size.'
           title: Limit
           type: integer
