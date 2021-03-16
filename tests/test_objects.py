@@ -1081,6 +1081,46 @@ def test_get_objects_filter_by_counts_index_equals(client):
         tear_down_metadata_objects(client)
 
 
+def test_get_objects_filter_using_lte(client):
+    """
+    Test that the GET /objects endpoint filters correctly for a less than or
+    equal operator.
+    """
+    try:
+        set_up_metadata_objects(client)
+
+        resp = client.get("/objects?data=true&filter=(pet_age,:lte,5)")
+        resp_json = resp.json()
+        resp_json["items"].sort(key=lambda o: o["metadata"]["pet_age"])
+
+        assert resp.status_code == 200
+        assert len(resp_json["items"]) == 2
+        assert resp_json["items"][0]["metadata"]["pet_age"] == 1
+        assert resp_json["items"][1]["metadata"]["pet_age"] == 5
+    finally:
+        tear_down_metadata_objects(client)
+
+
+def test_get_objects_filter_using_gt(client):
+    """
+    Test that the GET /objects endpoint filters correctly for a greater than
+    operator.
+    """
+    try:
+        set_up_metadata_objects(client)
+
+        resp = client.get("/objects?data=true&filter=(pet_age,:gt,5)")
+        resp_json = resp.json()
+        resp_json["items"].sort(key=lambda o: o["metadata"]["pet_age"])
+
+        assert resp.status_code == 200
+        assert len(resp_json["items"]) == 2
+        assert resp_json["items"][0]["metadata"]["pet_age"] == 10
+        assert resp_json["items"][1]["metadata"]["pet_age"] == 15
+    finally:
+        tear_down_metadata_objects(client)
+
+
 def test_get_objects_filter_by_any_and_like_with_resource_paths(client):
     """
     Test that the GET /objects endpoint filters correctly when an :any filter is
