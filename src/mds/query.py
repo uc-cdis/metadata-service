@@ -94,102 +94,33 @@ async def search_metadata(
         ]
 
 
-#  XXX move long docstring to objects.py
-async def search_metadata_helper(
-    data: bool = False,
+async def advanced_search_metadata(
+    data: bool = True,
     page: int = 0,
     limit: int = 10,
     filter: str = "",
 ):
     """
-    Helper to search for metadata objects based on filters provided in filter
-    param.
+    Provides for more advanced searching of metadata based on filter param.
+    Please see get_objects function for more documentation of how filter param
+    works.
 
-    The filtering functionality was primarily driven by the requirement that a
-    user be able to get all objects having an authz resource matching a
-    user-supplied pattern at any index in the "_resource_paths" array. For
-    example, given the following metadata objects:
+    Args:
+        data (bool): Switch to returning a list of GUIDs (false), or metadata
+        objects (true).
 
-    {
-        "0": {
-            "message": "hello",
-            "_uploader_id": "100",
-            "_resource_paths": [
-                "/programs/a",
-                "/programs/b"
-            ],
-            "pet": "dog"
-        },
-        "1": {
-            "message": "greetings",
-            "_uploader_id": "101",
-            "_resource_paths": [
-                "/open",
-                "/programs/c/projects/a"
-            ],
-            "pet": "ferret",
-            "sport": "soccer"
-        },
-        "2": {
-            "message": "morning",
-            "_uploader_id": "102",
-            "_resource_paths": [
-                "/programs/d",
-                "/programs/e"
-            ],
-            "counts": [42, 42, 42],
-            "pet": "ferret",
-            "sport": "soccer"
-        },
-        "3": {
-            "message": "evening",
-            "_uploader_id": "103",
-            "_resource_paths": [
-                "/programs/f/projects/a",
-                "/admin"
-            ],
-            "counts": [1, 3, 5],
-            "pet": "ferret",
-            "sport": "basketball"
-        }
-    }
+        page (int): The offset for what objects are returned (zero-indexed).
+        The exact offset will be equal to page*limit (e.g. with page=1,
+        limit=15, 15 objects beginning at index 15 will be returned).
 
-    how do we design a filtering interface that allows the user to get all
-    objects having an authz string matching the pattern
-    "/programs/%/projects/%" at any index in its "_resource_paths" array? (%
-    has been used as the wildcard so far because that's what Postgres uses as
-    the wildcard for LIKE) In this case, the "1" and "3" objects should be
-    returned.
+        limit (int): Maximum number of records returned (max: 2000). Also used
+        with page to determine page size.
 
-    The filter syntax that was arrived at ending up following the syntax
-    specified by a Node JS implementation
-    (https://www.npmjs.com/package/json-api#filtering) of the JSON:API
-    specification (https://jsonapi.org/).
+        filter (str): The filter(s) that will be applied to the result.
 
-    The format for this syntax is filter=(field_name,operator,value), in which
-    the field_name is a json key without quotes, operator is one of :eq, :ne,
-    :gt, :gte, :lt, :lte, :like, :all, :any (see operators dict), and value is
-    a typed json value against which the operator is run.
-
-    Examples:
-
-        - GET /objects?filter=(message,:eq,"morning") returns "2"
-        - GET /objects?filter=(counts.1,:eq,3) returns "3"
-
-    Compound expressions are supported:
-
-        - GET /objects?filter=(_resource_paths,:any,(,:like,"/programs/%/projects/%"))
-          returns "1" and "3"
-        - GET /objects?filter=(counts,:all,(,:eq,42))
-          returns "2"
-
-    Boolean expressions are also supported:
-
-        - GET /objects?filter=(or,(_uploader_id,:eq,"101"),(_uploader_id,:eq,"102"))
-          returns "1" and "2"
-        - GET /objects?filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello"))
-          returns "0", "1", and "2"
-
+    Returns:
+        if data=True, a list of (guid, metadata object) tuples
+        if data=False, a list of guids
     """
     #  XXX change to 1024
     limit = min(limit, 2000)
