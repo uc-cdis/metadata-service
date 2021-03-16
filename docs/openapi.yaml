@@ -410,45 +410,91 @@ paths:
       - Index
   /objects:
     get:
-      description: XXX comments
+      description: "The filtering functionality was primarily driven by the requirement\
+        \ that a\nuser be able to get all objects having an authz resource matching\
+        \ a\nuser-supplied pattern at any index in the \"_resource_paths\" array.\n\
+        \nFor example, given the following metadata objects:\n\n    {\n        \"\
+        0\": {\n            \"message\": \"hello\",\n            \"_uploader_id\"\
+        : \"100\",\n            \"_resource_paths\": [\n                \"/programs/a\"\
+        ,\n                \"/programs/b\"\n            ],\n            \"pet\": \"\
+        dog\"\n        },\n        \"1\": {\n            \"message\": \"greetings\"\
+        ,\n            \"_uploader_id\": \"101\",\n            \"_resource_paths\"\
+        : [\n                \"/open\",\n                \"/programs/c/projects/a\"\
+        \n            ],\n            \"pet\": \"ferret\",\n            \"sport\"\
+        : \"soccer\"\n        },\n        \"2\": {\n            \"message\": \"morning\"\
+        ,\n            \"_uploader_id\": \"102\",\n            \"_resource_paths\"\
+        : [\n                \"/programs/d\",\n                \"/programs/e\"\n \
+        \           ],\n            \"counts\": [42, 42, 42],\n            \"pet\"\
+        : \"ferret\",\n            \"sport\": \"soccer\"\n        },\n        \"3\"\
+        : {\n            \"message\": \"evening\",\n            \"_uploader_id\":\
+        \ \"103\",\n            \"_resource_paths\": [\n                \"/programs/f/projects/a\"\
+        ,\n                \"/admin\"\n            ],\n            \"counts\": [1,\
+        \ 3, 5],\n            \"pet\": \"ferret\",\n            \"sport\": \"basketball\"\
+        \n        }\n    }\n\nhow do we design a filtering interface that allows the\
+        \ user to get all\nobjects having an authz string matching the pattern\n\"\
+        /programs/%/projects/%\" at any index in its \"_resource_paths\" array? (%\n\
+        has been used as the wildcard so far because that's what Postgres uses as\n\
+        the wildcard for LIKE) In this case, the \"1\" and \"3\" objects should be\n\
+        returned.\n\nThe filter syntax that was arrived at ending up following the\
+        \ syntax\nspecified by a [Node JS implementation](https://www.npmjs.com/package/json-api#filtering)\
+        \ of the [JSON:API\nspecification](https://jsonapi.org/).\n\nThe format for\
+        \ this syntax is filter=(field_name,operator,value), in which\nthe field_name\
+        \ is a json key without quotes, operator is one of :eq, :ne,\n:gt, :gte, :lt,\
+        \ :lte, :like, :all, :any (see operators dict), and value is\na typed json\
+        \ value against which the operator is run.\n\nExamples:\n\n    GET /objects?filter=(message,:eq,\"\
+        morning\") returns \"2\"\n    GET /objects?filter=(counts.1,:eq,3) returns\
+        \ \"3\"\n\nCompound expressions are supported:\n\n    GET /objects?filter=(_resource_paths,:any,(,:like,\"\
+        /programs/%/projects/%\")) returns \"1\" and \"3\"\n    GET /objects?filter=(counts,:all,(,:eq,42))\
+        \ returns \"2\"\n\nBoolean expressions are also supported:\n\n    GET /objects?filter=(or,(_uploader_id,:eq,\"\
+        101\"),(_uploader_id,:eq,\"102\")) returns \"1\" and \"2\"\n    GET /objects?filter=(or,(and,(pet,:eq,\"\
+        ferret\"),(sport,:eq,\"soccer\")),(message,:eq,\"hello\")) returns \"0\",\
+        \ \"1\", and \"2\""
       operationId: get_objects_objects_get
       parameters:
-      - description: Switch to returning a list of GUIDs (false), or GUIDs mapping
-          to their metadata (true).
+      - description: Switch to returning a list of GUIDs (false), or metadata objects
+          (true).
         in: query
         name: data
         required: false
         schema:
-          default: false
-          description: Switch to returning a list of GUIDs (false), or GUIDs mapping
-            to their metadata (true).
+          default: true
+          description: Switch to returning a list of GUIDs (false), or metadata objects
+            (true).
           title: Data
           type: boolean
-      - description: paginate
+      - description: The offset for what objects are returned (zero-indexed). The
+          exact offset will be equal to page*limit (e.g. with page=1, limit=15, 15
+          objects beginning at index 15 will be returned).
         in: query
         name: page
         required: false
         schema:
           default: 0
-          description: paginate
+          description: The offset for what objects are returned (zero-indexed). The
+            exact offset will be equal to page*limit (e.g. with page=1, limit=15,
+            15 objects beginning at index 15 will be returned).
           title: Page
           type: integer
-      - description: 'Maximum number of records returned. (max: 2000)'
+      - description: 'Maximum number of records returned (max: 2000). Also used with
+          page to determine page size.'
         in: query
         name: limit
         required: false
         schema:
           default: 10
-          description: 'Maximum number of records returned. (max: 2000)'
+          description: 'Maximum number of records returned (max: 2000). Also used
+            with page to determine page size.'
           title: Limit
           type: integer
-      - description: Filters to apply.
+      - description: The filter(s) that will be applied to the result (more detail
+          in the docstring).
         in: query
         name: filter
         required: false
         schema:
           default: ''
-          description: Filters to apply.
+          description: The filter(s) that will be applied to the result (more detail
+            in the docstring).
           title: Filter
           type: string
       responses:
