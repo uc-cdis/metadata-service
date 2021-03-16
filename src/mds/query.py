@@ -113,7 +113,7 @@ async def advanced_search_metadata(
         The exact offset will be equal to page*limit (e.g. with page=1,
         limit=15, 15 objects beginning at index 15 will be returned).
 
-        limit (int): Maximum number of records returned (max: 2000). Also used
+        limit (int): Maximum number of objects returned (max: 1024). Also used
         with page to determine page size.
 
         filter (str): The filter(s) that will be applied to the result.
@@ -122,8 +122,7 @@ async def advanced_search_metadata(
         if data=True, a list of (guid, metadata object) tuples
         if data=False, a list of guids
     """
-    #  XXX change to 1024
-    limit = min(limit, 2000)
+    limit = min(limit, 1024)
 
     def add_filter(target_key, operator_name, right_operand):
         """
@@ -305,7 +304,6 @@ async def advanced_search_metadata(
         specific_filter = scalar_filter / compound_filter / boolean_filter
         scalar_filter   = open json_key separator scalar_operator separator json_value close
         compound_filter   = open json_key separator compound_operator separator scalar_filter close
-        json_value_or_scalar_filter = json_value / scalar_filter
 
         json_key        = ~"[A-Z 0-9_.]*"i
         scalar_operator = ":eq" / ":ne" / ":gte" / ":gt" / ":lte" / ":lt" / ":like"
@@ -382,10 +380,6 @@ async def advanced_search_metadata(
                 "op": operator,
                 "val": scalar_filter,
             }
-
-        #  XXX no longer used, remove
-        def visit_json_value_or_scalar_filter(self, node, visited_children):
-            return visited_children[0]
 
         def visit_json_key(self, node, visited_children):
             return node.text

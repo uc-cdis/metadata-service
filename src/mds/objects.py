@@ -243,7 +243,7 @@ async def get_objects(
     ),
     limit: int = Query(
         10,
-        description="Maximum number of records returned (max: 2000). "
+        description="Maximum number of objects returned (max: 1024). "
         "Also used with page to determine page size.",
     ),
     filter: str = Query(
