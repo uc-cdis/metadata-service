@@ -190,8 +190,8 @@ async def advanced_search_metadata(
             scalar_operator_name (str): the name of the operator (leading colon
             included) (see operators dict for a list of valid operators)
 
-            scalar_right_operand (str, bool, int, float, dict): the value that
-            each element in the target_json_key array is compared against
+            scalar_right_operand (str, bool, int, float): the value that each
+            element in the target_json_key array is compared against
 
         Returns:
             SQLAlchemy clause corresponding to the :any operation.
@@ -233,8 +233,8 @@ async def advanced_search_metadata(
             scalar_operator_name (str): the name of the operator (leading colon
             included) (see operators dict for a list of valid operators)
 
-            scalar_right_operand (str, bool, int, float, dict): the value that
-            each element in the target_json_key array is compared against
+            scalar_right_operand (str, bool, int, float): the value that each
+            element in the target_json_key array is compared against
 
         Returns:
             SQLAlchemy clause corresponding to the :all operation.
