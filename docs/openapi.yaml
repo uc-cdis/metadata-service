@@ -417,19 +417,21 @@ paths:
         0\": {\n            \"message\": \"hello\",\n            \"_uploader_id\"\
         : \"100\",\n            \"_resource_paths\": [\n                \"/programs/a\"\
         ,\n                \"/programs/b\"\n            ],\n            \"pet\": \"\
-        dog\"\n        },\n        \"1\": {\n            \"message\": \"greetings\"\
-        ,\n            \"_uploader_id\": \"101\",\n            \"_resource_paths\"\
-        : [\n                \"/open\",\n                \"/programs/c/projects/a\"\
-        \n            ],\n            \"pet\": \"ferret\",\n            \"sport\"\
-        : \"soccer\"\n        },\n        \"2\": {\n            \"message\": \"morning\"\
-        ,\n            \"_uploader_id\": \"102\",\n            \"_resource_paths\"\
-        : [\n                \"/programs/d\",\n                \"/programs/e\"\n \
-        \           ],\n            \"counts\": [42, 42, 42],\n            \"pet\"\
-        : \"ferret\",\n            \"sport\": \"soccer\"\n        },\n        \"3\"\
-        : {\n            \"message\": \"evening\",\n            \"_uploader_id\":\
-        \ \"103\",\n            \"_resource_paths\": [\n                \"/programs/f/projects/a\"\
-        ,\n                \"/admin\"\n            ],\n            \"counts\": [1,\
-        \ 3, 5],\n            \"pet\": \"ferret\",\n            \"sport\": \"basketball\"\
+        dog\",\n            \"pet_age\": 1\n        },\n        \"1\": {\n       \
+        \     \"message\": \"greetings\",\n            \"_uploader_id\": \"101\",\n\
+        \            \"_resource_paths\": [\n                \"/open\",\n        \
+        \        \"/programs/c/projects/a\"\n            ],\n            \"pet\":\
+        \ \"ferret\",\n            \"pet_age\": 5,\n            \"sport\": \"soccer\"\
+        \n        },\n        \"2\": {\n            \"message\": \"morning\",\n  \
+        \          \"_uploader_id\": \"102\",\n            \"_resource_paths\": [\n\
+        \                \"/programs/d\",\n                \"/programs/e\"\n     \
+        \       ],\n            \"counts\": [42, 42, 42],\n            \"pet\": \"\
+        ferret\",\n            \"pet_age\": 10,\n            \"sport\": \"soccer\"\
+        \n        },\n        \"3\": {\n            \"message\": \"evening\",\n  \
+        \          \"_uploader_id\": \"103\",\n            \"_resource_paths\": [\n\
+        \                \"/programs/f/projects/a\",\n                \"/admin\"\n\
+        \            ],\n            \"counts\": [1, 3, 5],\n            \"pet\":\
+        \ \"ferret\",\n            \"pet_age\": 15,\n            \"sport\": \"basketball\"\
         \n        }\n    }\n\nhow do we design a filtering interface that allows the\
         \ user to get all\nobjects having an authz string matching the pattern\n\"\
         /programs/%/projects/%\" at any index in its \"_resource_paths\" array? (%\n\
@@ -443,7 +445,9 @@ paths:
         \ :lte, :like, :all, :any (see operators dict), and value is\na typed json\
         \ value against which the operator is run.\n\nExamples:\n\n    GET /objects?filter=(message,:eq,\"\
         morning\") returns \"2\"\n    GET /objects?filter=(counts.1,:eq,3) returns\
-        \ \"3\"\n\nCompound expressions are supported:\n\n    GET /objects?filter=(_resource_paths,:any,(,:like,\"\
+        \ \"3\"\n    GET /objects?filter=(pet_age,:lte,5) returns \"0\" and \"1\"\n\
+        \    GET /objects?filter=(pet_age,:gt,5) returns \"2\" and \"3\"\n\nCompound\
+        \ expressions are supported:\n\n    GET /objects?filter=(_resource_paths,:any,(,:like,\"\
         /programs/%/projects/%\")) returns \"1\" and \"3\"\n    GET /objects?filter=(counts,:all,(,:eq,42))\
         \ returns \"2\"\n\nBoolean expressions are also supported:\n\n    GET /objects?filter=(or,(_uploader_id,:eq,\"\
         101\"),(_uploader_id,:eq,\"102\")) returns \"1\" and \"2\"\n    GET /objects?filter=(or,(and,(pet,:eq,\"\
