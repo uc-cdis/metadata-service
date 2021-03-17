@@ -94,16 +94,16 @@ async def search_metadata(
         ]
 
 
-async def advanced_search_metadata(
+async def search_metadata_objects(
     data: bool = True,
     page: int = 0,
     limit: int = 10,
     filter: str = "",
 ):
     """
-    Provides for more advanced searching of metadata based on filter param.
-    Please see get_objects function for more documentation of how filter param
-    works.
+    Intended as a helper for the get_objects function to query the db
+    based on the filter param. Please see get_objects function for more
+    documentation of filter param formatting.
 
     Args:
         data (bool): Switch to returning a list of GUIDs (false), or metadata

@@ -22,7 +22,7 @@ from starlette.status import (
 
 from . import config, logger
 from .models import Metadata
-from .query import get_metadata, advanced_search_metadata
+from .query import get_metadata, search_metadata_objects
 
 mod = APIRouter()
 
@@ -267,7 +267,8 @@ async def get_objects(
                     "/programs/a",
                     "/programs/b"
                 ],
-                "pet": "dog"
+                "pet": "dog",
+                "pet_age": 1
             },
             "1": {
                 "message": "greetings",
@@ -277,6 +278,7 @@ async def get_objects(
                     "/programs/c/projects/a"
                 ],
                 "pet": "ferret",
+                "pet_age": 5,
                 "sport": "soccer"
             },
             "2": {
@@ -288,6 +290,7 @@ async def get_objects(
                 ],
                 "counts": [42, 42, 42],
                 "pet": "ferret",
+                "pet_age": 10,
                 "sport": "soccer"
             },
             "3": {
@@ -299,6 +302,7 @@ async def get_objects(
                 ],
                 "counts": [1, 3, 5],
                 "pet": "ferret",
+                "pet_age": 15,
                 "sport": "basketball"
             }
         }
@@ -323,6 +327,8 @@ async def get_objects(
 
         GET /objects?filter=(message,:eq,"morning") returns "2"
         GET /objects?filter=(counts.1,:eq,3) returns "3"
+        GET /objects?filter=(pet_age,:lte,5) returns "0" and "1"
+        GET /objects?filter=(pet_age,:gt,5) returns "2" and "3"
 
     Compound expressions are supported:
 
@@ -335,7 +341,7 @@ async def get_objects(
         GET /objects?filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello")) returns "0", "1", and "2"
     """
 
-    metadata_objects = await advanced_search_metadata(
+    metadata_objects = await search_metadata_objects(
         data=data, page=page, limit=limit, filter=filter
     )
 
@@ -345,8 +351,7 @@ async def get_objects(
             endpoint_path = "/bulk/documents"
             full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
             guids = list(guid for guid, _ in metadata_objects)
-            #  XXX /bulk/documents endpoint in indexd currently doesn't support
-            #  filters
+
             response = await request.app.async_client.post(full_endpoint, json=guids)
             response.raise_for_status()
             records = {r["did"]: r for r in response.json()}
