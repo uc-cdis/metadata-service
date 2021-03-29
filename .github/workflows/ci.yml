@@ -43,10 +43,10 @@ jobs:
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
       env:
-        CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_TOKEN }}
+        COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
       run: |
-        pip install codacy-coverage
-        python-codacy-coverage -r coverage.xml
+        pip install coveralls
+        coveralls
 
   build:
     needs: test
