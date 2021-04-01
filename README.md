@@ -2,8 +2,7 @@
 
 [![Docker release](https://img.shields.io/github/v/release/uc-cdis/metadata-service?logo=docker&logoColor=white)](https://quay.io/repository/cdis/metadata-service)
 [![GitHub workflow](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/CI%20Workflow?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3A%22CI+Workflow%22)
-[![Codacy coverage](https://img.shields.io/codacy/coverage/5acc2d70109f451ab8047b2691ffcffe?logo=codacy)](https://www.codacy.com/gh/uc-cdis/metadata-service)
-[![Codacy grade](https://img.shields.io/codacy/grade/5acc2d70109f451ab8047b2691ffcffe?logo=codacy)](https://www.codacy.com/gh/uc-cdis/metadata-service)
+[![Coverage Status](https://coveralls.io/repos/github/uc-cdis/metadata-service/badge.svg?branch=master)](https://coveralls.io/github/uc-cdis/metadata-service?branch=master)
 [![Dependabot Badge](https://img.shields.io/badge/Dependabot-active-brightgreen?logo=dependabot)](https://dependabot.com/)
 [![License](https://img.shields.io/github/license/uc-cdis/metadata-service?logo=apache)](https://github.com/uc-cdis/metadata-service/blob/master/LICENSE)
 
@@ -18,9 +17,9 @@ The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged w
 
 Install required software:
 
-*   [PostgreSQL](PostgreSQL) 9.6 or above
-*   [Python](https://www.python.org/downloads/) 3.7 or above
-*   [Poetry](https://poetry.eustace.io/docs/#installation)
+* [PostgreSQL](PostgreSQL) 9.6 or above
+* [Python](https://www.python.org/downloads/) 3.7 or above
+* [Poetry](https://poetry.eustace.io/docs/#installation)
 
 Then use `poetry install` to install the dependencies. Before that,
 a [virtualenv](https://virtualenv.pypa.io/) is recommended.
@@ -78,19 +77,13 @@ docker-compose up
 Run database schema migration as well:
 
 ```bash
-docker-compose exec mds poetry run alembic upgrade head
-```
-
-Create test database:
-
-```bash
-docker-compose exec db createdb -U mds test_mds
+docker-compose exec app alembic upgrade head
 ```
 
 Run tests:
 
 ```bash
-docker-compose exec mds poetry run pytest --cov=src --cov=migrations/versions tests
+docker-compose exec app pytest --cov=src --cov=migrations/versions tests
 ```
 
 ## Deployment

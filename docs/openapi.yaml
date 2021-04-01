@@ -547,6 +547,40 @@ paths:
       tags:
       - Object
   /objects/{guid}:
+    delete:
+      description: "Delete the metadata for the specified object. Remove the object\
+        \ from\nexisting bucket location(s) by proxying to fence DELETE /data/file_id.\n\
+        Uses the response status code from fence to determine whether user has\npermission\
+        \ to delete metadata.\n\nArgs:\n    guid (str): indexd GUID or alias, or MDS\
+        \ key\n    request (Request): starlette request (which contains reference\
+        \ to FastAPI app)\nReturns:\n    204: if record and metadata are deleted\n\
+        \    403: if fence returns a 403 unauthorized response\n    500: if fence\
+        \ does not return 204 or 403 or there is an error deleting metadata"
+      operationId: delete_object_objects__guid__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBearer: []
+      summary: Delete Object
+      tags:
+      - Object
     get:
       description: "Get the metadata associated with the provided key. If the key\
         \ is an\nindexd GUID or alias, also returns the indexd record.\n\nArgs:\n\
