@@ -410,7 +410,9 @@ paths:
       - Index
   /objects:
     get:
-      description: "The filtering functionality was primarily driven by the requirement\
+      description: "Returns a list of objects and their corresponding Indexd records\
+        \ (please\nsee URL query documentation for more info on which objects get\
+        \ returned).\n\nThe filtering functionality was primarily driven by the requirement\
         \ that a\nuser be able to get all objects having an authz resource matching\
         \ a\nuser-supplied pattern at any index in the \"_resource_paths\" array.\n\
         \nFor example, given the following metadata objects:\n\n    {\n        \"\
@@ -455,14 +457,14 @@ paths:
         \ \"1\", and \"2\""
       operationId: get_objects_objects_get
       parameters:
-      - description: Switch to returning a list of GUIDs (false), or metadata objects
+      - description: Switch to return a list of GUIDs (false), or metadata objects
           (true).
         in: query
         name: data
         required: false
         schema:
           default: true
-          description: Switch to returning a list of GUIDs (false), or metadata objects
+          description: Switch to return a list of GUIDs (false), or metadata objects
             (true).
           title: Data
           type: boolean
