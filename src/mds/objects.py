@@ -233,7 +233,7 @@ async def get_objects(
     request: Request,
     data: bool = Query(
         True,
-        description="Switch to returning a list of GUIDs (false), "
+        description="Switch to return a list of GUIDs (false), "
         "or metadata objects (true).",
     ),
     page: int = Query(
@@ -255,6 +255,9 @@ async def get_objects(
     ),
 ) -> JSONResponse:
     """
+    Returns a list of objects and their corresponding Indexd records (please
+    see URL query documentation for more info on which objects get returned).
+
     The filtering functionality was primarily driven by the requirement that a
     user be able to get all objects having an authz resource matching a
     user-supplied pattern at any index in the "_resource_paths" array.
@@ -351,10 +354,12 @@ async def get_objects(
     if data and metadata_objects:
         try:
             endpoint_path = "/bulk/documents"
-            full_endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
+            full_indexd_url = (
+                config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
+            )
             guids = list(guid for guid, _ in metadata_objects)
 
-            response = await request.app.async_client.post(full_endpoint, json=guids)
+            response = await request.app.async_client.post(full_indexd_url, json=guids)
             response.raise_for_status()
             records = {r["did"]: r for r in response.json()}
         except httpx.HTTPError as err:
@@ -362,13 +367,13 @@ async def get_objects(
             if err.response:
                 logger.error(
                     "indexd `POST %s` endpoint returned a %s HTTP status code",
-                    endpoint_path,
+                    full_indexd_url,
                     err.response.status_code,
                 )
             else:
                 logger.error(
                     "Unable to get a response from indexd `POST %s` endpoint",
-                    endpoint_path,
+                    full_indexd_url,
                 )
 
     if data:
