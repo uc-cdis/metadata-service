@@ -32,6 +32,8 @@ pytest-cov = "^2.8"
 pyyaml = "^5.3.1"
 requests = "^2.22"
 respx = "*"
+fakeredis = "^1.5.0"
+nest-asyncio = "^1.5.1"
 
 [tool.poetry.plugins."mds.modules"]
 "query" = "mds.query"

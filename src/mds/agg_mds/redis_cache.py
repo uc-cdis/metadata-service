@@ -35,6 +35,9 @@ class RedisCache:
     async def json_arr_appends(self, key: str, value: Any):
         await self.redis_cache.execute("JSON.ARRAPPEND", key, ".", json.dumps(value))
 
+    async def json_arr_index(self, key: str, guid: str):
+        await self.redis_cache.execute("JSON.ARRINDEX", key, ".guids", f'"{guid}"')
+
     async def close(self):
         self.redis_cache.close()
         await self.redis_cache.wait_closed()
@@ -86,10 +89,13 @@ class RedisCache:
         return await self.json_get(name, ".metadata")
 
     async def get_commons_metadata_guid(self, name: str, guid: str):
-        idx = await self.redis_cache.execute(
-            "JSON.ARRINDEX", name, ".guids", f'"{guid}"'
-        )
-        return await self.json_get(name, f".metadata[{idx}]")
+        resp = await self.json_get(name, f".metadata")
+        if resp is None:
+            return None
+        idx = await self.json_arr_index(name, guid)
+        if idx is None:
+            return None
+        return resp[idx]
 
     async def get_commons_fields_to_columns(self, name: str):
         return await self.json_get(name, "field_mapping")
