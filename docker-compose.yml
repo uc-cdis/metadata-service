@@ -7,12 +7,15 @@ services:
     volumes:
       - .:/src
     depends_on:
-      - migration
+      - db_migration
+      - redis_migration
     environment:
       - DB_HOST=db
       - DB_USER=mds
+      - USE_AGG_MDS=true
+      - REDIS_DB_HOST=redis
     command: /env/bin/uvicorn --host 0.0.0.0 --port 80 mds.asgi:app --reload
-  migration:
+  db_migration:
     build: .
     image: mds
     volumes:
@@ -23,6 +26,15 @@ services:
       - DB_HOST=db
       - DB_USER=mds
     command: /env/bin/alembic upgrade head
+  redis_migration:
+    build: .
+    image: mds
+    volumes:
+      - .:/src
+    environment:
+      - USE_AGG_MDS=true
+      - REDIS_DB_HOST=redis
+    command: /env/bin/python /src/src/mds/populate.py --config /src/configs/brh_config.json --hostname redis
   db:
     image: postgres
     environment:
@@ -31,3 +43,7 @@ services:
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
+  redis:
+    image: redislabs/rejson:latest
+    ports:
+      - "6379:6379"
