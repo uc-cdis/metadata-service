@@ -35,6 +35,7 @@ def get_app():
             logger.info("Closing redis cache.")
             await redis_cache.close()
         logger.info("Closing async client.")
+        await redis_cache.close()
         await app.async_client.aclose()
 
     @app.on_event("startup")

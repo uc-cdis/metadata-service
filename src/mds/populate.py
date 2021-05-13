@@ -48,7 +48,6 @@ async def main(config: Commons, hostname: str, port: int) -> None:
     for name, common in config.commons.items():
         results = pull_mds(common.mds_url)
         mds_arr = [{k: v} for k, v in results.items()]
-
         # prefilter to remove entries not matching a certain field.
         if common.select_field is not None:
             mds_arr = await filter_entries(common, mds_arr)
