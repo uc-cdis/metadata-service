@@ -2,30 +2,30 @@
 	"BioData Catalyst": {
 		"mds_url": "https://staging.gen3.biodatacatalyst.nhlbi.nih.gov",
 		"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
-		"fields_to_columns": {
+		"columns_to_fields": {
 			"short_name": "name",
 			"full_name": "full_name",
 			"_subjects_count" : "_subjects_count",
 			"study_id" : "study_id",
-			"_unique_id" : "_unique_id",
+			"_unique_id" : "study_id",
 			"study_description" : "study_description"
 		}
 	},
 	"AnVIL": {
 		"mds_url": "https://internalstaging.theanvil.io",
 		"commons_url": "gen3.theanvil.io",
-		"fields_to_columns": {
+		"columns_to_fields": {
 			"name": "name",
 			"full_name": "full_name",
 			"_subjects_count" : "_subjects_count",
-			"study_id" : "study_id",
+			"_unique_id" : "study_id",
 			"study_description" : "study_description"
 		}
 	},
 	"HEAL": {
 		"mds_url": "https://preprod.healdata.org",
 		"commons_url": "preprod.healdata.org",
-		"fields_to_columns": {
+		"columns_to_fields": {
 			"study_name": "name",
 			"project_title": "full_name",
 			"project_number" : "study_id",
@@ -36,7 +36,7 @@
 	"BloodPAC": {
 		"mds_url": "https://data.bloodpac.org",
 		"commons_url": "data.bloodpac.org",
-		"fields_to_columns": {
+		"columns_to_fields": {
 			"title": "full_name",
 			"_subjects_count" : "_subjects_count",
 			"_publication_id" : "study_id",
@@ -46,7 +46,7 @@
 	"Genomic Data Commons": {
 		"mds_url": "https://gen3.datacommons.io",
 		"commons_url": "portal.gdc.cancer.gov",
-		"fields_to_columns": {
+		"columns_to_fields": {
 			"short_name": "name",
 			"full_name": "full_name",
 			"_subjects_count" : "_subjects_count",
@@ -62,11 +62,11 @@
 	"Proteomic Data Commons": {
 		"mds_url": "https://gen3.datacommons.io",
 		"commons_url": "portal.gdc.cancer.gov",
-		"fields_to_columns": {
+		"columns_to_fields": {
 			"short_name": "name",
 			"full_name": "full_name",
 			"_subjects_count" : "_subjects_count",
-			"dbgap_accession_number" : "study_id",
+			"study_id" : "_unique_id",
 			"_unique_id" : "_unique_id",
 			"description" : "study_description"
 		},
