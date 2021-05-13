@@ -1,4 +1,4 @@
-# DCFS Metadata Service
+# TEST DCFS Metadata Service
 
 [![Docker release](https://img.shields.io/github/v/release/uc-cdis/metadata-service?logo=docker&logoColor=white)](https://quay.io/repository/cdis/metadata-service)
 [![GitHub workflow](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/CI%20Workflow?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3A%22CI+Workflow%22)
