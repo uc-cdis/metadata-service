@@ -1,4 +1,6 @@
 import importlib
+import json
+from collections import defaultdict
 
 import pytest
 from alembic.config import main
@@ -8,9 +10,14 @@ from starlette.config import environ
 from starlette.testclient import TestClient
 
 from unittest.mock import MagicMock, patch
+import fakeredis.aioredis
+import asyncio
+from aioredis import Redis, create_redis_pool
 
 environ["TESTING"] = "TRUE"
 from mds import config
+from mds.agg_mds.redis_cache import RedisCache
+
 
 # NOTE: AsyncMock is included in unittest.mock but ONLY in Python 3.8+
 class AsyncMock(MagicMock):
@@ -31,8 +38,79 @@ def setup_test_database():
         main(["--raiseerr", "downgrade", "base"])
 
 
+class MockRedisJSONStore:
+    def __init__(self):
+        self.store = {}
+
+    def _deep_set(self, keys, value, state):
+        last = keys.pop()
+        for key in keys:
+            if key not in state:
+                state[key] = {}
+            state = state[key]
+        state[last] = value
+
+    def _deep_get(self, keys, state):
+        key = keys.pop(0)
+        is_last = len(keys) == 0
+        next_state = state.get(key, None)
+        return (
+            next_state
+            if is_last or next_state is None
+            else self._deep_get(keys, next_state)
+        )
+
+    def set(self, key, path, value):
+        keys = [x for x in f"{key}.{path}".split(".") if x]
+        self._deep_set(keys, value, self.store)
+
+    def get(self, key, path=""):
+        keys = [x for x in f"{key}.{path}".split(".") if x]
+        return self._deep_get(keys, self.store)
+
+
 @pytest.fixture()
-def client():
+def mock_redis_cache():
+    store = MockRedisJSONStore()
+
+    async def mock_init_cache(self, hostname, port):
+        self.redis_cache = await fakeredis.aioredis.create_redis_pool()
+
+    async def mock_json_sets(self, key, value, path="."):
+        store.set(key, path, value)
+
+    async def mock_json_get(self, key, path="."):
+        return store.get(key, path)
+
+    async def mock_json_arr_appends(self, key, value, path="."):
+        arr = store.get(key, path) or []
+        arr.append(value)
+        store.set(key, path, arr)
+
+    async def mock_json_arr_index(self, key, guid):
+        arr = store.get(key) or []
+        if guid in arr:
+            return arr.index(guid)
+        return -1
+
+    patches = []
+    patches.append(patch.object(RedisCache, "init_cache", mock_init_cache))
+    patches.append(patch.object(RedisCache, "json_sets", mock_json_sets))
+    patches.append(patch.object(RedisCache, "json_get", mock_json_get))
+    patches.append(patch.object(RedisCache, "json_arr_appends", mock_json_arr_appends))
+    patches.append(patch.object(RedisCache, "json_arr_index", mock_json_arr_index))
+
+    for patched_function in patches:
+        patched_function.start()
+
+    yield RedisCache
+
+    for patched_function in patches:
+        patched_function.stop()
+
+
+@pytest.fixture()
+def client(mock_redis_cache):
     from mds import config
     from mds.main import get_app
 

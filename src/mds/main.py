@@ -5,6 +5,8 @@ import pkg_resources
 from fastapi import FastAPI, APIRouter
 import httpx
 
+from mds.agg_mds.redis_cache import redis_cache
+
 try:
     from importlib.metadata import entry_points
 except ImportError:
@@ -29,8 +31,20 @@ def get_app():
 
     @app.on_event("shutdown")
     async def shutdown_event():
+        if config.USE_AGG_MDS:
+            logger.info("Closing redis cache.")
+            await redis_cache.close()
         logger.info("Closing async client.")
+        await redis_cache.close()
         await app.async_client.aclose()
+
+    @app.on_event("startup")
+    async def startup_event():
+        if config.USE_AGG_MDS:
+            logger.info("Starting redis cache.")
+            await redis_cache.init_cache(
+                hostname=config.REDIS_HOST, port=config.REDIS_PORT
+            )
 
     return app
 
@@ -95,5 +109,14 @@ def get_version():
 
 @router.get("/_status")
 async def get_status():
+    """
+    Returns the status of all the cached commons. There are two fields per common:
+     * error: if there was no error this will be "none"
+     * last_update: timestamp of the last data pull from the commons
+     * count: number of entries
+    :return:
+    """
+    # return await redis_cache.get_status()
+
     now = await db.scalar("SELECT now()")
     return dict(status="OK", timestamp=now)

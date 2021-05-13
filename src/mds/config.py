@@ -17,7 +17,7 @@ config = Config(".env")
 DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
-
+USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 
 # Database
 
@@ -27,6 +27,8 @@ DB_PORT = config("DB_PORT", cast=int, default=None)
 DB_USER = config("DB_USER", default=None)
 DB_PASSWORD = config("DB_PASSWORD", cast=Secret, default=None)
 DB_DATABASE = config("DB_DATABASE", default=None)
+REDIS_HOST = config("REDIS_DB_HOST", default="localhost")
+REDIS_PORT = config("REDIS_DB_PORT", cast=int, default=6379)
 
 if TESTING:
     DB_DATABASE = "test_" + (DB_DATABASE or "mds")

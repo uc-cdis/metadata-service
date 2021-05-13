@@ -13,6 +13,24 @@ The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged w
 
 [View API Documentation](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml)
 
+## Aggregation APIs
+
+The aggregated MDS is a service which caches metadata from commons metadata services and becomes a centralize API for browsing Metadata with clients such as the Ecosystem browser.
+
+The aggregate metadata APIs and migrations are disabled by default unless `USE_AGG_MDS=true` is specified.
+
+The aggregate cache is built using Redis and the [RedisJson](http://redisjson.io) module. To quickly populate it you can run the following:
+
+```bash
+docker run -p 6379:6379 --name redis-redisjson redislabs/rejson:latest
+```
+
+and then
+
+```bash
+python src/mds/populate.py --config configs/brh_config.json
+```
+
 ## Installation
 
 Install required software:
@@ -36,11 +54,14 @@ Create a file `.env` in the root directory of the checkout:
 (uncomment to override the default)
 
 ```python
-# DB_HOST = "..."     # default: localhost
-# DB_PORT = ...       # default: 5432
-# DB_USER = "..."     # default: current user
-# DB_PASSWORD = "..." # default: empty
-# DB_DATABASE = "..." # default: current user
+# DB_HOST = "..."       # default: localhost
+# DB_PORT = ...         # default: 5432
+# DB_USER = "..."       # default: current user
+# DB_PASSWORD = "..."   # default: empty
+# DB_DATABASE = "..."   # default: current user
+# USE_AGG_MDS = "..."   # default: false
+# REDIS_DB_HOST = "..." # default: localhost
+# REDIS_DB_PORT = "..." # default: 6379
 ```
 
 Run database schema migration:
