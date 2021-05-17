@@ -38,6 +38,7 @@ async def test_main(mock_redis_cache):
                 "gen3_discovery": {
                     "commons_name": "my_commons",
                     "tags": [{"category": "tag_category", "name": "tag_name"}],
+                    "_subjects_count": 30,
                 }
             }
         }
@@ -57,12 +58,19 @@ async def test_main(mock_redis_cache):
                             "_unique_id": "_unique_id",
                             "study_description": "study_description",
                         },
-                    )
-                }
+                    ),
+                },
+                ["_subjects_count"],
             ),
             "",
             0,
         )
+
+    with patch("mds.config.USE_AGG_MDS", False):
+        with pytest.raises(SystemExit) as pytest_wrapped_e:
+            await main(None, "", 0)
+        assert pytest_wrapped_e.type == SystemExit
+        assert pytest_wrapped_e.value.code == 1
 
 
 @pytest.mark.asyncio

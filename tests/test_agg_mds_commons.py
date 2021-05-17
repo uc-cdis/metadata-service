@@ -17,7 +17,7 @@ def test_parse_config():
             "commons": {
                 "mds_url": "http://mds",
                 "commons_url": "http://commons",
-                "fields_to_columns": {
+                "columns_to_fields": {
                     "short_name": "name",
                     "full_name": "full_name",
                     "_subjects_count": "_subjects_count",
@@ -52,7 +52,7 @@ def test_parse_config_from_file():
                 "mycommons": {
                     "mds_url": "http://mds",
                     "commons_url": "http://commons",
-                    "fields_to_columns": {
+                    "columns_to_fields": {
                         "short_name": "name",
                         "full_name": "full_name",
                         "_subjects_count": "_subjects_count",

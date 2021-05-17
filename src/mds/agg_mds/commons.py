@@ -25,7 +25,7 @@ class ColumnsToFields:
 class MDSInstance:
     mds_url: str
     commons_url: str
-    fields_to_columns: Dict[str, str]
+    columns_to_fields: Dict[str, str]
     study_data_field: str = "gen3_discovery"
     select_field: Optional[Dict[str, str]] = None
 
@@ -34,6 +34,9 @@ class MDSInstance:
 @dataclass
 class Commons:
     commons: Dict[str, MDSInstance]
+    aggregation: List[str] = field(
+        default_factory=lambda: ["_unique_id", "_subjects_count"]
+    )
 
 
 def parse_config(data: dict) -> Commons:

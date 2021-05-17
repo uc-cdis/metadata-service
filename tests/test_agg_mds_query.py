@@ -21,12 +21,14 @@ async def test_aggregate_commons(client):
         [],
         None,
         None,
+        None,
     )
     await redis_cache.update_metadata(
         "commons2",
         [],
         {},
         [],
+        None,
         None,
         None,
     )
@@ -52,6 +54,7 @@ async def test_aggregate_metadata(client):
         ["study1"],
         None,
         None,
+        None,
     )
     await redis_cache.update_metadata(
         "commons2",
@@ -62,6 +65,7 @@ async def test_aggregate_metadata(client):
         ],
         {},
         ["study2"],
+        None,
         None,
         None,
     )
@@ -85,7 +89,12 @@ async def test_aggregate_metadata(client):
 async def test_aggregate_metdata_name(client):
     resp = client.get("/aggregate/metadata/commons1")
     assert resp.status_code == 404
-    assert resp.json() == {"detail": "Commons not found: commons1"}
+    assert resp.json() == {
+        "detail": {
+            "code": 404,
+            "message": "no common exists with the given: commons1",
+        }
+    }
 
     await redis_cache.update_metadata(
         "commons1",
@@ -96,6 +105,7 @@ async def test_aggregate_metdata_name(client):
         ],
         {},
         ["study1"],
+        None,
         None,
         None,
     )
@@ -108,7 +118,12 @@ async def test_aggregate_metdata_name(client):
 async def test_aggregate_metdata_tags(client):
     resp = client.get("/aggregate/metadata/commons1/tags")
     assert resp.status_code == 404
-    assert resp.json() == {"detail": "Commons not found: commons1"}
+    assert resp.json() == {
+        "detail": {
+            "code": 404,
+            "message": "no common exists with the given: commons1",
+        }
+    }
 
     await redis_cache.update_metadata(
         "commons1",
@@ -121,6 +136,7 @@ async def test_aggregate_metdata_tags(client):
         ["study1"],
         ["mytag1"],
         None,
+        None,
     )
     resp = client.get("/aggregate/metadata/commons1/tags")
     assert resp.status_code == 200
@@ -131,7 +147,12 @@ async def test_aggregate_metdata_tags(client):
 async def test_aggregate_metdata_info(client):
     resp = client.get("/aggregate/metadata/commons1/info")
     assert resp.status_code == 404
-    assert resp.json() == {"detail": "Commons not found: commons1"}
+    assert resp.json() == {
+        "detail": {
+            "code": 404,
+            "message": "no common exists with the given: commons1",
+        }
+    }
 
     await redis_cache.update_metadata(
         "commons1",
@@ -144,6 +165,7 @@ async def test_aggregate_metdata_info(client):
         ["guid1"],
         None,
         {"commons_url": "http://commons"},
+        None,
     )
     resp = client.get("/aggregate/metadata/commons1/info")
     assert resp.status_code == 200
@@ -152,9 +174,14 @@ async def test_aggregate_metdata_info(client):
 
 @pytest.mark.asyncio
 async def test_aggregate_metdata_field_to_columns(client):
-    resp = client.get("/aggregate/metadata/commons1/field_to_columns")
+    resp = client.get("/aggregate/metadata/commons1/columns_to_fields")
     assert resp.status_code == 404
-    assert resp.json() == {"detail": "Not found: commons1"}
+    assert resp.json() == {
+        "detail": {
+            "code": 404,
+            "message": "no common exists with the given: commons1",
+        }
+    }
 
     await redis_cache.update_metadata(
         "commons1",
@@ -167,17 +194,35 @@ async def test_aggregate_metdata_field_to_columns(client):
         ["study1"],
         None,
         {"commons_url": "http://commons"},
+        None,
     )
-    resp = client.get("/aggregate/metadata/commons1/field_to_columns")
+    resp = client.get("/aggregate/metadata/commons1/columns_to_fields")
     assert resp.status_code == 200
     assert resp.json() == {"fields": {"some_key": "other_key"}}
+
+
+@pytest.mark.asyncio
+async def test_metadtata_aggregations(client):
+    resp = client.get("/aggregate/metadata/commons1/aggregations")
+    assert resp.status_code == 404
+    assert resp.json() == {
+        "detail": {
+            "code": 404,
+            "message": "no common exists with the given: commons1",
+        }
+    }
 
 
 @pytest.mark.asyncio
 async def test_aggregate_metdata_name_guid(client):
     resp = client.get("/aggregate/metadata/commons1/guid/study2:path")
     assert resp.status_code == 404
-    assert resp.json() == {"detail": "Not found: commons1/study2"}
+    assert resp.json() == {
+        "detail": {
+            "code": 404,
+            "message": "no common/guid exists with the given: commons1/study2",
+        }
+    }
 
     await redis_cache.update_metadata(
         "commons1",
@@ -193,6 +238,7 @@ async def test_aggregate_metdata_name_guid(client):
         ["study1", "study2"],
         None,
         {"commons_url": "http://commons"},
+        None,
     )
     resp = client.get("/aggregate/metadata/commons1/guid/study2:path")
     assert resp.status_code == 200

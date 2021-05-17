@@ -48,7 +48,10 @@ async def metdata_name(name: str):
     if res:
         return res
     else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Commons not found: {name}")
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {"message": f"no common exists with the given: {name}", "code": 404},
+        )
 
 
 @mod.get("/aggregate/metadata/{name}/tags")
@@ -60,7 +63,10 @@ async def metdata_tags(name: str):
     if res:
         return res
     else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Commons not found: {name}")
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {"message": f"no common exists with the given: {name}", "code": 404},
+        )
 
 
 @mod.get("/aggregate/metadata/{name}/info")
@@ -72,16 +78,34 @@ async def metdata_info(name: str):
     if res:
         return res
     else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Commons not found: {name}")
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {"message": f"no common exists with the given: {name}", "code": 404},
+        )
 
 
-@mod.get("/aggregate/metadata/{name}/field_to_columns")
-async def redis_status(name: str):
-    res = await redis_cache.get_commons_fields_to_columns(name)
+@mod.get("/aggregate/metadata/{name}/columns_to_fields")
+async def metadata_columns_to_fields(name: str):
+    res = await redis_cache.get_commons_attribute(name, "field_mapping")
     if res:
         return res
     else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {name}")
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {"message": f"no common exists with the given: {name}", "code": 404},
+        )
+
+
+@mod.get("/aggregate/metadata/{name}/aggregations")
+async def metadtata_aggregations(name: str):
+    res = await redis_cache.get_commons_attribute(name, "aggregations")
+    if res:
+        return res
+    else:
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {"message": f"no common exists with the given: {name}", "code": 404},
+        )
 
 
 @mod.get("/aggregate/metadata/{name}/guid/{guid}:path")
@@ -91,7 +115,13 @@ async def metadata_name_guid(name: str, guid: str):
     if res:
         return res
     else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {name}/{guid}")
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {
+                "message": f"no common/guid exists with the given: {name}/{guid}",
+                "code": 404,
+            },
+        )
 
 
 def init_app(app):

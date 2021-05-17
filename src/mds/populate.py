@@ -27,7 +27,7 @@ def parse_args(argv: List[str]) -> Namespace:
     return known_args
 
 
-async def main(config: Commons, hostname: str, port: int) -> None:
+async def main(commons_config: Commons, hostname: str, port: int) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
@@ -42,17 +42,29 @@ async def main(config: Commons, hostname: str, port: int) -> None:
         "..." : {
         }
     """
+
+    if not config.USE_AGG_MDS:
+        print("aggregate MDS disabled")
+        exit(1)
+
     await redis_cache.init_cache(hostname, port)
     await redis_cache.json_sets("commons", [])
 
-    for name, common in config.commons.items():
+    for name, common in commons_config.commons.items():
         results = pull_mds(common.mds_url)
         mds_arr = [{k: v} for k, v in results.items()]
+
+        total_items = len(mds_arr)
+
         # prefilter to remove entries not matching a certain field.
         if common.select_field is not None:
             mds_arr = await filter_entries(common, mds_arr)
 
         tags = {}
+        aggregations = {
+            x: {"count": 0, "missing": 0, "sum": 0, "notANumber": 0}
+            for x in commons_config.aggregation
+        }
         # inject common_name field into each entry
         for x in mds_arr:
             key = next(iter(x.keys()))
@@ -67,7 +79,27 @@ async def main(config: Commons, hostname: str, port: int) -> None:
                     tags[t["category"]] = set()
                 tags[t["category"]].add(t["name"])
 
-        # process tags set to list
+            # build aggregation counts on column fields
+            for aggName in commons_config.aggregation:
+                if (
+                    aggName not in common.columns_to_fields.keys()
+                    or common.columns_to_fields[aggName]
+                    not in entry[common.study_data_field]
+                ):
+                    aggregations[aggName]["missing"] += 1
+                else:
+                    aggregations[aggName]["count"] += 1
+                    try:
+                        value = int(
+                            entry[common.study_data_field][
+                                common.columns_to_fields[aggName]
+                            ]
+                        )
+                        aggregations[aggName]["sum"] += value
+                    except ValueError:
+                        aggregations[aggName]["notANumber"] += 1
+
+            # process tags set to list
         for k, v in tags.items():
             tags[k] = list(tags[k])
 
@@ -76,7 +108,7 @@ async def main(config: Commons, hostname: str, port: int) -> None:
         keys = list(results.keys())
         info = {"commons_url": common.commons_url}
         await redis_cache.update_metadata(
-            name, mds_arr, common.fields_to_columns, keys, tags, info
+            name, mds_arr, common.columns_to_fields, keys, tags, info, aggregations
         )
 
     res = await redis_cache.get_status()
@@ -114,9 +146,6 @@ if __name__ == "__main__":
     """
     Runs a redis "populate" procedure. Assumes Redis is already running.
     """
-    if not config.USE_AGG_MDS:
-        print("aggregate MDS disabled")
-        exit(1)
     args: Namespace = parse_args(sys.argv)
     commons = parse_config_from_file(Path(args.config))
-    asyncio.run(main(config=commons, hostname=args.hostname, port=args.port))
+    asyncio.run(main(commons_config=commons, hostname=args.hostname, port=args.port))
