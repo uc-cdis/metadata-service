@@ -1,7 +1,8 @@
 from fastapi import HTTPException, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
-from mds.agg_mds import datastore
 from mds import config
+from mds.agg_mds import datastore
+
 
 mod = APIRouter()
 
@@ -23,6 +24,8 @@ async def metadata(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
 ):
+    # TODO WFH How to properly return this? We think grouping by MDS is probably
+    # not ideal in reality. We already have commons_name in the results.
     """
     Returns all metadata from all registered commons in the form:
     {
@@ -85,7 +88,7 @@ async def metadata_info(name: str):
 
 @mod.get("/aggregate/metadata/{name}/aggregations")
 async def metadata_aggregations(name: str):
-    res = await datastore.get_commons_attribute(name, "aggregations")
+    res = await datastore.get_aggregations(name)
     if res:
         return res
     else:
@@ -95,17 +98,17 @@ async def metadata_aggregations(name: str):
         )
 
 
-@mod.get("/aggregate/metadata/{name}/guid/{guid}:path")
-async def metadata_name_guid(name: str, guid: str):
+@mod.get("/aggregate/metadata/guid/{guid}")
+async def metadata_name_guid(guid: str):
     """Get the metadata of the GUID in the named commons."""
-    res = await datastore.get_commons_metadata_guid(name, guid)
+    res = await datastore.get_by_guid(guid)
     if res:
         return res
     else:
         raise HTTPException(
             HTTP_404_NOT_FOUND,
             {
-                "message": f"no common/guid exists with the given: {name}/{guid}",
+                "message": f"no entry exists with the given guid: {guid}",
                 "code": 404,
             },
         )

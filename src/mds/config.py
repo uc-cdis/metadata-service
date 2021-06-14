@@ -27,8 +27,7 @@ DB_PORT = config("DB_PORT", cast=int, default=None)
 DB_USER = config("DB_USER", default=None)
 DB_PASSWORD = config("DB_PASSWORD", cast=Secret, default=None)
 DB_DATABASE = config("DB_DATABASE", default=None)
-REDIS_HOST = config("REDIS_DB_HOST", default="localhost")
-REDIS_PORT = config("REDIS_DB_PORT", cast=int, default=6379)
+ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
 if TESTING:
     DB_DATABASE = "test_" + (DB_DATABASE or "metadata")

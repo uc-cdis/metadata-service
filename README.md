@@ -19,17 +19,7 @@ The aggregated MDS is a service which caches metadata from commons metadata serv
 
 The aggregate metadata APIs and migrations are disabled by default unless `USE_AGG_MDS=true` is specified.
 
-The aggregate cache is built using Redis and the [RedisJson](http://redisjson.io) module. To quickly populate it you can run the following:
-
-```bash
-docker run -p 6379:6379 --name redis-redisjson redislabs/rejson:latest
-```
-
-and then
-
-```bash
-python src/mds/populate.py --config configs/brh_config.json
-```
+The aggregate cache is built using Elasticsearch. See the `docker-compose.yaml` file (specifically the `aggregate_migration` service) for details regarding how aggregate data is populated.
 
 ## Installation
 
@@ -54,14 +44,13 @@ Create a file `.env` in the root directory of the checkout:
 (uncomment to override the default)
 
 ```python
-# DB_HOST = "..."       # default: localhost
-# DB_PORT = ...         # default: 5432
-# DB_USER = "..."       # default: current user
-# DB_PASSWORD = "..."   # default: empty
-# DB_DATABASE = "..."   # default: current user
-# USE_AGG_MDS = "..."   # default: false
-# REDIS_DB_HOST = "..." # default: localhost
-# REDIS_DB_PORT = "..." # default: 6379
+# DB_HOST = "..."          # default: localhost
+# DB_PORT = ...            # default: 5432
+# DB_USER = "..."          # default: current user
+# DB_PASSWORD = "..."      # default: empty
+# DB_DATABASE = "..."      # default: current user
+# USE_AGG_MDS = "..."      # default: false
+# GEN3_ES_ENDPOINT = "..." # default: empty
 ```
 
 Run database schema migration:
