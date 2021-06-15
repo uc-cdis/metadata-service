@@ -5,7 +5,7 @@ import pkg_resources
 from fastapi import FastAPI, APIRouter
 import httpx
 
-from mds.agg_mds.redis_cache import redis_cache
+from mds.agg_mds import datastore as aggregate_datastore
 
 try:
     from importlib.metadata import entry_points
@@ -32,17 +32,16 @@ def get_app():
     @app.on_event("shutdown")
     async def shutdown_event():
         if config.USE_AGG_MDS:
-            logger.info("Closing redis cache.")
-            await redis_cache.close()
+            logger.info("Closing aggregate datastore.")
+            await aggregate_datastore.close()
         logger.info("Closing async client.")
-        await redis_cache.close()
         await app.async_client.aclose()
 
     @app.on_event("startup")
     async def startup_event():
         if config.USE_AGG_MDS:
-            logger.info("Starting redis cache.")
-            await redis_cache.init_cache(
+            logger.info("Creating aggregate datastore.")
+            await aggregate_datastore.init(
                 hostname=config.REDIS_HOST, port=config.REDIS_PORT
             )
 

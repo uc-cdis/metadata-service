@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
-from mds.agg_mds.redis_cache import redis_cache
+from mds.agg_mds import datastore
 from mds import config
 
 mod = APIRouter()
@@ -12,7 +12,7 @@ async def get_commons():
     Returns a list of all registered commons
     :return:
     """
-    return await redis_cache.get_commons()
+    return await datastore.get_commons()
 
 
 @mod.get("/aggregate/metadata")
@@ -35,16 +35,15 @@ async def metadata(
       ...
     }
     """
-
-    return await redis_cache.get_all_metadata(limit, offset)
+    return await datastore.get_all_metadata(limit, offset)
 
 
 @mod.get("/aggregate/metadata/{name}")
-async def metdata_name(name: str):
+async def metadata_name(name: str):
     """
     Returns the all the metadata from the named commons.
     """
-    res = await redis_cache.get_all_named_commons_metadata(name)
+    res = await datastore.get_all_named_commons_metadata(name)
     if res:
         return res
     else:
@@ -55,11 +54,11 @@ async def metdata_name(name: str):
 
 
 @mod.get("/aggregate/metadata/{name}/tags")
-async def metdata_tags(name: str):
+async def metadata_tags(name: str):
     """
     Returns the tags associated with the named commons.
     """
-    res = await redis_cache.get_commons_attribute(name, "tags")
+    res = await datastore.get_commons_attribute(name, "tags")
     if res:
         return res
     else:
@@ -70,23 +69,11 @@ async def metdata_tags(name: str):
 
 
 @mod.get("/aggregate/metadata/{name}/info")
-async def metdata_info(name: str):
+async def metadata_info(name: str):
     """
     Returns information from the named commons.
     """
-    res = await redis_cache.get_commons_attribute(name, "info")
-    if res:
-        return res
-    else:
-        raise HTTPException(
-            HTTP_404_NOT_FOUND,
-            {"message": f"no common exists with the given: {name}", "code": 404},
-        )
-
-
-@mod.get("/aggregate/metadata/{name}/columns_to_fields")
-async def metadata_columns_to_fields(name: str):
-    res = await redis_cache.get_commons_attribute(name, "field_mapping")
+    res = await datastore.get_commons_attribute(name, "info")
     if res:
         return res
     else:
@@ -97,8 +84,8 @@ async def metadata_columns_to_fields(name: str):
 
 
 @mod.get("/aggregate/metadata/{name}/aggregations")
-async def metadtata_aggregations(name: str):
-    res = await redis_cache.get_commons_attribute(name, "aggregations")
+async def metadata_aggregations(name: str):
+    res = await datastore.get_commons_attribute(name, "aggregations")
     if res:
         return res
     else:
@@ -111,7 +98,7 @@ async def metadtata_aggregations(name: str):
 @mod.get("/aggregate/metadata/{name}/guid/{guid}:path")
 async def metadata_name_guid(name: str, guid: str):
     """Get the metadata of the GUID in the named commons."""
-    res = await redis_cache.get_commons_metadata_guid(name, guid)
+    res = await datastore.get_commons_metadata_guid(name, guid)
     if res:
         return res
     else:

@@ -1,7 +1,7 @@
 from typing import Dict
 import pytest
 import nest_asyncio
-from mds.agg_mds.redis_cache import redis_cache
+from mds.agg_mds import datastore
 
 
 # https://github.com/encode/starlette/issues/440
@@ -14,19 +14,17 @@ async def test_aggregate_commons(client):
     assert resp.status_code == 200
     assert resp.json() == None
 
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons1",
         [],
-        {},
         [],
         None,
         None,
         None,
     )
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons2",
         [],
-        {},
         [],
         None,
         None,
@@ -43,27 +41,25 @@ async def test_aggregate_metadata(client):
     assert resp.status_code == 200
     assert resp.json() == {}
 
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons1",
         [
             {
                 "study1": {},
             }
         ],
-        {},
         ["study1"],
         None,
         None,
         None,
     )
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons2",
         [
             {
                 "study2": {},
             }
         ],
-        {},
         ["study2"],
         None,
         None,
@@ -86,7 +82,7 @@ async def test_aggregate_metadata(client):
 
 
 @pytest.mark.asyncio
-async def test_aggregate_metdata_name(client):
+async def test_aggregate_metadata_name(client):
     resp = client.get("/aggregate/metadata/commons1")
     assert resp.status_code == 404
     assert resp.json() == {
@@ -96,14 +92,13 @@ async def test_aggregate_metdata_name(client):
         }
     }
 
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons1",
         [
             {
                 "study1": {},
             }
         ],
-        {},
         ["study1"],
         None,
         None,
@@ -115,7 +110,7 @@ async def test_aggregate_metdata_name(client):
 
 
 @pytest.mark.asyncio
-async def test_aggregate_metdata_tags(client):
+async def test_aggregate_metadata_tags(client):
     resp = client.get("/aggregate/metadata/commons1/tags")
     assert resp.status_code == 404
     assert resp.json() == {
@@ -125,14 +120,13 @@ async def test_aggregate_metdata_tags(client):
         }
     }
 
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons1",
         [
             {
                 "study1": {},
             }
         ],
-        {},
         ["study1"],
         ["mytag1"],
         None,
@@ -144,7 +138,7 @@ async def test_aggregate_metdata_tags(client):
 
 
 @pytest.mark.asyncio
-async def test_aggregate_metdata_info(client):
+async def test_aggregate_metadata_info(client):
     resp = client.get("/aggregate/metadata/commons1/info")
     assert resp.status_code == 404
     assert resp.json() == {
@@ -154,14 +148,13 @@ async def test_aggregate_metdata_info(client):
         }
     }
 
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons1",
         [
             {
                 "study1": {},
             }
         ],
-        {},
         ["guid1"],
         None,
         {"commons_url": "http://commons"},
@@ -173,36 +166,7 @@ async def test_aggregate_metdata_info(client):
 
 
 @pytest.mark.asyncio
-async def test_aggregate_metdata_field_to_columns(client):
-    resp = client.get("/aggregate/metadata/commons1/columns_to_fields")
-    assert resp.status_code == 404
-    assert resp.json() == {
-        "detail": {
-            "code": 404,
-            "message": "no common exists with the given: commons1",
-        }
-    }
-
-    await redis_cache.update_metadata(
-        "commons1",
-        [
-            {
-                "study1": {},
-            }
-        ],
-        {"fields": {"some_key": "other_key"}},
-        ["study1"],
-        None,
-        {"commons_url": "http://commons"},
-        None,
-    )
-    resp = client.get("/aggregate/metadata/commons1/columns_to_fields")
-    assert resp.status_code == 200
-    assert resp.json() == {"fields": {"some_key": "other_key"}}
-
-
-@pytest.mark.asyncio
-async def test_metadtata_aggregations(client):
+async def test_metadata_aggregations(client):
     resp = client.get("/aggregate/metadata/commons1/aggregations")
     assert resp.status_code == 404
     assert resp.json() == {
@@ -214,7 +178,7 @@ async def test_metadtata_aggregations(client):
 
 
 @pytest.mark.asyncio
-async def test_aggregate_metdata_name_guid(client):
+async def test_aggregate_metadata_name_guid(client):
     resp = client.get("/aggregate/metadata/commons1/guid/study2:path")
     assert resp.status_code == 404
     assert resp.json() == {
@@ -224,7 +188,7 @@ async def test_aggregate_metdata_name_guid(client):
         }
     }
 
-    await redis_cache.update_metadata(
+    await datastore.update_metadata(
         "commons1",
         [
             {
@@ -234,7 +198,6 @@ async def test_aggregate_metdata_name_guid(client):
                 "study2": {},
             },
         ],
-        {"fields": {"some_key": "other_key"}},
         ["study1", "study2"],
         None,
         {"commons_url": "http://commons"},

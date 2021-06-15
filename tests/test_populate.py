@@ -1,13 +1,9 @@
 import pytest
 from argparse import Namespace
 from mds.populate import parse_args, main, filter_entries
-import mds.agg_mds.mds
-from mds.agg_mds import mds
 from mds.agg_mds.commons import MDSInstance, Commons
-from mds.agg_mds.redis_cache import redis_cache, RedisCache
 import respx
 from unittest.mock import patch
-import fakeredis
 
 
 @pytest.mark.asyncio
@@ -31,7 +27,7 @@ async def test_parse_args():
 
 
 @pytest.mark.asyncio
-async def test_main(mock_redis_cache):
+async def test_main(mock_aggregate_datastore):
     def mock_pull_mds(url):
         return {
             "thing": {

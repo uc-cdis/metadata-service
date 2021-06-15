@@ -2,9 +2,9 @@ import asyncio
 from argparse import Namespace
 from typing import Any, Dict, List
 from collections import Counter
+from mds.agg_mds import datastore
 from mds.agg_mds.mds import pull_mds
 from mds.agg_mds.commons import MDSInstance, Commons, parse_config_from_file
-from mds.agg_mds.redis_cache import redis_cache
 from mds import config
 from pathlib import Path
 import argparse
@@ -47,8 +47,8 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
         print("aggregate MDS disabled")
         exit(1)
 
-    await redis_cache.init_cache(hostname, port)
-    await redis_cache.json_sets("commons", [])
+    await datastore.init(hostname, port)
+    await datastore.drop_all()
 
     for name, common in commons_config.commons.items():
         results = pull_mds(common.mds_url)
@@ -103,17 +103,29 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
         for k, v in tags.items():
             tags[k] = list(tags[k])
 
+        def normalize(entry: Dict[Any, Any]):
+            # The entry is an object with one top-level key. Its own id.
+            id = list(entry.keys())[0]
+            for column, field in common.columns_to_fields.items():
+                if field == column:
+                    continue
+                if column in entry[id]["gen3_discovery"]:
+                    entry[id]["gen3_discovery"][field] = entry[id]["gen3_discovery"][
+                        column
+                    ]
+            return entry
+
+        data = [normalize(x) for x in mds_arr]
+
         # build index of keys. which is used to compute the index into the .metadata array
         # Admittedly a hack but will be faster than using json path, until the release of RedisJson v1.2
         keys = list(results.keys())
         info = {"commons_url": common.commons_url}
-        await redis_cache.update_metadata(
-            name, mds_arr, common.columns_to_fields, keys, tags, info, aggregations
-        )
+        await datastore.update_metadata(name, mds_arr, keys, tags, info, aggregations)
 
-    res = await redis_cache.get_status()
+    res = await datastore.get_status()
     print(res)
-    await redis_cache.close()
+    await datastore.close()
 
 
 async def filter_entries(

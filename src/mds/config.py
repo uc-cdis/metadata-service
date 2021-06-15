@@ -31,7 +31,7 @@ REDIS_HOST = config("REDIS_DB_HOST", default="localhost")
 REDIS_PORT = config("REDIS_DB_PORT", cast=int, default=6379)
 
 if TESTING:
-    DB_DATABASE = "test_" + (DB_DATABASE or "mds")
+    DB_DATABASE = "test_" + (DB_DATABASE or "metadata")
     TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
 
 DB_DSN = config(
