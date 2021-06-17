@@ -10,9 +10,9 @@ jobs:
       postgres:
         image: postgres:9.6
         env:
-          POSTGRES_USER: mds
-          POSTGRES_PASSWORD: mds
-          POSTGRES_DB: test_mds
+          POSTGRES_USER: metadata_user
+          POSTGRES_PASSWORD: metadata_pass
+          POSTGRES_DB: test_metadata
         ports:
         - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
@@ -40,8 +40,8 @@ jobs:
       env:
         DB_HOST: localhost
         DB_PORT: ${{ job.services.postgres.ports[5432] }}
-        DB_USER: mds
-        DB_PASSWORD: mds
+        DB_USER: metadata_user
+        DB_PASSWORD: metadata_pass
         USE_AGG_MDS: true
       run: |
         $HOME/.poetry/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml

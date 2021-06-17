@@ -10,7 +10,6 @@ class RedisCache:
         self.redis_cache: Optional[Redis] = None
 
     async def init_cache(self, hostname: str = "0.0.0.0", port: int = 6379):
-        print(create_redis_pool)
         self.redis_cache = await create_redis_pool(
             f"redis://{hostname}:{port}/0?encoding=utf-8"
         )
@@ -48,8 +47,7 @@ class RedisCache:
     async def update_metadata(
         self,
         name: str,
-        data: dict,
-        mapping: dict,
+        data: List[Dict],
         guid_arr: List[str],
         tags: Dict[str, List[str]],
         info: Dict[str, str],
@@ -57,7 +55,6 @@ class RedisCache:
     ):
         await self.json_sets(f"{name}", {})
         await self.json_sets(name, data, ".metadata")
-        await self.json_sets(name, mapping, ".field_mapping")
         await self.json_sets(name, guid_arr, ".guids")
         await self.json_sets(name, tags, ".tags")
         await self.json_sets(name, info, ".info")

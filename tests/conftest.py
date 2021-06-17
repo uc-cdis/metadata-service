@@ -10,13 +10,11 @@ from starlette.config import environ
 from starlette.testclient import TestClient
 
 from unittest.mock import MagicMock, patch
-import fakeredis.aioredis
 import asyncio
-from aioredis import Redis, create_redis_pool
 
 environ["TESTING"] = "TRUE"
 from mds import config
-from mds.agg_mds.redis_cache import RedisCache
+from mds.agg_mds import datastore
 
 
 # NOTE: AsyncMock is included in unittest.mock but ONLY in Python 3.8+
@@ -38,79 +36,85 @@ def setup_test_database():
         main(["--raiseerr", "downgrade", "base"])
 
 
-class MockRedisJSONStore:
-    def __init__(self):
-        self.store = {}
-
-    def _deep_set(self, keys, value, state):
-        last = keys.pop()
-        for key in keys:
-            if key not in state:
-                state[key] = {}
-            state = state[key]
-        state[last] = value
-
-    def _deep_get(self, keys, state):
-        key = keys.pop(0)
-        is_last = len(keys) == 0
-        next_state = state.get(key, None)
-        return (
-            next_state
-            if is_last or next_state is None
-            else self._deep_get(keys, next_state)
-        )
-
-    def set(self, key, path, value):
-        keys = [x for x in f"{key}.{path}".split(".") if x]
-        self._deep_set(keys, value, self.store)
-
-    def get(self, key, path=""):
-        keys = [x for x in f"{key}.{path}".split(".") if x]
-        return self._deep_get(keys, self.store)
-
-
 @pytest.fixture()
-def mock_redis_cache():
-    store = MockRedisJSONStore()
+def mock_aggregate_datastore():
+    store = {
+        "commons": {},
+        "info": {},
+        "aggregations": {},
+        "tags": {},
+    }
 
-    async def mock_init_cache(self, hostname, port):
-        self.redis_cache = await fakeredis.aioredis.create_redis_pool()
+    async def mock_init(hostname, port):
+        pass
 
-    async def mock_json_sets(self, key, value, path="."):
-        store.set(key, path, value)
+    async def mock_drop_all():
+        pass
 
-    async def mock_json_get(self, key, path="."):
-        return store.get(key, path)
+    async def mock_get_status():
+        pass
 
-    async def mock_json_arr_appends(self, key, value, path="."):
-        arr = store.get(key, path) or []
-        arr.append(value)
-        store.set(key, path, arr)
+    async def mock_close():
+        pass
 
-    async def mock_json_arr_index(self, key, guid):
-        arr = store.get(key) or []
-        if guid in arr:
-            return arr.index(guid)
-        return -1
+    async def mock_get_all_metadata(limit, offset):
+        return store["commons"]
+
+    async def mock_get_all_named_commons_metadata(name):
+        return store["commons"].get(name, {})
+
+    async def mock_update_metadata(name, data, guid_arr, tags, info, aggregations):
+        store["commons"][name] = data
+        store["info"][name] = info
+        store["aggregations"][name] = aggregations
+        store["tags"][name] = tags
+
+    async def mock_get_commons():
+        keys = list(store["commons"].keys())
+        return None if len(keys) == 0 else {"commons": keys}
+
+    async def mock_get_commons_attribute(name, type):
+        return store[type].get(name, {})
+
+    async def mock_get_commons_metadata_guid(name, guid):
+        studies = store["commons"].get(name, [])
+        return next((x for x in studies if list(x.keys())[0] == guid), None)
 
     patches = []
-    patches.append(patch.object(RedisCache, "init_cache", mock_init_cache))
-    patches.append(patch.object(RedisCache, "json_sets", mock_json_sets))
-    patches.append(patch.object(RedisCache, "json_get", mock_json_get))
-    patches.append(patch.object(RedisCache, "json_arr_appends", mock_json_arr_appends))
-    patches.append(patch.object(RedisCache, "json_arr_index", mock_json_arr_index))
+    patches.append(patch.object(datastore, "init", mock_init))
+    patches.append(patch.object(datastore, "drop_all", mock_drop_all))
+    patches.append(patch.object(datastore, "get_status", mock_get_status))
+    patches.append(patch.object(datastore, "close", mock_close))
+    patches.append(patch.object(datastore, "get_all_metadata", mock_get_all_metadata))
+    patches.append(
+        patch.object(
+            datastore,
+            "get_all_named_commons_metadata",
+            mock_get_all_named_commons_metadata,
+        )
+    )
+    patches.append(patch.object(datastore, "update_metadata", mock_update_metadata))
+    patches.append(patch.object(datastore, "get_commons", mock_get_commons))
+    patches.append(
+        patch.object(datastore, "get_commons_attribute", mock_get_commons_attribute)
+    )
+    patches.append(
+        patch.object(
+            datastore, "get_commons_metadata_guid", mock_get_commons_metadata_guid
+        )
+    )
 
     for patched_function in patches:
         patched_function.start()
 
-    yield RedisCache
+    yield datastore
 
     for patched_function in patches:
         patched_function.stop()
 
 
 @pytest.fixture()
-def client(mock_redis_cache):
+def client(mock_aggregate_datastore):
     from mds import config
     from mds.main import get_app
 
