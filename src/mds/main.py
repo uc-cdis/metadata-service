@@ -4,6 +4,7 @@ import click
 import pkg_resources
 from fastapi import FastAPI, APIRouter
 import httpx
+from urllib.parse import urlparse
 
 from mds.agg_mds import datastore as aggregate_datastore
 
@@ -41,8 +42,9 @@ def get_app():
     async def startup_event():
         if config.USE_AGG_MDS:
             logger.info("Creating aggregate datastore.")
+            url_parts = urlparse(config.ES_ENDPOINT)
             await aggregate_datastore.init(
-                hostname=config.REDIS_HOST, port=config.REDIS_PORT
+                hostname=url_parts.hostname, port=url_parts.port
             )
 
     return app
@@ -109,13 +111,18 @@ def get_version():
 @router.get("/_status")
 async def get_status():
     """
-    Returns the status of all the cached commons. There are two fields per common:
+    Returns the status of the MDS:
      * error: if there was no error this will be "none"
      * last_update: timestamp of the last data pull from the commons
      * count: number of entries
     :return:
     """
-    # return await redis_cache.get_status()
-
     now = await db.scalar("SELECT now()")
+
+    try:
+        await aggregate_datastore.get_status()
+    except Exception as error:
+        logger.error("error with aggregate datastore connection: %s", error)
+        return dict(error="aggregate datastore offline")
+
     return dict(status="OK", timestamp=now)
