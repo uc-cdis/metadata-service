@@ -87,6 +87,9 @@ openapi: 3.0.2
 paths:
   /_status:
     get:
+      description: "Returns the status of the MDS:\n * error: if there was no error\
+        \ this will be \"none\"\n * last_update: timestamp of the last data pull from\
+        \ the commons\n * count: number of entries\n:return:"
       operationId: get_status__status_get
       responses:
         '200':
