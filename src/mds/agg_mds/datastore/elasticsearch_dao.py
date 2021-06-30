@@ -5,15 +5,19 @@ import json
 from mds import logger
 
 
-agg_mds_index = "commons-index"
-agg_mds_type = "commons"
+# TODO WFH Why do we have both __manifest and _file_manifest?
+FIELDS_TO_NORMALIZE = ["__manifest", "_file_manifest", "advSearchFilters"]
 
 
-agg_mds_info_index = "commons-info-index"
-agg_mds_info_type = "commons-info"
+AGG_MDS_INDEX = "commons-index"
+AGG_MDS_TYPE = "commons"
 
 
-mapping = {
+AGG_MDS_INFO_INDEX = "commons-info-index"
+AGG_MDS_INFO_TYPE = "commons-info"
+
+
+MAPPING = {
     "mappings": {
         "commons": {
             "properties": {
@@ -43,12 +47,12 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
 async def drop_all():
     res = elastic_search_client.indices.delete(index="_all", ignore=[400, 404])
     logger.debug(f"deleted all indexes: {res}")
-    res = elastic_search_client.indices.create(index=agg_mds_index, body=mapping)
-    logger.debug(f"created index {agg_mds_index}: {res}")
+    res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=MAPPING)
+    logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
     res = elastic_search_client.indices.create(
-        index=agg_mds_info_index,
+        index=AGG_MDS_INFO_INDEX,
     )
-    logger.debug(f"created index {agg_mds_info_index}: {res}")
+    logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
 
 
 def normalize_string_or_object(doc, key):
@@ -65,8 +69,8 @@ async def update_metadata(
     info: Dict[str, str],
 ):
     elastic_search_client.index(
-        index=agg_mds_info_index,
-        doc_type=agg_mds_info_type,
+        index=AGG_MDS_INFO_INDEX,
+        doc_type=AGG_MDS_INFO_TYPE,
         id=name,
         body=info,
     )
@@ -76,17 +80,18 @@ async def update_metadata(
         # Flatten out this structure
         doc = doc[key]["gen3_discovery"]
 
-        normalize_string_or_object(doc, "__manifest")
-        # TODO WFH Why do we have this redundant field? Which commons has this?
-        normalize_string_or_object(doc, "_file_manifest")
-        normalize_string_or_object(doc, "advSearchFilters")
+        for field in FIELDS_TO_NORMALIZE:
+            normalize_string_or_object(doc, field)
+
         elastic_search_client.index(
-            index=agg_mds_index, doc_type=agg_mds_type, id=key, body=doc
+            index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
         )
 
 
 async def get_status():
-    return elastic_search_client.cluster.health()
+    if not elastic_search_client.ping():
+        raise ValueError("Connection failed")
+    return "OK"
 
 
 async def close():
@@ -96,7 +101,7 @@ async def close():
 async def get_commons():
     try:
         res = elastic_search_client.search(
-            index=agg_mds_index,
+            index=AGG_MDS_INDEX,
             body={
                 "size": 0,
                 "aggs": {"commons_names": {"terms": {"field": "commons_name.keyword"}}},
@@ -115,7 +120,7 @@ async def get_commons():
 async def get_all_metadata(limit, offset):
     try:
         res = elastic_search_client.search(
-            index=agg_mds_index,
+            index=AGG_MDS_INDEX,
             body={"size": limit, "from": offset, "query": {"match_all": {}}},
         )
         byCommons = {}
@@ -141,7 +146,7 @@ async def get_all_metadata(limit, offset):
 async def get_all_named_commons_metadata(name):
     try:
         return elastic_search_client.search(
-            index=agg_mds_index,
+            index=AGG_MDS_INDEX,
             body={"query": {"match": {"commons_name.keyword": name}}},
         )
     except Exception as error:
@@ -152,7 +157,7 @@ async def get_all_named_commons_metadata(name):
 async def metadata_tags(name):
     try:
         return elastic_search_client.search(
-            index=agg_mds_index,
+            index=AGG_MDS_INDEX,
             body={
                 "size": 0,
                 "aggs": {
@@ -182,7 +187,7 @@ async def metadata_tags(name):
 async def get_commons_attribute(name, what):
     try:
         data = elastic_search_client.search(
-            index=agg_mds_info_index,
+            index=AGG_MDS_INFO_INDEX,
             body={
                 "query": {
                     "terms": {
@@ -200,7 +205,7 @@ async def get_commons_attribute(name, what):
 async def get_aggregations(name):
     try:
         res = elastic_search_client.search(
-            index=agg_mds_index,
+            index=AGG_MDS_INDEX,
             body={
                 "size": 0,
                 "query": {
@@ -224,8 +229,8 @@ async def get_aggregations(name):
 async def get_by_guid(guid):
     try:
         data = elastic_search_client.get(
-            index=agg_mds_index,
-            doc_type=agg_mds_type,
+            index=AGG_MDS_INDEX,
+            doc_type=AGG_MDS_TYPE,
             id=guid,
         )
         return data["_source"]

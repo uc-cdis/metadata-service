@@ -111,11 +111,18 @@ def get_version():
 @router.get("/_status")
 async def get_status():
     """
-    Returns the status of all the cached commons. There are two fields per common:
+    Returns the status of the MDS:
      * error: if there was no error this will be "none"
      * last_update: timestamp of the last data pull from the commons
      * count: number of entries
     :return:
     """
     now = await db.scalar("SELECT now()")
+
+    try:
+        await aggregate_datastore.get_status()
+    except Exception as error:
+        logger.error("error with aggregate datastore connection: %s", error)
+        return dict(error="aggregate datastore offline")
+
     return dict(status="OK", timestamp=now)

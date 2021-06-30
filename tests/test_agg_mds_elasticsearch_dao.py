@@ -4,7 +4,7 @@ from conftest import AsyncMock
 import pytest
 import mds
 from mds.agg_mds.datastore import elasticsearch_dao
-from mds.agg_mds.datastore.elasticsearch_dao import mapping
+from mds.agg_mds.datastore.elasticsearch_dao import MAPPING
 import nest_asyncio
 
 
@@ -27,7 +27,7 @@ async def test_drop_all():
     mock_indices.delete.assert_called_with(index="_all", ignore=[400, 404])
     mock_indices.create.assert_has_calls(
         [
-            call(body=mapping, index="commons-index"),
+            call(body=MAPPING, index="commons-index"),
             call(index="commons-info-index"),
         ],
         any_order=True,
@@ -76,12 +76,12 @@ async def test_update_metadata():
 @pytest.mark.asyncio
 async def test_get_status():
     with patch(
-        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.cluster",
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
         MagicMock(),
-    ) as mock_cluster:
+    ) as mock_client:
         await elasticsearch_dao.get_status()
 
-    mock_cluster.health.assert_called_with()
+    mock_client.ping.assert_called_with()
 
 
 @pytest.mark.asyncio

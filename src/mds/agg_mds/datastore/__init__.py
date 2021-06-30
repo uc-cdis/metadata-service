@@ -22,6 +22,9 @@ async def close():
 
 
 async def get_status():
+    """
+    Returns "OK" or raises an error indicating the status of the datastore:
+    """
     return await client.get_status()
 
 
@@ -55,3 +58,7 @@ async def get_all_metadata(*args):
 
 async def get_aggregations(*args):
     return await client.get_aggregations(*args)
+
+
+async def search(*args):
+    return await client.search(*args)
