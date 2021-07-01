@@ -2,9 +2,12 @@ import asyncio
 
 import click
 import pkg_resources
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 import httpx
 from urllib.parse import urlparse
+from starlette.status import (
+    HTTP_500_INTERNAL_SERVER_ERROR,
+)
 
 from mds.agg_mds import datastore as aggregate_datastore
 
@@ -119,10 +122,17 @@ async def get_status():
     """
     now = await db.scalar("SELECT now()")
 
-    try:
-        await aggregate_datastore.get_status()
-    except Exception as error:
-        logger.error("error with aggregate datastore connection: %s", error)
-        return dict(error="aggregate datastore offline")
+    if config.USE_AGG_MDS:
+        try:
+            await aggregate_datastore.get_status()
+        except Exception as error:
+            logger.error("error with aggregate datastore connection: %s", error)
+            raise HTTPException(
+                HTTP_500_INTERNAL_SERVER_ERROR,
+                {
+                    "message": "aggregate datastore offline",
+                    "code": HTTP_500_INTERNAL_SERVER_ERROR,
+                },
+            )
 
     return dict(status="OK", timestamp=now)

@@ -23,7 +23,11 @@ def test_status_aggregate_error(client):
     ).start()
     patch("mds.main.db.scalar", AsyncMock(return_value="some time")).start()
 
-    resp = client.get("/_status")
-    resp.raise_for_status()
-    assert resp.status_code == 200
-    assert resp.json() == {"error": "aggregate datastore offline"}
+    try:
+        resp = client.get("/_status")
+        resp.raise_for_status()
+    except:
+        assert resp.status_code == 500
+        assert resp.json() == {
+            "detail": {"message": "aggregate datastore offline", "code": 500}
+        }
