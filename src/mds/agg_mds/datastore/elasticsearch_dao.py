@@ -145,10 +145,11 @@ async def get_all_metadata(limit, offset):
 
 async def get_all_named_commons_metadata(name):
     try:
-        return elastic_search_client.search(
+        res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
             body={"query": {"match": {"commons_name.keyword": name}}},
         )
+        return [x["_source"] for x in res["hits"]["hits"]]
     except Exception as error:
         logger.error(error)
         return {}

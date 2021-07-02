@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import Dict, List, Optional, Union
-from pathlib import Path
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
 
@@ -32,22 +31,33 @@ class MDSInstance:
 
 @dataclass_json
 @dataclass
+class AdapterMDSInstance:
+    mds_url: str
+    commons_url: str
+    adapter: str
+    filters: Optional[Dict[str, Any]] = None
+    study_data_field: str = "gen3_discovery"
+
+
+@dataclass_json
+@dataclass
 class Commons:
-    commons: Dict[str, MDSInstance]
+    gen3_commons: Dict[str, MDSInstance]
+    adapter_commons: Dict[str, AdapterMDSInstance]
     aggregation: List[str] = field(
         default_factory=lambda: ["_unique_id", "_subjects_count"]
     )
 
 
-def parse_config(data: dict) -> Commons:
+def parse_config(data: Dict[str, Any]) -> Commons:
     """
     parses a aggregated config which defines the list of MDS services and the mapping of field to column names
     for the Ecosystem browser. Returns a dictionary of MDSInfo entries
     """
 
-    return Commons.from_dict({"commons": data})
-
-
-def parse_config_from_file(path: Path) -> Commons:
-    with open(path, "rt") as infile:
-        return parse_config(json.load(infile))
+    return Commons.from_dict(
+        {
+            "gen3_commons": data.get("gen3_commons", dict()),
+            "adapter_commons": data.get("adapter_commons", dict()),
+        }
+    )
