@@ -2,54 +2,19 @@ import json
 import os
 from pathlib import Path
 
-from tempfile import NamedTemporaryFile
 from mds.agg_mds.commons import (
     parse_config,
-    parse_config_from_file,
     Commons,
     MDSInstance,
+    AdapterMDSInstance,
 )
 
 
 def test_parse_config():
     assert parse_config(
         {
-            "commons": {
-                "mds_url": "http://mds",
-                "commons_url": "http://commons",
-                "columns_to_fields": {
-                    "short_name": "name",
-                    "full_name": "full_name",
-                    "_subjects_count": "_subjects_count",
-                    "study_id": "study_id",
-                    "_unique_id": "_unique_id",
-                    "study_description": "study_description",
-                },
-            }
-        }
-    ) == Commons(
-        {
-            "commons": MDSInstance(
-                "http://mds",
-                "http://commons",
-                {
-                    "short_name": "name",
-                    "full_name": "full_name",
-                    "_subjects_count": "_subjects_count",
-                    "study_id": "study_id",
-                    "_unique_id": "_unique_id",
-                    "study_description": "study_description",
-                },
-            )
-        }
-    )
-
-
-def test_parse_config_from_file():
-    with NamedTemporaryFile(mode="w+", delete=False) as fp:
-        json.dump(
-            {
-                "mycommons": {
+            "gen3_commons": {
+                "my_gen3_commons": {
                     "mds_url": "http://mds",
                     "commons_url": "http://commons",
                     "columns_to_fields": {
@@ -60,27 +25,36 @@ def test_parse_config_from_file():
                         "_unique_id": "_unique_id",
                         "study_description": "study_description",
                     },
-                },
+                }
             },
-            fp,
-        )
-    config = parse_config_from_file(Path(fp.name))
-    assert (
-        config.to_json()
-        == Commons(
-            {
-                "mycommons": MDSInstance(
-                    "http://mds",
-                    "http://commons",
-                    {
-                        "short_name": "name",
-                        "full_name": "full_name",
-                        "_subjects_count": "_subjects_count",
-                        "study_id": "study_id",
-                        "_unique_id": "_unique_id",
-                        "study_description": "study_description",
-                    },
-                )
-            }
-        ).to_json()
+            "adapter_commons": {
+                "non_gen3_commons": {
+                    "mds_url": "http://non-gen3",
+                    "commons_url": "non-gen3",
+                    "adapter": "icpsr",
+                }
+            },
+        }
+    ) == Commons(
+        gen3_commons={
+            "my_gen3_commons": MDSInstance(
+                "http://mds",
+                "http://commons",
+                {
+                    "short_name": "name",
+                    "full_name": "full_name",
+                    "_subjects_count": "_subjects_count",
+                    "study_id": "study_id",
+                    "_unique_id": "_unique_id",
+                    "study_description": "study_description",
+                },
+            ),
+        },
+        adapter_commons={
+            "non_gen3_commons": AdapterMDSInstance(
+                "http://non-gen3",
+                "non-gen3",
+                "icpsr",
+            )
+        },
     )

@@ -55,8 +55,8 @@
 			"description" : "study_description"
 		},
 		"select_field": {
-				"field_name" : "commons" ,
-				"field_value" : "Genomic Data Commons"
+			"field_name" : "commons" ,
+			"field_value" : "Genomic Data Commons"
 		}
 	},
 	"Proteomic Data Commons": {
@@ -71,8 +71,8 @@
 			"description" : "study_description"
 		},
 		"select_field": {
-				"field_name" : "commons" ,
-				"field_value" : "Proteomic Data Commons"
+			"field_name" : "commons" ,
+			"field_value" : "Proteomic Data Commons"
 		}
 	}
 }
