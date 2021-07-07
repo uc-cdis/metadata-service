@@ -85,6 +85,14 @@
 			"filters": {
 				"study_ids": [37887, 37833, 37842, 37841, 35197]
 			}
+		},
+		"clinicaltrials": {
+			"mds_url": "https://www.icpsr.umich.edu/icpsrweb/neutral/oai/studies",
+			"commons_url": "http://clinicaltrials.gov",
+			"adapter": "clinicaltrials",
+			"filters": {
+				"term": "OUD"
+			}
 		}
 	}
 }
