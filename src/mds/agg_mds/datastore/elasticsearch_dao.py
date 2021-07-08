@@ -3,17 +3,18 @@ from typing import List, Dict
 from typing import Any
 import json
 from mds import logger
+from mds.config import AGG_MDS_NAMESPACE
 
 
 # TODO WFH Why do we have both __manifest and _file_manifest?
 FIELDS_TO_NORMALIZE = ["__manifest", "_file_manifest", "advSearchFilters"]
 
 
-AGG_MDS_INDEX = "commons-index"
+AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
 
 
-AGG_MDS_INFO_INDEX = "commons-info-index"
+AGG_MDS_INFO_INDEX = f"{AGG_MDS_NAMESPACE}-commons-info-index"
 AGG_MDS_INFO_TYPE = "commons-info"
 
 

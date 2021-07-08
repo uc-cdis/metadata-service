@@ -27,8 +27,8 @@ async def test_drop_all():
     mock_indices.delete.assert_called_with(index="_all", ignore=[400, 404])
     mock_indices.create.assert_has_calls(
         [
-            call(body=MAPPING, index="commons-index"),
-            call(index="commons-info-index"),
+            call(body=MAPPING, index="default-commons-index"),
+            call(index="default-commons-info-index"),
         ],
         any_order=True,
     )
@@ -61,13 +61,13 @@ async def test_update_metadata():
                 body={},
                 doc_type="commons-info",
                 id="my_commons",
-                index="commons-info-index",
+                index="default-commons-info-index",
             ),
             call(
                 body={"one": "one"},
                 doc_type="commons",
                 id="my_id",
-                index="commons-index",
+                index="default-commons-index",
             ),
         ],
     )
@@ -92,7 +92,7 @@ async def test_get_commons():
     ) as mock_search:
         await elasticsearch_dao.get_commons()
         mock_search.assert_called_with(
-            index="commons-index",
+            index="default-commons-index",
             body={
                 "size": 0,
                 "aggs": {"commons_names": {"terms": {"field": "commons_name.keyword"}}},
@@ -118,7 +118,7 @@ async def test_get_all_metadata():
     ) as mock_search:
         await elasticsearch_dao.get_all_metadata(5, 9)
         mock_search.assert_called_with(
-            index="commons-index",
+            index="default-commons-index",
             body={"size": 5, "from": 9, "query": {"match_all": {}}},
         )
 
@@ -136,7 +136,7 @@ async def test_get_all_named_commons_metadata():
     ) as mock_client:
         await elasticsearch_dao.get_all_named_commons_metadata("my-commons")
         mock_client.search.assert_called_with(
-            index="commons-index",
+            index="default-commons-index",
             body={"query": {"match": {"commons_name.keyword": "my-commons"}}},
         )
 
@@ -156,7 +156,7 @@ async def test_metadata_tags():
     ) as mock_client:
         await elasticsearch_dao.metadata_tags("my-commons")
         mock_client.search.assert_called_with(
-            index="commons-index",
+            index="default-commons-index",
             body={
                 "size": 0,
                 "aggs": {
@@ -189,7 +189,7 @@ async def test_get_commons_attribute():
     ) as mock_client:
         await elasticsearch_dao.get_commons_attribute("my-commons", "attribute")
         mock_client.search.assert_called_with(
-            index="commons-info-index",
+            index="default-commons-info-index",
             body={"query": {"terms": {"_id": ["my-commons"]}}},
         )
 
@@ -210,7 +210,7 @@ async def test_get_aggregations():
     ) as mock_client:
         await elasticsearch_dao.get_aggregations("my-commons")
         mock_client.search.assert_called_with(
-            index="commons-index",
+            index="default-commons-index",
             body={
                 "size": 0,
                 "query": {
@@ -236,7 +236,7 @@ async def test_get_by_guid():
     ) as mock_client:
         await elasticsearch_dao.get_by_guid("my-commons")
         mock_client.get.assert_called_with(
-            index="commons-index",
+            index="default-commons-index",
             doc_type="commons",
             id="my-commons",
         )
