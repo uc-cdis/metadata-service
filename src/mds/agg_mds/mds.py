@@ -24,7 +24,7 @@ def pull_mds(baseURL: str, batchSize: int = 1000) -> dict:
                 results.update(data)
             else:
                 more = False
-                raise ValueError(f"An error occurred while requesting {baseURL}.")
+                raise ValueError(f"An error occurred while requesting {url}.")
         except Exception as exc:
             raise ValueError(f"An error occurred while requesting {url}.")
 

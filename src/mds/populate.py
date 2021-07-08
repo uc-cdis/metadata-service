@@ -104,7 +104,13 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
         await populate_metadata(name, common, results)
 
     for name, common in commons_config.adapter_commons.items():
-        results = adapters.get_metadata(common.adapter, common.mds_url, common.filters)
+        results = adapters.get_metadata(
+            common.adapter,
+            common.mds_url,
+            common.filters,
+            common.field_mappings,
+            common.per_item_values,
+        )
         await populate_metadata(name, common, results)
 
     res = await datastore.get_status()

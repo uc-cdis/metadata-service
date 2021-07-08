@@ -36,6 +36,8 @@ class AdapterMDSInstance:
     commons_url: str
     adapter: str
     filters: Optional[Dict[str, Any]] = None
+    field_mappings: Optional[Dict[str, Any]] = None
+    per_item_values: Optional[Dict[str, Any]] = None
     study_data_field: str = "gen3_discovery"
 
 
