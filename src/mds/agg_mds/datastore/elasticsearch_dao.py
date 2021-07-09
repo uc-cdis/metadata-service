@@ -46,10 +46,13 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
 
 
 async def drop_all():
-    res = elastic_search_client.indices.delete(index="_all", ignore=[400, 404])
-    logger.debug(f"deleted all indexes: {res}")
+    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX]:
+        res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
+        logger.debug(f"deleted index: {index}")
+
     res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=MAPPING)
     logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
+
     res = elastic_search_client.indices.create(
         index=AGG_MDS_INFO_INDEX,
     )
