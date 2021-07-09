@@ -841,3 +841,163 @@ def test_get_metadata_clinicaltrials():
             },
         }
     }
+
+    json_response1 = r"""{
+      "FullStudiesResponse":{
+        "APIVrs":"1.01.03",
+        "DataVrs":"2021:07:06 22:12:28.413",
+        "Expression":"heart attack",
+        "NStudiesAvail":382563,
+        "NStudiesFound":8322,
+        "MinRank":1,
+        "MaxRank":3,
+        "NStudiesReturned":3,
+        "FullStudies":[
+          {
+            "Rank":1,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"1"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary1"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "Rank":2,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"2"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary2"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "Rank":3,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"3"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary3"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }"""
+
+    json_response2 = r"""{
+      "FullStudiesResponse":{
+        "APIVrs":"1.01.03",
+        "DataVrs":"2021:07:06 22:12:28.413",
+        "Expression":"heart attack",
+        "NStudiesAvail":382563,
+        "NStudiesFound":8322,
+        "MinRank":4,
+        "MaxRank":5,
+        "NStudiesReturned":2,
+        "FullStudies":[
+          {
+            "Rank":4,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"4"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary4"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "Rank":5,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"5"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary5"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }"""
+
+    respx.get(
+        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3",
+        status_code=200,
+        content=json.loads(json_response1),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    respx.get(
+        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6",
+        status_code=200,
+        content=json.loads(json_response2),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    get_metadata(
+        "clinicaltrials",
+        "http://test/ok",
+        filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
+        mappings=field_mappings,
+        perItemValues=item_values,
+    )
+
+    respx.get(
+        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3",
+        status_code=400,
+        content=json.loads(json_response2),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    try:
+        get_metadata(
+            "clinicaltrials",
+            "http://test/ok",
+            filters={"term": "heart attack", "maxItems": 3, "batchSize": 3},
+            mappings=field_mappings,
+            perItemValues=item_values,
+        )
+    except Exception as err:
+        assert err == None

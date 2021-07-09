@@ -24,7 +24,12 @@ async def test_drop_all():
         MagicMock(),
     ) as mock_indices:
         await elasticsearch_dao.drop_all()
-    mock_indices.delete.assert_called_with(index="_all", ignore=[400, 404])
+    mock_indices.delete.assert_has_calls(
+        [
+            call(index="default-commons-index", ignore=[400, 404]),
+            call(index="default-commons-info-index", ignore=[400, 404]),
+        ]
+    )
     mock_indices.create.assert_has_calls(
         [
             call(body=MAPPING, index="default-commons-index"),

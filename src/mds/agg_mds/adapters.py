@@ -177,7 +177,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
     Expected Parameters:
         term: the search term (required)
         batchSize: number of studies to pull in a single call, default=100 and therefor optional
-        maxItems: maxItems to pull, currently more of a guildline as it possible there will be more items returned
+        maxItems: maxItems to pull, currently more of a guideline as it possible there will be more items returned
                   since the code below does not reduce the size of the results array, default = None
     """
 
