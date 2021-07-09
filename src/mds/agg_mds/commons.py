@@ -26,6 +26,7 @@ class MDSInstance:
     commons_url: str
     columns_to_fields: Dict[str, str]
     study_data_field: str = "gen3_discovery"
+    guid_type: str = "discovery_metadata"
     select_field: Optional[Dict[str, str]] = None
 
 
@@ -39,6 +40,7 @@ class AdapterMDSInstance:
     field_mappings: Optional[Dict[str, Any]] = None
     per_item_values: Optional[Dict[str, Any]] = None
     study_data_field: str = "gen3_discovery"
+    guid_type: str = "discovery_metadata"
 
 
 @dataclass_json

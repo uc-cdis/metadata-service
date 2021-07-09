@@ -100,7 +100,7 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
     await datastore.drop_all()
 
     for name, common in commons_config.gen3_commons.items():
-        results = pull_mds(common.mds_url)
+        results = pull_mds(common.mds_url, common.guid_type)
         await populate_metadata(name, common, results)
 
     for name, common in commons_config.adapter_commons.items():

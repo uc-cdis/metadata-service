@@ -1,7 +1,7 @@
 import httpx
 
 
-def pull_mds(baseURL: str, batchSize: int = 1000) -> dict:
+def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
     """
     Pull all data from the MDS server at the baseURL. Will pull data using paging in set of "batchsize"
     until all data from NDS is completed. Note that the httpx get request probably needs a retry using
@@ -12,7 +12,7 @@ def pull_mds(baseURL: str, batchSize: int = 1000) -> dict:
     offset = 0
     results = {}
     while more:
-        url = f"{baseURL}/mds/metadata?data=True&_guid_type=discovery_metadata&limit={batchSize}&offset={offset}"
+        url = f"{baseURL}/mds/metadata?data=True&_guid_type={guid_type}&limit={batchSize}&offset={offset}"
         try:
             response = httpx.get(url)
             if response.status_code == 200:

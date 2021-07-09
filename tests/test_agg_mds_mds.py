@@ -18,7 +18,7 @@ def test_pull_mds():
         content={"commons3": {"gen3_discovery": {}}},
     )
 
-    results = pull_mds("http://commons1", 2)
+    results = pull_mds("http://commons1", "discovery_metadata", 2)
     assert mock_route1.called
     assert mock_route2.called
     assert results == {
@@ -33,5 +33,5 @@ def test_pull_mds():
             content={},
             status_code=403,
         )
-        results = pull_mds("http://commons2", 2)
+        results = pull_mds("http://commons2", "discovery_metadata", 2)
     assert "An error occurred while requesting" in str(excinfo.value)
