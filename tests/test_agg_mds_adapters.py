@@ -985,8 +985,8 @@ def test_get_metadata_clinicaltrials():
     )
 
     respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3",
-        status_code=400,
+        "http://test/ok?expr=should+error&fmt=json&min_rnk=1&max_rnk=3",
+        status_code=500,
         content=json.loads(json_response2),
         content_type="text/plain;charset=UTF-8",
     )
@@ -995,9 +995,9 @@ def test_get_metadata_clinicaltrials():
         get_metadata(
             "clinicaltrials",
             "http://test/ok",
-            filters={"term": "heart attack", "maxItems": 3, "batchSize": 3},
+            filters={"term": "should error", "maxItems": 3, "batchSize": 3},
             mappings=field_mappings,
             perItemValues=item_values,
         )
     except Exception as err:
-        assert err == None
+        assert isinstance(err, ValueError) == True

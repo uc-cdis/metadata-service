@@ -51,7 +51,9 @@ async def test_update_metadata():
                 {
                     "my_id": {
                         "gen3_discovery": {
-                            "one": "one",
+                            "some_field": "some_value",
+                            "__manifest": "{}",
+                            "sites": "",
                         }
                     }
                 }
@@ -70,7 +72,7 @@ async def test_update_metadata():
                 index="default-commons-info-index",
             ),
             call(
-                body={"one": "one"},
+                body={"some_field": "some_value", "__manifest": {}, "sites": None},
                 doc_type="commons",
                 id="my_id",
                 index="default-commons-index",

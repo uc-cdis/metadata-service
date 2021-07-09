@@ -7,7 +7,12 @@ from mds.config import AGG_MDS_NAMESPACE
 
 
 # TODO WFH Why do we have both __manifest and _file_manifest?
-FIELDS_TO_NORMALIZE = ["__manifest", "_file_manifest", "advSearchFilters"]
+FIELD_NORMALIZERS = {
+    "__manifest": "object",
+    "_file_manifest": "object",
+    "advSearchFilters": "object",
+    "sites": "number",
+}
 
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
@@ -59,10 +64,12 @@ async def drop_all():
     logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
 
 
-def normalize_string_or_object(doc, key):
-    if key in doc and isinstance(doc[key], str):
-        manifest = doc[key]
-        doc[key] = None if manifest is "" else json.loads(manifest)
+def normalize_field(doc, key, normalize_type):
+    if normalize_type == "object" and isinstance(doc[key], str):
+        value = doc[key]
+        doc[key] = None if value is "" else json.loads(value)
+    if normalize_type == "number" and isinstance(doc[key], str):
+        doc[key] = None
 
 
 async def update_metadata(
@@ -85,8 +92,9 @@ async def update_metadata(
         # Flatten out this structure
         doc = doc[key][study_data_field]
 
-        for field in FIELDS_TO_NORMALIZE:
-            normalize_string_or_object(doc, field)
+        for field in FIELD_NORMALIZERS.keys():
+            if field in doc:
+                normalize_field(doc, field, FIELD_NORMALIZERS[field])
 
         elastic_search_client.index(
             index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
