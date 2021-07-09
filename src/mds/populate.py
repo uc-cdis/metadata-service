@@ -73,7 +73,9 @@ async def populate_metadata(name: str, common, results):
 
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
-    await datastore.update_metadata(name, mds_arr, keys, tags, info)
+    await datastore.update_metadata(
+        name, mds_arr, keys, tags, info, common.study_data_field
+    )
 
 
 async def main(commons_config: Commons, hostname: str, port: int) -> None:

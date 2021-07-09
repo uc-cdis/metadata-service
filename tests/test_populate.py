@@ -67,6 +67,7 @@ async def test_populate_metadata():
             ["id1"],
             {},
             {"commons_url": "http://commons"},
+            "gen3_discovery",
         )
 
 

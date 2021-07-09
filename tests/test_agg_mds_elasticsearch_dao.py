@@ -59,6 +59,7 @@ async def test_update_metadata():
             [],
             {},
             {},
+            "gen3_discovery",
         )
     mock_index.assert_has_calls(
         [

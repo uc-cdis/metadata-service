@@ -71,6 +71,7 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
+    study_data_field: str,
 ):
     elastic_search_client.index(
         index=AGG_MDS_INFO_INDEX,
@@ -82,7 +83,7 @@ async def update_metadata(
     for doc in data:
         key = list(doc.keys())[0]
         # Flatten out this structure
-        doc = doc[key]["gen3_discovery"]
+        doc = doc[key][study_data_field]
 
         for field in FIELDS_TO_NORMALIZE:
             normalize_string_or_object(doc, field)
