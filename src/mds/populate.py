@@ -112,6 +112,7 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
             common.filters,
             common.field_mappings,
             common.per_item_values,
+            common.keep_original_fields,
         )
         await populate_metadata(name, common, results)
 

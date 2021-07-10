@@ -68,7 +68,7 @@ class RemoteMetadataAdapter(ABC):
                 jsonpath_expr = parse(expression)
                 v = jsonpath_expr.find(item)
                 if len(v) == 0:  # nothing found use default value
-                    results[key] = value
+                    results[key] = ""
                 elif len(v) == 1:  # convert array length 1 to a value
                     results[key] = v[0].value
                 else:  # add array of values
@@ -128,12 +128,18 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         return id.replace("http://doi.org/", "").replace("dc:", "")
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings):
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+        results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
-            item.update(mapped_fields)
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
 
-        return item
+        if isinstance(results["investigators"], list):
+            results["investigators"] = ",".join(results["investigators"])
+        return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
         """
@@ -145,6 +151,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         """
 
         mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
 
         results = {}
         for record in data["results"]:
@@ -158,10 +165,12 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                         item["identifier"] = identifier
                     else:
                         item[str.replace(key, "dc:", "")] = value
-            item = ISCPSRDublin.addGen3ExpectedFields(item, mappings)
+            normalized_item = ISCPSRDublin.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields
+            )
             results[item["identifier"]] = {
                 "_guid_type": "discovery_metadata",
-                "gen3_discovery": item,
+                "gen3_discovery": normalized_item,
             }
 
         perItemValues = kwargs.get("perItemValues", None)
@@ -177,7 +186,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
     Expected Parameters:
         term: the search term (required)
         batchSize: number of studies to pull in a single call, default=100 and therefor optional
-        maxItems: maxItems to pull, currently more of a guideline as it possible there will be more items returned
+        maxItems: maxItems to pull, currently more of a guildline as it possible there will be more items returned
                   since the code below does not reduce the size of the results array, default = None
     """
 
@@ -247,14 +256,18 @@ class ClinicalTrials(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings):
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
         """
         Map item fields to gen3 normalized fields
         using the mapping and adding the location
         """
+        results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
-            item.update(mapped_fields)
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
 
         location = ""
         if "Location" in item and len(item["Location"]) > 0:
@@ -263,9 +276,9 @@ class ClinicalTrials(RemoteMetadataAdapter):
                 f"{item['Location'][0].get('LocationCity','')}, "
                 f"{item['Location'][0].get('LocationState', '')}"
             )
-        item["location"] = location
+        results["location"] = location
 
-        return item
+        return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
         """
@@ -275,14 +288,17 @@ class ClinicalTrials(RemoteMetadataAdapter):
         """
 
         mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
         results = {}
         for item in data["results"]:
             item = item["Study"]
             item = flatten(item)
-            item = ClinicalTrials.addGen3ExpectedFields(item, mappings)
+            normalized_item = ClinicalTrials.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields
+            )
             results[item["NCTId"]] = {
                 "_guid_type": "discovery_metadata",
-                "gen3_discovery": item,
+                "gen3_discovery": normalized_item,
             }
 
         perItemValues = kwargs.get("perItemValues", None)
@@ -292,19 +308,125 @@ class ClinicalTrials(RemoteMetadataAdapter):
         return results
 
 
-def get_metadata(adapter_name, mds_url, filters, mappings=None, perItemValues=None):
+class PDAPS(RemoteMetadataAdapter):
+    """
+    Simple adapter for PDAPS
+    """
+
+    def __init__(self, baseURL: str = "https://api.monqcle.com/"):
+        self.baseURL = baseURL
+
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        if "filters" not in kwargs or kwargs["filters"] is None:
+            return results
+
+        datasets = kwargs["filters"].get("datasets", None)
+
+        if datasets == None:
+            return results
+
+        for id in datasets:
+            try:
+                response = httpx.get(
+                    f"{self.baseURL}siteitem/{id}/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
+                )
+                if response.status_code == 200:
+                    results["results"].append(response.json())
+                else:
+
+                    raise ValueError(
+                        f"An error occurred while requesting {self.baseURL}."
+                    )
+            except:
+                raise ValueError(f"An error occurred while requesting {self.baseURL}.")
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+        """
+        Maps the items fields into Gen3 expected fields
+        if keepOriginal is False: only those fields will be included in the final entry
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        if isinstance(results["investigators"], list):
+            results["investigators"] = results["investigators"].join(", ")
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDAPS.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields
+            )
+            if "display_id" not in item:
+                continue
+            results[item["display_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
+
+        return results
+
+
+def get_metadata(
+    adapter_name,
+    mds_url,
+    filters,
+    mappings=None,
+    perItemValues=None,
+    keepOriginalFields=False,
+):
     if adapter_name == "icpsr":
         gather = ISCPSRDublin(mds_url)
         json_data = gather.getRemoteDataAsJson(filters=filters)
         results = gather.normalizeToGen3MDSFields(
-            json_data, mappings=mappings, perItemValues=perItemValues
+            json_data,
+            mappings=mappings,
+            perItemValues=perItemValues,
+            keepOriginalFields=keepOriginalFields,
         )
         return results
     if adapter_name == "clinicaltrials":
         gather = ClinicalTrials(mds_url)
         json_data = gather.getRemoteDataAsJson(filters=filters)
         results = gather.normalizeToGen3MDSFields(
-            json_data, mappings=mappings, perItemValues=perItemValues
+            json_data,
+            mappings=mappings,
+            perItemValues=perItemValues,
+            keepOriginalFields=keepOriginalFields,
+        )
+        return results
+    if adapter_name == "pdaps":
+        gather = PDAPS(mds_url)
+        json_data = gather.getRemoteDataAsJson(filters=filters)
+        results = gather.normalizeToGen3MDSFields(
+            json_data,
+            mappings=mappings,
+            perItemValues=perItemValues,
+            keepOriginalFields=keepOriginalFields,
         )
         return results
     else:

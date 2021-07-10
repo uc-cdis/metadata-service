@@ -40,7 +40,7 @@ class AdapterMDSInstance:
     field_mappings: Optional[Dict[str, Any]] = None
     per_item_values: Optional[Dict[str, Any]] = None
     study_data_field: str = "gen3_discovery"
-    guid_type: str = "discovery_metadata"
+    keep_original_fields: bool = True
 
 
 @dataclass_json
