@@ -75,7 +75,7 @@
 				"dataset_3_description": "",
 				"dataset_4_description": "",
 				"dataset_5_description": "",
-				"data_availability": "not_available"
+				"data_availability": "pending"
 			},
 			"per_item_values" : {
 				"10.3886/ICPSR30122.v5": {
@@ -142,7 +142,7 @@
 				"dataset_3_description": "",
 				"dataset_4_description": "",
 				"dataset_5_description": "",
-					"data_availability": "not_available"
+					"data_availability": "pending"
 			}
 		},
 		"PDAPS": {
@@ -205,7 +205,7 @@
 				"dataset_3_description": "",
 				"dataset_4_description": "",
 				"dataset_5_description": "",
-				"data_availability": "not_available"
+				"data_availability": "pending"
 			},
 			"per_item_values": {
 				"599ddda695679f66768b4569": {
