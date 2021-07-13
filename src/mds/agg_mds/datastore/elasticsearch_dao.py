@@ -36,6 +36,9 @@ MAPPING = {
                 "tags": {
                     "type": "nested",
                 },
+                "data_dictionary": {
+                    "type": "nested",
+                },
             }
         }
     }
@@ -76,6 +79,7 @@ def normalize_field(doc, key, normalize_type):
             doc[key] = None
     except:
         logger.debug(f"error normalizing {key} for a document")
+        doc[key] = None
 
 
 async def update_metadata(
