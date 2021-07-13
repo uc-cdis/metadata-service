@@ -88,7 +88,7 @@
 							"commons_url": "externaldata.healdata.org"
 						}
 					],
-				"data_availability": "available"
+					"data_availability": "available"
 				}
 			}
 		},
@@ -142,7 +142,7 @@
 				"dataset_3_description": "",
 				"dataset_4_description": "",
 				"dataset_5_description": "",
-					"data_availability": "pending"
+				"data_availability": "pending"
 			}
 		},
 		"PDAPS": {
@@ -150,17 +150,17 @@
 			"commons_url": "https://externaldata.healprod.org",
 			"adapter": "pdaps",
 			"filters": {
-					"datasets": [
-						"laws-regulating-administration-of-naloxone",
-						"drug-induced-homicide",
-						"civil-commitment-for-substance-users",
-						"medicaid-funded-mat-for-justice-involved-persons",
-						"medication-assisted-treatment-in-correctional-facilities",
-						"direct-dispensing-of-controlled-substances-laws",
-						"opioid-prescribing-guidelines-for-acute-and-emergency-care",
-						"pain-management-clinic-laws",
-						"medication-assisted-treatment-licensure-and-operations"
-					]
+				"datasets": [
+					"laws-regulating-administration-of-naloxone",
+					"drug-induced-homicide",
+					"civil-commitment-for-substance-users",
+					"medicaid-funded-mat-for-justice-involved-persons",
+					"medication-assisted-treatment-in-correctional-facilities",
+					"direct-dispensing-of-controlled-substances-laws",
+					"opioid-prescribing-guidelines-for-acute-and-emergency-care",
+					"pain-management-clinic-laws",
+					"medication-assisted-treatment-licensure-and-operations"
+				]
 			},
 			"keep_original_fields": false,
 			"field_mappings": {

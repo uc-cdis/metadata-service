@@ -7,10 +7,13 @@ from mds.config import AGG_MDS_NAMESPACE
 
 
 # TODO WFH Why do we have both __manifest and _file_manifest?
+# TODO WFH These are bugs. If we have to check whether an object is a string or
+# an object, the data is bad.
 FIELD_NORMALIZERS = {
     "__manifest": "object",
     "_file_manifest": "object",
     "advSearchFilters": "object",
+    "data_dictionary": "object",
     "sites": "number",
 }
 
