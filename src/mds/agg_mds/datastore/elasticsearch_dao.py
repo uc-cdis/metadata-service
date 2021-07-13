@@ -68,11 +68,14 @@ async def drop_all():
 
 
 def normalize_field(doc, key, normalize_type):
-    if normalize_type == "object" and isinstance(doc[key], str):
-        value = doc[key]
-        doc[key] = None if value is "" else json.loads(value)
-    if normalize_type == "number" and isinstance(doc[key], str):
-        doc[key] = None
+    try:
+        if normalize_type == "object" and isinstance(doc[key], str):
+            value = doc[key]
+            doc[key] = None if value is "" else json.loads(value)
+        if normalize_type == "number" and isinstance(doc[key], str):
+            doc[key] = None
+    except:
+        logger.debug(f"error normalizing {key} for a document")
 
 
 async def update_metadata(
