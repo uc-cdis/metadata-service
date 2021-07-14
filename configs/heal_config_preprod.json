@@ -110,7 +110,7 @@
 				"location": "",
 				"subjects": "path:EnrollmentCount",
 				"__manifest": "",
-				"study_name": "",
+				"study_name": "path:BriefTitle",
 				"study_type": "",
 				"institutions": "path:LeadSponsorName",
 				"year_awarded": "",
