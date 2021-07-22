@@ -1,9 +1,44 @@
 import collections.abc
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple
+from typing import Any, Dict, List, Tuple, Union
 from jsonpath_ng import parse
 import httpx
 import xmltodict
+import bleach
+
+
+def strip_html(s: str):
+    return bleach.clean(s, tags=[], strip=True)
+
+
+class FieldFilters:
+    filters = {"strip_html": strip_html}
+
+    @classmethod
+    def execute(cls, name, value):
+        if name not in FieldFilters.filters:
+            return value
+        return FieldFilters.filters[name](value)
+
+
+def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
+    """
+    Given a JSON Path expression and a dictionary, using the path expression
+    to find the value. If not found return an empty string
+    """
+
+    if expression is None:
+        return ""
+
+    jsonpath_expr = parse(expression)
+    v = jsonpath_expr.find(item)
+    if len(v) == 0:  # nothing found use default value of empty string
+        return ""
+
+    if len(v) == 1:  # convert array length 1 to a value
+        return v[0].value
+
+    return [x.value for x in v]  # join list
 
 
 def flatten(dictionary, parent_key=False, separator="."):
@@ -62,17 +97,20 @@ class RemoteMetadataAdapter(ABC):
         results = {}
 
         for key, value in mappings.items():
-            if "path:" in value:
+            if isinstance(value, dict):  # have a complex assignment
+                expression = value.get("path", None)
+                field_value = get_json_path_value(expression, item)
+
+                filters = value.get("filters", [])
+                for filter in filters:
+                    field_value = FieldFilters.execute(filter, field_value)
+
+                results[key] = field_value
+            elif "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
-                jsonpath_expr = parse(expression)
-                v = jsonpath_expr.find(item)
-                if len(v) == 0:  # nothing found use default value
-                    results[key] = ""
-                elif len(v) == 1:  # convert array length 1 to a value
-                    results[key] = v[0].value
-                else:  # add array of values
-                    results[key] = [x.value for x in v]
+                field_value = get_json_path_value(expression, item)
+                results[key] = field_value
             else:
                 results[key] = value
         return results
@@ -272,8 +310,8 @@ class ClinicalTrials(RemoteMetadataAdapter):
         location = ""
         if "Location" in item and len(item["Location"]) > 0:
             location = (
-                f"{item['Location'][0].get('LocationFacility','')}, "
-                f"{item['Location'][0].get('LocationCity','')}, "
+                f"{item['Location'][0].get('LocationFacility', '')}, "
+                f"{item['Location'][0].get('LocationCity', '')}, "
                 f"{item['Location'][0].get('LocationState', '')}"
             )
         results["location"] = location

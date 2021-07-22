@@ -1,7 +1,18 @@
 {
 	"gen3_commons": {
+		"ClinicalData": {
+			"mds_url": "https://accessclinicaldata.niaid.nih.gov",
+			"commons_url" : "accessclinicaldata.niaid.nih.gov/",
+			"study_data_field" : "my_metadata",
+			"guid_type" : "my_metadata",
+			"columns_to_fields": {
+				"full_name": "title",
+				"study_id" : "nct_number",
+				"study_description" : "brief_summary"
+			}
+		},
 		"BioData Catalyst": {
-			"mds_url": "https://staging.gen3.biodatacatalyst.nhlbi.nih.gov",
+			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov",
 			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
 			"columns_to_fields": {
 				"short_name": "name",
@@ -10,6 +21,24 @@
 				"study_id" : "study_id",
 				"_unique_id" : "study_id",
 				"study_description" : "study_description"
+			}
+		},
+		"MIDRC": {
+			"mds_url": "https://data.midrc.org",
+			"commons_url" : "data.midrc.org",
+			"columns_to_fields": {
+				"_subjects_count" : "cases_count",
+				"study_description" : "research_description"
+			}
+		},
+		"JCOIN": {
+			"mds_url": "https://jcoin.datacommons.io/",
+			"commons_url" : "jcoin.datacommons.io/",
+			"columns_to_fields": {
+				"_subjects_count" : "subjects",
+				"study_description" : "summary",
+				"short_name": "study_name",
+				"full_name": "study_name"
 			}
 		},
 		"AnVIL": {
@@ -23,34 +52,13 @@
 				"study_description" : "study_description"
 			}
 		},
-		"HEAL": {
-			"mds_url": "https://preprod.healdata.org",
-			"commons_url": "preprod.healdata.org",
-			"columns_to_fields": {
-				"study_name": "name",
-				"project_title": "full_name",
-				"project_number" : "study_id",
-				"_unique_id" : "study_id",
-				"summary" : "study_description"
-			}
-		},
-		"BloodPAC": {
-			"mds_url": "https://data.bloodpac.org",
-			"commons_url": "data.bloodpac.org",
-			"columns_to_fields": {
-				"title": "full_name",
-				"_subjects_count" : "_subjects_count",
-				"_publication_id" : "study_id",
-				"abstract" : "study_description"
-			}
-		},
 		"Genomic Data Commons": {
 			"mds_url": "https://gen3.datacommons.io",
 			"commons_url": "portal.gdc.cancer.gov",
 			"columns_to_fields": {
-				"short_name": "name",
+				"short_name": "short_name",
 				"full_name": "full_name",
-				"_subjects_count" : "_subjects_count",
+				"_subjects_count" : "subjects_count",
 				"dbgap_accession_number" : "study_id",
 				"_unique_id" : "_unique_id",
 				"description" : "study_description"
@@ -64,9 +72,9 @@
 			"mds_url": "https://gen3.datacommons.io",
 			"commons_url": "portal.gdc.cancer.gov",
 			"columns_to_fields": {
-				"short_name": "name",
+				"short_name": "short_name",
 				"full_name": "full_name",
-				"_subjects_count" : "_subjects_count",
+				"_subjects_count" : "cases_count",
 				"study_id" : "_unique_id",
 				"_unique_id" : "_unique_id",
 				"description" : "study_description"
@@ -75,111 +83,6 @@
 				"field_name" : "commons" ,
 				"field_value" : "Proteomic Data Commons"
 			}
-		}
-	},
-	"adapter_commons": {
-		"ICPSR": {
-			"mds_url": "https://www.icpsr.umich.edu/icpsrweb/neutral/oai/studies",
-			"commons_url": "https://www.icpsr.umich.edu",
-			"adapter": "icpsr",
-			"filters": {
-				"study_ids": [37887, 37833, 37842, 37841, 35197]
-			},
-			"field_mappings" : {
-					"tags": [],
-					"authz": "",
-					"sites": "",
-					"summary": "path:description",
-					"location": "path:coverage[0]",
-					"subjects": "",
-					"__manifest": "",
-					"study_name": "",
-					"study_type": "",
-					"institutions": "path:contributor",
-					"year_awarded": "",
-					"investigators": "path:creator",
-					"project_title": "path:title",
-					"protocol_name": "",
-					"study_summary": "",
-					"_file_manifest": "",
-					"dataset_1_type": "",
-					"dataset_2_type": "",
-					"dataset_3_type": "",
-					"dataset_4_type": "",
-					"dataset_5_type": "",
-					"project_number": "path:identifier",
-					"dataset_1_title": "",
-					"dataset_2_title": "",
-					"dataset_3_title": "",
-					"dataset_4_title": "",
-					"dataset_5_title": "",
-					"administering_ic": "",
-					"advSearchFilters": [],
-					"dataset_category": "path:type",
-					"research_program": "",
-					"research_question": "",
-					"study_description": "",
-					"clinical_trial_link": "",
-					"dataset_description": "",
-					"research_focus_area": "",
-					"dataset_1_description": "",
-					"dataset_2_description": "",
-					"dataset_3_description": "",
-					"dataset_4_description": "",
-					"dataset_5_description": ""
-				}
-
-		},
-		"clinicaltrials": {
-			"mds_url": "https://clinicaltrials.gov/api/query/full_studies",
-			"commons_url": "http://clinicaltrials.gov",
-			"adapter": "clinicaltrials",
-			"filters": {
-				"term": "OUD",
-				"maxItems": 25
-			},
-			"field_mappings": {
-					  "tags": [],
-					  "authz": "",
-					  "sites": "",
-					  "summary": "path:BriefSummary",
-					  "location": "",
-					  "subjects": "path:EnrollmentCount",
-					  "__manifest": "",
-					  "study_name": "",
-					  "study_type": "",
-					  "institutions": "path:LeadSponsorName",
-					  "year_awarded": "",
-					  "investigators": "path:OverallOfficial[0].OverallOfficialName",
-					  "protocol_name": "",
-					  "study_summary": "",
-					  "_file_manifest": "",
-					  "dataset_1_type": "",
-					  "dataset_2_type": "",
-					  "dataset_3_type": "",
-					  "dataset_4_type": "",
-					  "dataset_5_type": "",
-					  "project_number": "path:OrgStudyId",
-					  "dataset_1_title": "",
-					  "dataset_2_title": "",
-					  "dataset_3_title": "",
-					  "dataset_4_title": "",
-					  "dataset_5_title": "",
-					  "administering_ic": "",
-					  "advSearchFilters": [],
-					  "dataset_category": "",
-					  "research_program": "",
-					  "research_question": "",
-					  "study_description": "",
-					  "clinical_trial_link": "",
-					  "dataset_description": "",
-					  "research_focus_area": "",
-					  "dataset_1_description": "",
-					  "dataset_2_description": "",
-					  "dataset_3_description": "",
-					  "dataset_4_description": "",
-					  "dataset_5_description": ""
-					}
 		}
 	}
 }

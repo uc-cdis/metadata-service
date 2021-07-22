@@ -37,7 +37,10 @@
 				"tags": [],
 				"authz": "",
 				"sites": "",
-				"summary": "path:description",
+				"summary": {
+					"path":" description",
+					"filters": ["strip_html"]
+				},
 				"location": "path:coverage[0]",
 				"subjects": "",
 				"__manifest": "",

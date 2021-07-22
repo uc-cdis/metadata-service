@@ -98,7 +98,7 @@ async def metadata_aggregations(name: str):
         )
 
 
-@mod.get("/aggregate/metadata/guid/{guid}")
+@mod.get("/aggregate/metadata/guid/{guid:path}")
 async def metadata_name_guid(guid: str):
     """Get the metadata of the GUID in the named commons."""
     res = await datastore.get_by_guid(guid)
