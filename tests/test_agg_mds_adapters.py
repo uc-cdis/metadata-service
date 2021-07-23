@@ -1,6 +1,7 @@
 import respx
 import json
 from mds.agg_mds.adapters import get_metadata
+import pytest
 
 
 @respx.mock
@@ -37,7 +38,7 @@ def test_get_metadata_icpsr():
         "tags": [],
         "authz": "",
         "sites": "",
-        "summary": "path:description",
+        "summary": {"path": " description", "filters": ["strip_html"]},
         "location": "path:coverage[0]",
         "subjects": "",
         "__manifest": "",
@@ -1809,6 +1810,8 @@ def test_get_metadata_pdaps():
         }
     }
 
+    ## failed calls
+
     respx.get(
         "http://test/ok/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
         status_code=200,
@@ -2623,3 +2626,22 @@ def test_get_metadata_pdaps():
 }
 """
     )
+
+    respx.get(
+        "http://test/ok/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
+        status_code=500,
+        content={},
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    try:
+        get_metadata(
+            "pdaps",
+            "http://test/ok",
+            filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
