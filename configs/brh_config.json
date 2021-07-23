@@ -24,11 +24,8 @@
 			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
 			"columns_to_fields": {
 				"short_name": "name",
-				"full_name": "full_name",
-				"_subjects_count" : "_subjects_count",
 				"study_id" : "study_id",
-				"_unique_id" : "study_id",
-				"study_description" : "study_description"
+				"_unique_id" : "study_id"
 			}
 		},
 
@@ -57,12 +54,10 @@
 			"mds_url": "https://gen3.datacommons.io",
 			"commons_url": "portal.gdc.cancer.gov",
 			"columns_to_fields": {
-				"short_name": "short_name",
-				"full_name": "full_name",
 				"_subjects_count" : "subjects_count",
 				"dbgap_accession_number" : "study_id",
 				"_unique_id" : "_unique_id",
-				"description" : "study_description"
+				"study_description" : "description"
 			},
 			"select_field": {
 				"field_name" : "commons" ,
@@ -73,11 +68,8 @@
 			"mds_url": "https://gen3.datacommons.io",
 			"commons_url": "portal.gdc.cancer.gov",
 			"columns_to_fields": {
-				"short_name": "short_name",
-				"full_name": "full_name",
 				"_subjects_count" : "cases_count",
 				"study_id" : "_unique_id",
-				"_unique_id" : "_unique_id",
 				"description" : "study_description"
 			},
 			"select_field": {
