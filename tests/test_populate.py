@@ -58,7 +58,6 @@ async def test_populate_metadata():
                         "gen3_discovery": {
                             "column1": "some data",
                             "tags": {},
-                            "field1": "some data",
                             "commons_name": "my_commons",
                         }
                     }

@@ -50,10 +50,10 @@ async def populate_metadata(name: str, common, results):
             for column, field in common.columns_to_fields.items():
                 if field == column:
                     continue
-                if column in entry[common.study_data_field]:
-                    entry[common.study_data_field][field] = entry[
+                if field in entry[common.study_data_field]:
+                    entry[common.study_data_field][column] = entry[
                         common.study_data_field
-                    ][column]
+                    ][field]
                 return entry
 
         entry = normalize(entry)
