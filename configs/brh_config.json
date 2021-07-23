@@ -1,5 +1,13 @@
 {
 	"gen3_commons": {
+		"MIDRC": {
+			"mds_url": "https://data.midrc.org",
+			"commons_url" : "data.midrc.org",
+			"columns_to_fields": {
+				"_subjects_count" : "cases_count",
+				"study_description" : "research_description"
+			}
+		},
 		"ClinicalData": {
 			"mds_url": "https://accessclinicaldata.niaid.nih.gov",
 			"commons_url" : "accessclinicaldata.niaid.nih.gov/",
@@ -23,14 +31,7 @@
 				"study_description" : "study_description"
 			}
 		},
-		"MIDRC": {
-			"mds_url": "https://data.midrc.org",
-			"commons_url" : "data.midrc.org",
-			"columns_to_fields": {
-				"_subjects_count" : "cases_count",
-				"study_description" : "research_description"
-			}
-		},
+
 		"JCOIN": {
 			"mds_url": "https://jcoin.datacommons.io/",
 			"commons_url" : "jcoin.datacommons.io/",

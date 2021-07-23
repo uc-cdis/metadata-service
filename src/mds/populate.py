@@ -45,8 +45,12 @@ async def populate_metadata(name: str, common, results):
         entry = next(iter(x.values()))
 
         def normalize(entry: dict) -> Any:
-            if not hasattr(common, "columns_to_fields"):
+            if (
+                not hasattr(common, "columns_to_fields")
+                or common.columns_to_fields is None
+            ):
                 return entry
+
             for column, field in common.columns_to_fields.items():
                 if field == column:
                     continue
@@ -54,7 +58,7 @@ async def populate_metadata(name: str, common, results):
                     entry[common.study_data_field][column] = entry[
                         common.study_data_field
                     ][field]
-                return entry
+            return entry
 
         entry = normalize(entry)
 

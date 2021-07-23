@@ -24,7 +24,7 @@ class ColumnsToFields:
 class MDSInstance:
     mds_url: str
     commons_url: str
-    columns_to_fields: Dict[str, str]
+    columns_to_fields: Optional[Dict[str, Any]] = None
     study_data_field: str = "gen3_discovery"
     guid_type: str = "discovery_metadata"
     select_field: Optional[Dict[str, str]] = None

@@ -2,14 +2,8 @@
 	"gen3_commons": {
 		"HEAL": {
 			"mds_url": "https://preprod.healdata.org",
-			"commons_url": "preprod.healdata.org",
-			"columns_to_fields": {
-				"study_name": "name",
-				"project_title": "full_name",
-				"project_number" : "study_id",
-				"_unique_id" : "study_id",
-				"summary" : "study_description"
-			}
+			"commons_url": "preprod.healdata.org"
+
 		},
 		"JCOIN": {
 			"mds_url": "https://jcoin.datacommons.io/",
