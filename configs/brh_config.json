@@ -1,5 +1,13 @@
 {
 	"gen3_commons": {
+		"BioData Catalyst": {
+			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov",
+			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
+			"columns_to_fields": {
+				"short_name": "name",
+				"_unique_id" : "study_id"
+			}
+		},
 		"MIDRC": {
 			"mds_url": "https://data.midrc.org",
 			"commons_url" : "data.midrc.org",
@@ -21,15 +29,6 @@
 				"study_description" : "brief_summary"
 			}
 		},
-		"BioData Catalyst": {
-			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov",
-			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
-			"columns_to_fields": {
-				"short_name": "name",
-				"_unique_id" : "study_id"
-			}
-		},
-
 		"JCOIN": {
 			"mds_url": "https://jcoin.datacommons.io/",
 			"commons_url" : "jcoin.datacommons.io/",
