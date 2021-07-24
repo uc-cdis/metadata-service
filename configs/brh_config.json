@@ -5,7 +5,8 @@
 			"commons_url" : "data.midrc.org",
 			"columns_to_fields": {
 				"_subjects_count" : "cases_count",
-				"study_description" : "research_description"
+				"study_description" : "research_description",
+				"_unique_id": "study_id"
 			}
 		},
 		"ClinicalData": {
@@ -16,6 +17,7 @@
 			"columns_to_fields": {
 				"full_name": "title",
 				"study_id" : "nct_number",
+				"_unique_id": "nct_number",
 				"study_description" : "brief_summary"
 			}
 		},
@@ -24,7 +26,6 @@
 			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
 			"columns_to_fields": {
 				"short_name": "name",
-				"study_id" : "study_id",
 				"_unique_id" : "study_id"
 			}
 		},
@@ -56,7 +57,6 @@
 			"columns_to_fields": {
 				"_subjects_count" : "subjects_count",
 				"dbgap_accession_number" : "study_id",
-				"_unique_id" : "_unique_id",
 				"study_description" : "description"
 			},
 			"select_field": {
