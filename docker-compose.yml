@@ -7,12 +7,15 @@ services:
     volumes:
       - .:/src
     depends_on:
-      - migration
+      - db_migration
+      - aggregate_migration
     environment:
       - DB_HOST=db
-      - DB_USER=mds
+      - DB_USER=metadata_user
+      - USE_AGG_MDS=true
+      - GEN3_ES_ENDPOINT=http://esproxy-service:9200
     command: /env/bin/uvicorn --host 0.0.0.0 --port 80 mds.asgi:app --reload
-  migration:
+  db_migration:
     build: .
     image: mds
     volumes:
@@ -21,13 +24,43 @@ services:
       - db
     environment:
       - DB_HOST=db
-      - DB_USER=mds
+      - DB_USER=metadata_user
     command: /env/bin/alembic upgrade head
+  aggregate_migration:
+    build: .
+    image: mds
+    volumes:
+      - .:/src
+    environment:
+      - USE_AGG_MDS=true
+    command: /env/bin/python /src/src/mds/populate.py --config /src/configs/brh_config.json --hostname esproxy-service --port 9200
   db:
     image: postgres
     environment:
-      - POSTGRES_USER=mds
+      - POSTGRES_USER=metadata_user
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - ./postgres-data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
+  esproxy-service:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.12
+    container_name: esproxy-service
+    environment:
+      - cluster.name=elasticsearch-cluster
+      - bootstrap.memory_lock=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    entrypoint:
+      - /bin/bash
+    # mmapfs requires systemctl update - see https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-store.html#mmapfs
+    command:
+      - -c
+      - "echo -e 'cluster.name: docker-cluster\nhttp.host: 0.0.0.0\nindex.store.type: niofs' > /usr/share/elasticsearch/config/elasticsearch.yml && /usr/local/bin/docker-entrypoint.sh eswrapper"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - 9200:9200
