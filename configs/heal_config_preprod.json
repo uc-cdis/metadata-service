@@ -166,7 +166,10 @@
 				"tags": [],
 				"authz": "",
 				"sites": "",
-				"summary": "path:preview[0].description",
+				"summary": {
+					"path":" preview[0].description",
+					"filters": ["strip_html"]
+				},
 				"location": "United States",
 				"subjects": "",
 				"__manifest": "",
