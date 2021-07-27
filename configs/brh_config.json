@@ -19,7 +19,7 @@
 		},
 		"ClinicalData": {
 			"mds_url": "https://accessclinicaldata.niaid.nih.gov",
-			"commons_url" : "accessclinicaldata.niaid.nih.gov/",
+			"commons_url" : "accessclinicaldata.niaid.nih.gov",
 			"study_data_field" : "my_metadata",
 			"guid_type" : "my_metadata",
 			"columns_to_fields": {
