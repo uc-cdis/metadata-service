@@ -17,7 +17,7 @@
 				"_unique_id": "study_id"
 			}
 		},
-		"ClinicalData": {
+		"NIAID ClinicalData": {
 			"mds_url": "https://accessclinicaldata.niaid.nih.gov",
 			"commons_url" : "accessclinicaldata.niaid.nih.gov",
 			"study_data_field" : "my_metadata",
@@ -74,6 +74,19 @@
 			"select_field": {
 				"field_name" : "commons" ,
 				"field_value" : "Proteomic Data Commons"
+			}
+		},
+		"Cancer Imaging Data Commons": {
+			"mds_url": "https://gen3.datacommons.io",
+			"commons_url": "portal.gdc.cancer.gov",
+			"columns_to_fields": {
+				"_subjects_count" : "cases_count",
+				"study_id" : "_unique_id",
+				"description" : "study_description"
+			},
+			"select_field": {
+				"field_name" : "commons" ,
+				"field_value" : "Cancer Imaging Data Commons"
 			}
 		}
 	}
