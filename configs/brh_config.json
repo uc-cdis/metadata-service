@@ -12,6 +12,18 @@
 				"full_name": "dataset_title"
 			}
 		},
+		"Kids First": {
+			"mds_url": "https://gen3.datacommons.io",
+			"commons_url" : "https://kidsfirstdrc.org",
+			"columns_to_fields": {
+				"_subjects_count" : "subjects_count",
+				"study_description" : "description"
+			},
+			"select_field": {
+				"field_name" : "commons",
+				"field_value" : "Kids First"
+			}
+		},
 		"BioData Catalyst": {
 			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov",
 			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
