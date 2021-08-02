@@ -17,7 +17,8 @@
 			"commons_url" : "https://kidsfirstdrc.org",
 			"columns_to_fields": {
 				"_subjects_count" : "subjects_count",
-				"study_description" : "description"
+				"study_description" : "description",
+				"study_id" : "dbgap_accession_number"
 			},
 			"select_field": {
 				"field_name" : "commons",

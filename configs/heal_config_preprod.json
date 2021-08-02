@@ -25,15 +25,19 @@
 			"adapter": "icpsr",
 			"keep_original_fields": false,
 			"filters": {
-				"study_ids": [30122, 37887, 37833, 37842, 37841, 35197 ]
+				"study_ids": [4256, 30122, 34945, 35197, 37887, 37833, 37842, 37841, 35197 ]
 			},
 			"field_mappings" : {
 				"tags": [],
 				"authz": "",
 				"sites": "",
 				"summary": {
-					"path":" description",
+					"path":"description",
 					"filters": ["strip_html"]
+				},
+				"study_url" : {
+					"path":"ipcsr_study_id",
+					"filters": ["add_icpsr_source_url"]
 				},
 				"location": "path:coverage[0]",
 				"subjects": "",
@@ -104,6 +108,10 @@
 				"authz": "",
 				"sites": "",
 				"summary": "path:BriefSummary",
+				"study_url" : {
+					"path":"NCTId",
+					"filters": ["add_clinical_trials_source_url"]
+				},
 				"location": "",
 				"subjects": "path:EnrollmentCount",
 				"__manifest": "",
@@ -180,7 +188,7 @@
 				"investigators": "path:preview[0].created_by",
 				"project_title": "path:preview[0].title",
 				"protocol_name": "",
-				"study_summary": "path:preview[0].description",
+				"study_summary": { "path":" preview[0].description", "filters": ["strip_html"] },
 				"_file_manifest": "",
 				"dataset_1_type": "Data",
 				"dataset_2_type": "Codebook",
@@ -221,7 +229,8 @@
 						}
 					],
 					"data_availability": "available",
-					"authz": "/programs/open"
+					"authz": "/programs/open",
+					"study_url": "https://pdaps.org/datasets/laws-regulating-administration-of-naloxone-1501695139"
 				}
 			}
 		}

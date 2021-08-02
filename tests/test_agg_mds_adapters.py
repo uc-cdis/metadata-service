@@ -1,7 +1,7 @@
 import respx
 import json
 from mds.agg_mds.adapters import get_metadata
-import pytest
+import dictdiffer
 
 
 @respx.mock
@@ -38,7 +38,8 @@ def test_get_metadata_icpsr():
         "tags": [],
         "authz": "",
         "sites": "",
-        "summary": {"path": " description", "filters": ["strip_html"]},
+        "summary": {"path": "description", "filters": ["strip_html"]},
+        "study_url": {"path": "ipcsr_study_id", "filters": ["add_icpsr_source_url"]},
         "location": "path:coverage[0]",
         "subjects": "",
         "__manifest": "",
@@ -96,6 +97,7 @@ def test_get_metadata_icpsr():
         "10.3886/ICPSR06425.v1": {
             "_guid_type": "discovery_metadata",
             "gen3_discovery": {
+                "ipcsr_study_id": "6425",
                 "title": "103rd Congressional District Geographic Entity File, 1990: [United States]",
                 "contributor": "Inter-university Consortium for Political and Social Research [distributor]",
                 "creator": "United States. Bureau of the Census",
@@ -110,6 +112,7 @@ def test_get_metadata_icpsr():
                 "sites": "",
                 "summary": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
                 "location": "1",
+                "study_url": "https://www.icpsr.umich.edu/web/NAHDAP/studies/6425",
                 "subjects": "",
                 "__manifest": "",
                 "study_name": "",

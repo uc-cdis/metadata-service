@@ -11,8 +11,20 @@ def strip_html(s: str):
     return bleach.clean(s, tags=[], strip=True)
 
 
+def add_icpsr_source_url(id: str):
+    return f"https://www.icpsr.umich.edu/web/NAHDAP/studies/{id}"
+
+
+def add_clinical_trials_source_url(id: str):
+    return f"https://clinicaltrials.gov/ct2/show/{id}"
+
+
 class FieldFilters:
-    filters = {"strip_html": strip_html}
+    filters = {
+        "strip_html": strip_html,
+        "add_icpsr_source_url": add_icpsr_source_url,
+        "add_clinical_trials_source_url": add_clinical_trials_source_url,
+    }
 
     @classmethod
     def execute(cls, name, value):
@@ -88,6 +100,11 @@ class RemoteMetadataAdapter(ABC):
         which will set the field and the default value
         There is support for JSON path syntax if the string starts with "path:"
         as in "path:OverallOfficial[0].OverallOfficialName"
+        or for more complex operations:
+        field: {
+            path: JSON Path
+            filters: [process field filters]
+        }
 
         :param item: dictionary to map fields to
         :param mappings:
@@ -147,7 +164,6 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         if len(study_ids) > 0:
             for id in study_ids:
                 url = f"{self.baseURL}?verb=GetRecord&metadataPrefix=oai_dc&identifier={id}"
-
                 response = httpx.get(url)
 
                 if response.status_code == 200:
@@ -156,8 +172,6 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     results["results"].append(data_dict)
                 else:
                     raise ValueError(f"An error occurred while requesting {url}")
-
-                more = False
 
         return results
 
@@ -201,6 +215,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     if "dc:identifier" in key:
                         identifier = ISCPSRDublin.buildIdentifier(value[1])
                         item["identifier"] = identifier
+                        item["ipcsr_study_id"] = value[0]
                     else:
                         item[str.replace(key, "dc:", "")] = value
             normalized_item = ISCPSRDublin.addGen3ExpectedFields(
