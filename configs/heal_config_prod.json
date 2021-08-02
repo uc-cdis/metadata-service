@@ -1,0 +1,238 @@
+{
+	"gen3_commons": {
+		"HEAL": {
+			"mds_url": "https://healdata.org",
+			"commons_url": "healdata.org"
+
+		},
+		"JCOIN": {
+			"mds_url": "https://jcoin.datacommons.io/",
+			"commons_url" : "jcoin.datacommons.io",
+			"columns_to_fields": {
+				"short_name": "name",
+				"full_name": "full_name",
+				"_subjects_count" : "_subjects_count",
+				"study_id" : "study_id",
+				"_unique_id" : "study_id",
+				"study_description" : "study_description"
+			}
+		}
+	},
+	"adapter_commons": {
+		"ICPSR": {
+			"mds_url": "https://www.icpsr.umich.edu/icpsrweb/neutral/oai/studies",
+			"commons_url": "https://www.icpsr.umich.edu",
+			"adapter": "icpsr",
+			"keep_original_fields": false,
+			"filters": {
+				"study_ids": [4256, 30122, 34945, 35197, 37887, 37833, 37842, 37841, 35197 ]
+			},
+			"field_mappings" : {
+				"tags": [],
+				"authz": "",
+				"sites": "",
+				"summary": {
+					"path":"description",
+					"filters": ["strip_html"]
+				},
+				"study_url" : {
+					"path":"ipcsr_study_id",
+					"filters": ["add_icpsr_source_url"]
+				},
+				"location": "path:coverage[0]",
+				"subjects": "",
+				"__manifest": "",
+				"study_name": "",
+				"study_type": "",
+				"institutions": "path:contributor",
+				"year_awarded": "",
+				"investigators": "path:creator",
+				"project_title": "path:title",
+				"protocol_name": "",
+				"study_summary": "",
+				"_file_manifest": "",
+				"dataset_1_type": "",
+				"dataset_2_type": "",
+				"dataset_3_type": "",
+				"dataset_4_type": "",
+				"dataset_5_type": "",
+				"project_number": "path:identifier",
+				"dataset_1_title": "",
+				"dataset_2_title": "",
+				"dataset_3_title": "",
+				"dataset_4_title": "",
+				"dataset_5_title": "",
+				"administering_ic": "",
+				"advSearchFilters": [],
+				"dataset_category": "path:type",
+				"research_program": "",
+				"research_question": "",
+				"study_description": "",
+				"clinical_trial_link": "",
+				"dataset_description": "",
+				"research_focus_area": "",
+				"dataset_1_description": "",
+				"dataset_2_description": "",
+				"dataset_3_description": "",
+				"dataset_4_description": "",
+				"dataset_5_description": "",
+				"data_availability": "pending"
+			},
+			"per_item_values" : {
+				"10.3886/ICPSR30122.v5": {
+					"__manifest": [
+						{
+							"md5sum": "7cf87ce47b91e3a766753222bc22d098",
+							"file_name": "TEDS-D-2018-DS0001-bndl-data-spss.zip",
+							"file_size": 69297783,
+							"object_id": "dg.XXXX/208f4c52-771e-409a-b810-4bcba3c03c51",
+							"commons_url": "externaldata.healdata.org"
+						}
+					],
+					"data_availability": "available",
+					"authz": "/programs/open"
+				}
+			}
+		},
+		"clinicaltrials": {
+			"mds_url": "https://clinicaltrials.gov/api/query/full_studies",
+			"commons_url": "http://clinicaltrials.gov",
+			"adapter": "clinicaltrials",
+			"filters": {
+				"term": "OUD",
+				"maxItems": 25
+			},
+			"keep_original_fields": false,
+			"field_mappings": {
+				"tags": [],
+				"authz": "",
+				"sites": "",
+				"summary": "path:BriefSummary",
+				"study_url" : {
+					"path":"NCTId",
+					"filters": ["add_clinical_trials_source_url"]
+				},
+				"location": "",
+				"subjects": "path:EnrollmentCount",
+				"__manifest": "",
+				"study_name": "",
+				"study_type": "",
+				"institutions": "path:LeadSponsorName",
+				"year_awarded": "",
+				"investigators": "path:OverallOfficial[0].OverallOfficialName",
+				"project_title": "path:BriefTitle",
+				"protocol_name": "",
+				"study_summary": "",
+				"_file_manifest": "",
+				"dataset_1_type": "",
+				"dataset_2_type": "",
+				"dataset_3_type": "",
+				"dataset_4_type": "",
+				"dataset_5_type": "",
+				"project_number": "path:OrgStudyId",
+				"dataset_1_title": "",
+				"dataset_2_title": "",
+				"dataset_3_title": "",
+				"dataset_4_title": "",
+				"dataset_5_title": "",
+				"administering_ic": "",
+				"advSearchFilters": [],
+				"dataset_category": "",
+				"research_program": "",
+				"research_question": "",
+				"study_description": "",
+				"clinical_trial_link": "",
+				"dataset_description": "",
+				"research_focus_area": "",
+				"dataset_1_description": "",
+				"dataset_2_description": "",
+				"dataset_3_description": "",
+				"dataset_4_description": "",
+				"dataset_5_description": "",
+				"data_availability": "pending"
+			}
+		},
+		"PDAPS": {
+			"mds_url": "https://api.monqcle.com/",
+			"commons_url": "https://externaldata.healprod.org",
+			"adapter": "pdaps",
+			"filters": {
+				"datasets": [
+					"laws-regulating-administration-of-naloxone",
+					"drug-induced-homicide",
+					"civil-commitment-for-substance-users",
+					"medicaid-funded-mat-for-justice-involved-persons",
+					"medication-assisted-treatment-in-correctional-facilities",
+					"direct-dispensing-of-controlled-substances-laws",
+					"opioid-prescribing-guidelines-for-acute-and-emergency-care",
+					"pain-management-clinic-laws",
+					"medication-assisted-treatment-licensure-and-operations"
+				]
+			},
+			"keep_original_fields": false,
+			"field_mappings": {
+				"tags": [],
+				"authz": "",
+				"sites": "",
+				"summary": {
+					"path":" preview[0].description",
+					"filters": ["strip_html"]
+				},
+				"location": "United States",
+				"subjects": "",
+				"__manifest": "",
+				"study_name": "",
+				"study_type": "",
+				"institutions": "Temple University",
+				"year_awarded": "",
+				"investigators": "path:preview[0].created_by",
+				"project_title": "path:preview[0].title",
+				"protocol_name": "",
+				"study_summary": { "path":" preview[0].description", "filters": ["strip_html"] },
+				"_file_manifest": "",
+				"dataset_1_type": "Data",
+				"dataset_2_type": "Codebook",
+				"dataset_3_type": "Protocol",
+				"dataset_4_type": "Final report",
+				"dataset_5_type": "",
+				"project_number": "path:display_id",
+				"dataset_1_title": "path:preview[0].data_data",
+				"dataset_2_title": "path:preview[0].data_codebook",
+				"dataset_3_title": "path:preview[0].data_protocol",
+				"dataset_4_title": "path:preview[0].final_report",
+				"dataset_5_title": "",
+				"administering_ic": "NIDA",
+				"advSearchFilters": [],
+				"dataset_category": "",
+				"research_program": "",
+				"research_question": "",
+				"study_description": "",
+				"clinical_trial_link": "",
+				"dataset_description": "",
+				"research_focus_area": "",
+				"dataset_1_description": "",
+				"dataset_2_description": "",
+				"dataset_3_description": "",
+				"dataset_4_description": "",
+				"dataset_5_description": "",
+				"data_availability": "pending"
+			},
+			"per_item_values": {
+				"599ddda695679f66768b4569": {
+					"__manifest": [
+						{
+						"md5sum": "40dcac42435d323ebdb92d615f42d0c3",
+						"file_name": "Naloxone_Data_09112020.xlsx",
+						"file_size": 88921,
+						"object_id": "dg.XXXX/d4d4c6d2-a2e7-463f-9c76-4e21a1731a1d",
+							"commons_url": "externaldata.healdata.org"
+						}
+					],
+					"data_availability": "available",
+					"authz": "/programs/open",
+					"study_url": "https://pdaps.org/datasets/laws-regulating-administration-of-naloxone-1501695139"
+				}
+			}
+		}
+	}
+}
