@@ -1,7 +1,6 @@
 import respx
 import json
 from mds.agg_mds.adapters import get_metadata
-import dictdiffer
 
 
 @respx.mock
