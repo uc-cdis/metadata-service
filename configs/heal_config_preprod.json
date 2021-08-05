@@ -91,6 +91,102 @@
 					],
 					"data_availability": "available",
 					"authz": "/programs/open"
+				},
+				"10.3886/ICPSR34945.v3": {
+					"__manifest": [
+						{
+							"md5sum": "f8334864a8e2ca52d64272a73d8a9021",
+							"file_name": "N-MHSS-2019-DS0001-bndl-data-tsv.zip",
+							"file_size": 288889 ,
+							"object_id": "dg.XXXX/c6f5f04e-70e8-46ed-bf62-902e51d8d9b9",
+							"commons_url": "externaldata.healdata.org"
+						}
+					],
+					"data_availability": "available",
+					"authz": "/programs/open"
+				},
+				"10.3886/ICPSR04256.v5": {
+					"__manifest": [
+						{
+							"md5sum": "eac267906a463fdca35e2cbf12bdb2fd",
+							"file_name": "N-SSATS-2017-DS0001-bndl-data-spss.zip",
+							"file_size": 501181,
+							"object_id": "dg.XXXX/082a288e-3da2-4806-9438-bc974cdb1cd7",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "1797fb553dbf4f5bb0111415936783d9",
+							"file_name": "N-SSATS-2009-DS0001-bndl-data-spss.zip",
+							"file_size": 8653639,
+							"object_id": "dg.XXXX/70453ef5-728a-4a4a-907b-e18ac374918d",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "89019e34fd116e7befc1abc300ea59dc",
+							"file_name": "N-SSATS-2011-DS0001-bndl-data-spss.zip",
+							"file_size": 2120680,
+							"object_id": "dg.XXXX/6dd94d94-5fcf-43ee-94e5-87ff10230df0",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "8ded2f937933193c804e4e5cd07b1e86",
+							"file_name": "N-SSATS-2013-DS0001-bndl-data-spss.zip",
+							"file_size": 1988340,
+							"object_id": "dg.XXXX/e374f214-21a1-4298-bb16-3bcb889bb6de",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "5fd5509171787d028a386ea203f27b39",
+							"file_name": "N-SSATS-2015-DS0001-bndl-data-spss.zip",
+							"file_size": 2204836,
+							"object_id": "dg.XXXX/4d78774d-1768-4647-b113-6a9ad4932652",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "eac267906a463fdca35e2cbf12bdb2fd",
+							"file_name": "N-SSATS-2017-DS0001-bndl-data-spss.zip",
+							"file_size": 501181,
+							"object_id": "dg.XXXX/082a288e-3da2-4806-9438-bc974cdb1cd7",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "01a920271b85b450e7897fd658661f06",
+							"file_name": "N-SSATS-2019-DS0001-bndl-data-spss.zip",
+							"file_size": 1346011,
+							"object_id": "dg.XXXX/68fe4b6a-6e4a-4854-9078-86f5234d74f3",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "994b1a04912edf2b00e8118678faaf70",
+							"file_name": "N-SSATS-2003.sav",
+							"file_size": 2911525,
+							"object_id": "dg.XXXX/1a76f3c0-e922-44a5-92fb-0b4c83770c02",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "bbd28d42097c06a2b61f225402055df3",
+							"file_name": "N-SSATS-2004.sav",
+							"file_size": 2975800,
+							"object_id": "dg.XXXX/597033aa-73a0-4cce-8851-6bf3973648ab",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "e063579c1bf88455859d095453cfdace",
+							"file_name": "N-SSATS-2005.sav",
+							"file_size": 2604863,
+							"object_id": "dg.XXXX/656c77cf-b762-4998-a4ce-54bc9928e8f3",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "69b172b4056ae45a228725501f2f0a8a",
+							"file_name": "NSSATS_PUF_2019_SAV.sav",
+							"file_size": 32853593,
+							"object_id": "dg.XXXX/34b9f362-6104-4567-80a9-31fca2493603",
+							"commons_url": "externaldata.healdata.org"
+						}
+					],
+					"data_availability": "available",
+					"authz": "/programs/open/projects/Preventing_Opioid_Use_Disorder"
 				}
 			}
 		},
