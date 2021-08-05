@@ -90,7 +90,33 @@
 						}
 					],
 					"data_availability": "available",
-					"authz": "/programs/open"
+					"authz": "/programs/open",
+					"source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/30122"
+				},
+				"10.3886/ICPSR37841.v1": {
+					"data_availability": "pending",
+				 	"authz": "/programs/open",
+				 	"source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37841"
+				},
+				"10.3886/ICPSR37842.v1": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37842"
+				},
+				"10.3886/ICPSR37887.v2": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37887"
+				},
+				"10.3886/ICPSR37833.v1": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37833"
+				},
+				"10.3886/ICPSR35197.v7": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/35197"
 				},
 				"10.3886/ICPSR34945.v3": {
 					"__manifest": [
@@ -246,7 +272,135 @@
 				"dataset_4_description": "",
 				"dataset_5_description": "",
 				"data_availability": "pending"
+			},
+			"per_item_values" : {
+			    "STU-2019-0743": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04059016?titles=Innovatively+Increasing+PCP+Prescribing+of+Buprenorphine%3A+Measurement+Based+Care+and+Integrated+Electronic+Solution&draw=2&rank=1"
+			    },
+				"1903499841": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03950492?titles=Feasibility+of+Deep+Brain+Stimulation+as+a+Novel+Treatment+for+Refractory+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"2018-1-100-OUD": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03633929?titles=mHealth+for+Patient+Self-Management+of+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"MHBB-010-17F": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03605342?titles=Optimal+Treatment+of+Veterans+With+PTSD+and+Comorbid+OUD&draw=2&rank=1"
+				},
+				"999920014": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04316559?titles=Biased+Opioid+Agonists+for+Treatment+of+Opioid+Withdrawal+in+OUD&draw=2&rank=1"
+				},
+				"2000026223": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04180020?titles=Coordinating+Opioid+Use+Treatment+Through+Medical+Management+With+Infection+Treatment+%28Project+COMMIT%29&draw=2&rank=1"
+				},
+				"2019-131-DCYF": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04901312?titles=Preventing+OUD+in+Justice-Involved+Youth&draw=2&rank=1"
+				},
+				"842717": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04401917?titles=FNOS+in+HIV+Subjects&draw=2&rank=1"
+				},
+				"HIC 2000023783": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03658642?titles=Clinical+Decision+Support+to+Implement+ED-initiated+Buprenorphine+for+OUD&draw=2&rank=1"
+				},
+				"MS057": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04027166?titles=Cognitive+Function+and+Pain+Threshold+in+People+Who+Are+Methadone+Maintained&draw=2&rank=1"
+				},
+				"2000028548(2000027149)": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04253782?titles=SafetyNet+Program+for+Opioid+Use+Disorder+%28OUD%29&draw=2&rank=1"
+				},
+				"CBOTDA049616": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04850664?titles=Computerized+Chemosensory-Based+Orbitofrontal+Cortex+%28CBOT%29+for+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"CTN - 0095": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04198428?titles=Clinical+Decision+Support+for+Opioid+Use+Disorders+in+Medical+Settings+%28COMPUTE+2.0%29&draw=2&rank=1"
+				},
+				"2020P002928": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04759703?titles=Treatment+of+Restless+Legs+Symptoms+With+Pramipexole+to+Improve+the+Outcomes+of+Protracted+Opioid+Withdrawal+in+OUD&draw=2&rank=1"
+				},
+				"NIDA CTN 0098A": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04345718?titles=EXHIT+ENTRE+Comparative+Effectiveness+Trial&draw=2&rank=1"
+				},
+				"STUDY20060069": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04888962?titles=Quantitative+Sensory+Psychophysical+Correlates+of+Pain+in+Pregnant+Women+With+OUD&draw=2&rank=1"
+				},
+				"UF1MH121944": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04245423?titles=The+Whole+Health+Study%3A+Collaborative+Care+for+OUD+and+Mental+Health+Conditions&draw=1&rank=1"
+				},
+				"0076-ot": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03559179?titles=Clinical+Decision+Support+for+Opioid+Use+Disorders+in+Medical+Settings%3A+Usability+Testing+in+an+EMR&draw=2&rank=1"
+				},
+				"1906002463": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04240093?titles=CoMBAT+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"2000030168": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04982627?titles=A+Brief+Negotiation+Interview+Chatbot+to+Improve+Buprenorphine+Engagement+Among+Justice-Involved+Individuals&draw=2&rank=1"
+				},
+				"CTN-0074": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03407638?titles=PRimary+Care+Opioid+Use+Disorders+Treatment+%28PROUD%29+Trial&draw=2&rank=1"
+				},
+				"OUD001": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04197921?titles=Exablate+for+LIFU+Neuromodulation+in+Patients+With+Opioid+Use+Disorder+%28OUD%29&draw=2&rank=1"
+				},
+				"2000027031": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04240392?titles=Treatment+of+Pregnant+Women+With+OUD&draw=2&rank=1"
+				},
+				"A20-042": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04939727?titles=Suicide+Prediction+and+Prevention+for+People+at+Risk+for+Opioid+Use+Disorder%3A+Supplement+to+COMPUTE+2.0&draw=2&rank=1"
+				},
+				"2019B0287": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04135703?titles=Prevention+of+OUD%3A+The+HOME+Project+%28Housing%2C+Opportunities%2C+Motivation+and+Engagement%29&draw=2&rank=1"
+				}
 			}
+
 		},
 		"PDAPS": {
 			"mds_url": "https://api.monqcle.com/",
