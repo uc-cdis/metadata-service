@@ -90,7 +90,129 @@
 						}
 					],
 					"data_availability": "available",
+					"authz": "/programs/open",
+					"source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/30122"
+				},
+				"10.3886/ICPSR37841.v1": {
+					"data_availability": "pending",
+				 	"authz": "/programs/open",
+				 	"source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37841"
+				},
+				"10.3886/ICPSR37842.v1": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37842"
+				},
+				"10.3886/ICPSR37887.v2": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37887"
+				},
+				"10.3886/ICPSR37833.v1": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/37833"
+				},
+				"10.3886/ICPSR35197.v7": {
+					 "data_availability": "pending",
+					 "authz": "/programs/open",
+					 "source_url": "https://www.icpsr.umich.edu/web/ICPSR/studies/35197"
+				},
+				"10.3886/ICPSR34945.v3": {
+					"__manifest": [
+						{
+							"md5sum": "f8334864a8e2ca52d64272a73d8a9021",
+							"file_name": "N-MHSS-2019-DS0001-bndl-data-tsv.zip",
+							"file_size": 288889 ,
+							"object_id": "dg.XXXX/c6f5f04e-70e8-46ed-bf62-902e51d8d9b9",
+							"commons_url": "externaldata.healdata.org"
+						}
+					],
+					"data_availability": "available",
 					"authz": "/programs/open"
+				},
+				"10.3886/ICPSR04256.v5": {
+					"__manifest": [
+						{
+							"md5sum": "eac267906a463fdca35e2cbf12bdb2fd",
+							"file_name": "N-SSATS-2017-DS0001-bndl-data-spss.zip",
+							"file_size": 501181,
+							"object_id": "dg.XXXX/082a288e-3da2-4806-9438-bc974cdb1cd7",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "1797fb553dbf4f5bb0111415936783d9",
+							"file_name": "N-SSATS-2009-DS0001-bndl-data-spss.zip",
+							"file_size": 8653639,
+							"object_id": "dg.XXXX/70453ef5-728a-4a4a-907b-e18ac374918d",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "89019e34fd116e7befc1abc300ea59dc",
+							"file_name": "N-SSATS-2011-DS0001-bndl-data-spss.zip",
+							"file_size": 2120680,
+							"object_id": "dg.XXXX/6dd94d94-5fcf-43ee-94e5-87ff10230df0",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "8ded2f937933193c804e4e5cd07b1e86",
+							"file_name": "N-SSATS-2013-DS0001-bndl-data-spss.zip",
+							"file_size": 1988340,
+							"object_id": "dg.XXXX/e374f214-21a1-4298-bb16-3bcb889bb6de",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "5fd5509171787d028a386ea203f27b39",
+							"file_name": "N-SSATS-2015-DS0001-bndl-data-spss.zip",
+							"file_size": 2204836,
+							"object_id": "dg.XXXX/4d78774d-1768-4647-b113-6a9ad4932652",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "eac267906a463fdca35e2cbf12bdb2fd",
+							"file_name": "N-SSATS-2017-DS0001-bndl-data-spss.zip",
+							"file_size": 501181,
+							"object_id": "dg.XXXX/082a288e-3da2-4806-9438-bc974cdb1cd7",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "01a920271b85b450e7897fd658661f06",
+							"file_name": "N-SSATS-2019-DS0001-bndl-data-spss.zip",
+							"file_size": 1346011,
+							"object_id": "dg.XXXX/68fe4b6a-6e4a-4854-9078-86f5234d74f3",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "994b1a04912edf2b00e8118678faaf70",
+							"file_name": "N-SSATS-2003.sav",
+							"file_size": 2911525,
+							"object_id": "dg.XXXX/1a76f3c0-e922-44a5-92fb-0b4c83770c02",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "bbd28d42097c06a2b61f225402055df3",
+							"file_name": "N-SSATS-2004.sav",
+							"file_size": 2975800,
+							"object_id": "dg.XXXX/597033aa-73a0-4cce-8851-6bf3973648ab",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "e063579c1bf88455859d095453cfdace",
+							"file_name": "N-SSATS-2005.sav",
+							"file_size": 2604863,
+							"object_id": "dg.XXXX/656c77cf-b762-4998-a4ce-54bc9928e8f3",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "69b172b4056ae45a228725501f2f0a8a",
+							"file_name": "NSSATS_PUF_2019_SAV.sav",
+							"file_size": 32853593,
+							"object_id": "dg.XXXX/34b9f362-6104-4567-80a9-31fca2493603",
+							"commons_url": "externaldata.healdata.org"
+						}
+					],
+					"data_availability": "available",
+					"authz": "/programs/open/projects/Preventing_Opioid_Use_Disorder"
 				}
 			}
 		},
@@ -105,7 +227,7 @@
 			"keep_original_fields": false,
 			"field_mappings": {
 				"tags": [],
-				"authz": "",
+				"authz": "/programs/open",
 				"sites": "",
 				"summary": "path:BriefSummary",
 				"study_url" : {
@@ -150,7 +272,135 @@
 				"dataset_4_description": "",
 				"dataset_5_description": "",
 				"data_availability": "pending"
+			},
+			"per_item_values" : {
+			    "STU-2019-0743": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04059016?titles=Innovatively+Increasing+PCP+Prescribing+of+Buprenorphine%3A+Measurement+Based+Care+and+Integrated+Electronic+Solution&draw=2&rank=1"
+			    },
+				"1903499841": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03950492?titles=Feasibility+of+Deep+Brain+Stimulation+as+a+Novel+Treatment+for+Refractory+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"2018-1-100-OUD": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03633929?titles=mHealth+for+Patient+Self-Management+of+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"MHBB-010-17F": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03605342?titles=Optimal+Treatment+of+Veterans+With+PTSD+and+Comorbid+OUD&draw=2&rank=1"
+				},
+				"999920014": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04316559?titles=Biased+Opioid+Agonists+for+Treatment+of+Opioid+Withdrawal+in+OUD&draw=2&rank=1"
+				},
+				"2000026223": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04180020?titles=Coordinating+Opioid+Use+Treatment+Through+Medical+Management+With+Infection+Treatment+%28Project+COMMIT%29&draw=2&rank=1"
+				},
+				"2019-131-DCYF": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04901312?titles=Preventing+OUD+in+Justice-Involved+Youth&draw=2&rank=1"
+				},
+				"842717": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04401917?titles=FNOS+in+HIV+Subjects&draw=2&rank=1"
+				},
+				"HIC 2000023783": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03658642?titles=Clinical+Decision+Support+to+Implement+ED-initiated+Buprenorphine+for+OUD&draw=2&rank=1"
+				},
+				"MS057": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04027166?titles=Cognitive+Function+and+Pain+Threshold+in+People+Who+Are+Methadone+Maintained&draw=2&rank=1"
+				},
+				"2000028548(2000027149)": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04253782?titles=SafetyNet+Program+for+Opioid+Use+Disorder+%28OUD%29&draw=2&rank=1"
+				},
+				"CBOTDA049616": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04850664?titles=Computerized+Chemosensory-Based+Orbitofrontal+Cortex+%28CBOT%29+for+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"CTN - 0095": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04198428?titles=Clinical+Decision+Support+for+Opioid+Use+Disorders+in+Medical+Settings+%28COMPUTE+2.0%29&draw=2&rank=1"
+				},
+				"2020P002928": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04759703?titles=Treatment+of+Restless+Legs+Symptoms+With+Pramipexole+to+Improve+the+Outcomes+of+Protracted+Opioid+Withdrawal+in+OUD&draw=2&rank=1"
+				},
+				"NIDA CTN 0098A": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04345718?titles=EXHIT+ENTRE+Comparative+Effectiveness+Trial&draw=2&rank=1"
+				},
+				"STUDY20060069": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04888962?titles=Quantitative+Sensory+Psychophysical+Correlates+of+Pain+in+Pregnant+Women+With+OUD&draw=2&rank=1"
+				},
+				"UF1MH121944": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04245423?titles=The+Whole+Health+Study%3A+Collaborative+Care+for+OUD+and+Mental+Health+Conditions&draw=1&rank=1"
+				},
+				"0076-ot": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03559179?titles=Clinical+Decision+Support+for+Opioid+Use+Disorders+in+Medical+Settings%3A+Usability+Testing+in+an+EMR&draw=2&rank=1"
+				},
+				"1906002463": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04240093?titles=CoMBAT+Opioid+Use+Disorder&draw=2&rank=1"
+				},
+				"2000030168": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04982627?titles=A+Brief+Negotiation+Interview+Chatbot+to+Improve+Buprenorphine+Engagement+Among+Justice-Involved+Individuals&draw=2&rank=1"
+				},
+				"CTN-0074": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT03407638?titles=PRimary+Care+Opioid+Use+Disorders+Treatment+%28PROUD%29+Trial&draw=2&rank=1"
+				},
+				"OUD001": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04197921?titles=Exablate+for+LIFU+Neuromodulation+in+Patients+With+Opioid+Use+Disorder+%28OUD%29&draw=2&rank=1"
+				},
+				"2000027031": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04240392?titles=Treatment+of+Pregnant+Women+With+OUD&draw=2&rank=1"
+				},
+				"A20-042": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04939727?titles=Suicide+Prediction+and+Prevention+for+People+at+Risk+for+Opioid+Use+Disorder%3A+Supplement+to+COMPUTE+2.0&draw=2&rank=1"
+				},
+				"2019B0287": {
+					"data_availability": "pending",
+					"authz": "/programs/open",
+					"source_url": "https://clinicaltrials.gov/ct2/show/NCT04135703?titles=Prevention+of+OUD%3A+The+HOME+Project+%28Housing%2C+Opportunities%2C+Motivation+and+Engagement%29&draw=2&rank=1"
+				}
 			}
+
 		},
 		"PDAPS": {
 			"mds_url": "https://api.monqcle.com/",

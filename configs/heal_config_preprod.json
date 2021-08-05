@@ -227,7 +227,7 @@
 			"keep_original_fields": false,
 			"field_mappings": {
 				"tags": [],
-				"authz": "",
+				"authz": "/programs/open",
 				"sites": "",
 				"summary": "path:BriefSummary",
 				"study_url" : {
