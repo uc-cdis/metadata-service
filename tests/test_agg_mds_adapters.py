@@ -154,6 +154,73 @@ def test_get_metadata_icpsr():
 
 
 @respx.mock
+def test_add_clinical_trials_source_url():
+    json_response = r"""{
+  "FullStudiesResponse":{
+    "APIVrs":"1.01.03",
+    "DataVrs":"2021:07:06 22:12:28.413",
+    "Expression":"heart attack",
+    "NStudiesAvail":382563,
+    "NStudiesFound":8322,
+    "MinRank":1,
+    "MaxRank":1,
+    "NStudiesReturned":1,
+    "FullStudies":[
+      {
+        "Rank":1,
+        "Study":{
+          "ProtocolSection":{
+            "IdentificationModule":{
+              "NCTId":"NCT01874691",
+              "OrgStudyIdInfo":{
+                "OrgStudyId":"2011BAI11B02-A"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}"""
+    field_mappings = {
+        "study_name": "",
+        "project_number": "path:OrgStudyId",
+        "study_url": {
+            "path": "OrgStudyId",
+            "filters": ["add_clinical_trials_source_url"],
+        },
+    }
+
+    respx.get(
+        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1",
+        status_code=200,
+        content=json.loads(json_response),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert get_metadata(
+        "clinicaltrials",
+        "http://test/ok",
+        filters={"term": "heart attack", "maxItems": 1},
+        mappings=field_mappings,
+        perItemValues={},
+        keepOriginalFields=True,
+    ) == {
+        "NCT01874691": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "NCTId": "NCT01874691",
+                "OrgStudyId": "2011BAI11B02-A",
+                "location": "",
+                "project_number": "2011BAI11B02-A",
+                "study_name": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/2011BAI11B02-A",
+            },
+        }
+    }
+
+
+@respx.mock
 def test_get_metadata_clinicaltrials():
     json_response = r"""{
   "FullStudiesResponse":{
