@@ -1,4 +1,5 @@
 import httpx
+from mds import logger
 
 
 def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
@@ -24,8 +25,10 @@ def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
                 results.update(data)
             else:
                 more = False
+                logger.error(f"An error occurred while requesting {url}.")
                 raise ValueError(f"An error occurred while requesting {url}.")
         except Exception as exc:
+            logger.error(f"An error occurred while requesting {exc}.")
             raise ValueError(f"An error occurred while requesting {url}.")
 
     return results

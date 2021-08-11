@@ -5,6 +5,16 @@ from jsonpath_ng import parse
 import httpx
 import xmltodict
 import bleach
+import re
+from mds import logger
+
+
+def strip_email(text: str):
+    rgx = r"[\w.+-]+@[\w-]+\.[\w.-]+"
+    matches = re.findall(rgx, text)
+    for cur_word in matches:
+        text = text.replace(cur_word, "")
+    return text
 
 
 def strip_html(s: str):
@@ -171,6 +181,9 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     data_dict = xmltodict.parse(xmlData)
                     results["results"].append(data_dict)
                 else:
+                    logger.error(
+                        f"A {response.status_code} error occurred while requesting {url}"
+                    )
                     raise ValueError(f"An error occurred while requesting {url}")
 
         return results
@@ -299,11 +312,15 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     offset += numReturned
                     limit = min(remaining, batchSize)
                 else:
+                    logger.error(
+                        f"A {response.status_code} error occurred while requesting {self.baseURL}"
+                    )
                     raise ValueError(
                         f"An error occurred while requesting {self.baseURL}."
                     )
 
         except Exception as ex:
+            logger.error(f"An error occurred while requesting {self.baseURL} {ex}.")
             raise ValueError(f"An error occurred while requesting {self.baseURL} {ex}.")
 
         return results
@@ -388,11 +405,14 @@ class PDAPS(RemoteMetadataAdapter):
                 if response.status_code == 200:
                     results["results"].append(response.json())
                 else:
-
+                    logger.error(
+                        f"A {response.status_code} error occurred while requesting {self.baseURL}."
+                    )
                     raise ValueError(
                         f"An error occurred while requesting {self.baseURL}."
                     )
             except:
+                logger.error(f"An error occurred while requesting {self.baseURL}.")
                 raise ValueError(f"An error occurred while requesting {self.baseURL}.")
 
         return results
@@ -444,6 +464,93 @@ class PDAPS(RemoteMetadataAdapter):
         return results
 
 
+class Gen3Adapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Gen3 Metadata Service
+    """
+
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": {}}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+        guid_type = kwargs.get("guid_type", "discovery_metadata")
+        field_name = kwargs.get("field_name", None)
+        field_value = kwargs.get("field_value", None)
+        batchSize = kwargs.get("batchSize", 1000)
+        maxItems = kwargs.get("maxItems", None)
+        offset = 0
+        limit = min(maxItems, batchSize) if maxItems is not None else batchSize
+        moreData = True
+        while moreData:
+            try:
+                url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
+                if field_name is not None and field_value is not None:
+                    url += f"&{guid_type}.{field_name}={field_value}"
+                response = httpx.get(url)
+                if response.status_code == 200:
+                    data = response.json()
+                    results["results"].update(data)
+                    numReturned = len(data)
+
+                    if numReturned == 0 or numReturned < limit:
+                        moreData = False
+                    offset += numReturned
+                else:
+                    logger.error(
+                        f"{response.status_code} error occurred while requesting {self.mds_url}."
+                    )
+                    raise ValueError(f"An error occurred while requesting {mds_url}.")
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url}.")
+                raise ValueError(
+                    f"An error occurred while requesting {exc.request.url}."
+                )
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+        """"""
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+
+        mappings = kwargs.get("mappings", None)
+        study_field = kwargs.get("study_field", "gen3_discovery")
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+
+        results = {}
+        for guid, record in data["results"].items():
+            item = Gen3Adapter.addGen3ExpectedFields(
+                record[study_field], mappings, keepOriginalFields
+            )
+            results[guid] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": item,
+            }
+
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
+
+        return results
+
+
 def get_metadata(
     adapter_name,
     mds_url,
@@ -482,5 +589,16 @@ def get_metadata(
             keepOriginalFields=keepOriginalFields,
         )
         return results
-    else:
-        raise Exception(f"unknown adapter for commons: {name}")
+    if adapter_name == "gen3":
+        gather = Gen3Adapter(mds_url)
+        json_data = gather.getRemoteDataAsJson(filters=filters)
+        results = gather.normalizeToGen3MDSFields(
+            json_data,
+            mappings=mappings,
+            perItemValues=perItemValues,
+            keepOriginalFields=keepOriginalFields,
+        )
+        return results
+
+    logger.error(f"unknown adapter for commons {name}.")
+    raise Exception(f"unknown adapter for commons: {name}")

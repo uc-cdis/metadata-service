@@ -5,7 +5,7 @@ from collections import Counter
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
 from mds.agg_mds.commons import MDSInstance, AdapterMDSInstance, Commons, parse_config
-from mds import config
+from mds import config, logger
 from pathlib import Path
 import argparse
 import sys
@@ -106,10 +106,12 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
     await datastore.drop_all()
 
     for name, common in commons_config.gen3_commons.items():
+        logger.info(f"populating {name} using Gen3 MDS connector")
         results = pull_mds(common.mds_url, common.guid_type)
         await populate_metadata(name, common, results)
 
     for name, common in commons_config.adapter_commons.items():
+        logger.info(f"populating {name} using adapter: common.adapter")
         results = adapters.get_metadata(
             common.adapter,
             common.mds_url,
@@ -142,6 +144,11 @@ async def filter_entries(
     for x in mds_arr:
         key = next(iter(x.keys()))
         entry = next(iter(x.values()))
+        if common.study_data_field not in entry:
+            logger.warning(
+                f'"{common.study_data_field}" not found in response from {common.mds_url} for {common.commons_url}. Skipping.'
+            )
+            continue
         value = entry[common.study_data_field].get(
             common.select_field["field_name"], None
         )
