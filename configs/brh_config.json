@@ -14,7 +14,7 @@
 		},
 		"Kids First": {
 			"mds_url": "https://gen3.datacommons.io",
-			"commons_url" : "https://kidsfirstdrc.org",
+			"commons_url" : "kidsfirstdrc.org",
 			"study_data_field" : "gen3_discovery",
 			"columns_to_fields": {
 				"_subjects_count" : "subjects_count",
@@ -92,7 +92,7 @@
 		},
 		"Proteomic Data Commons": {
 			"mds_url": "https://gen3.datacommons.io",
-			"commons_url": "proteomic.datacommons.cancer.gov/pdc/",
+			"commons_url": "proteomic.datacommons.cancer.gov/pdc",
 			"columns_to_fields": {
 				"_subjects_count" : "cases_count",
 				"study_id" : "_unique_id",
@@ -105,7 +105,7 @@
 		},
 		"Cancer Imaging Data Commons": {
 			"mds_url": "https://gen3.datacommons.io",
-			"commons_url": "datacommons.cancer.gov/repository/imaging-data-commons",
+			"commons_url": "imaging.datacommons.cancer.gov/",
 			"columns_to_fields": {
 				"_subjects_count" : "cases_count",
 				"study_id" : "_unique_id",
