@@ -92,7 +92,7 @@
 		},
 		"Proteomic Data Commons": {
 			"mds_url": "https://gen3.datacommons.io",
-			"commons_url": "portal.gdc.cancer.gov",
+			"commons_url": "proteomic.datacommons.cancer.gov/pdc/",
 			"columns_to_fields": {
 				"_subjects_count" : "cases_count",
 				"study_id" : "_unique_id",
@@ -105,7 +105,7 @@
 		},
 		"Cancer Imaging Data Commons": {
 			"mds_url": "https://gen3.datacommons.io",
-			"commons_url": "portal.gdc.cancer.gov",
+			"commons_url": "datacommons.cancer.gov/repository/imaging-data-commons",
 			"columns_to_fields": {
 				"_subjects_count" : "cases_count",
 				"study_id" : "_unique_id",
