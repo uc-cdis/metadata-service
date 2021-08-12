@@ -1,6 +1,63 @@
 import respx
 import json
-from mds.agg_mds.adapters import get_metadata
+from mds.agg_mds.adapters import (
+    get_metadata,
+    Gen3Adapter,
+    strip_email,
+    get_json_path_value,
+)
+
+
+def test_strip_email():
+    assert strip_email("this is an email@whatever.com address") == "this is an  address"
+
+
+def test_get_json_path_value():
+    assert get_json_path_value(None, {}) == ""
+
+
+@respx.mock
+def test_get_metadata_gen3():
+    json_response = r"""{}"""
+    respx.get(
+        "http://test/one/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+        status_code=200,
+        content=json_response,
+    )
+
+    assert get_metadata("gen3", "http://test/one/", filters=None) == {}
+
+    assert (
+        get_metadata(
+            "gen3",
+            "http://test/one/",
+            filters=None,
+            mappings={},
+            keepOriginalFields=True,
+        )
+        == {}
+    )
+
+    respx.get(
+        "http://test/two/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+        status_code=500,
+        content=None,
+    )
+
+    try:
+        get_metadata("gen3", "http://test/two/", filters=None)
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
+
+
+def test_addGen3ExpectedFields():
+    study_field = ""
+    mappings = {}
+    keepOriginalFields = False
+
+    item = Gen3Adapter.addGen3ExpectedFields(study_field, mappings, keepOriginalFields)
+
+    assert item == {}
 
 
 @respx.mock
@@ -151,6 +208,17 @@ def test_get_metadata_icpsr():
             },
         }
     }
+
+    respx.get(
+        "http://test/error?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
+        status_code=500,
+        content=xml_response,
+    )
+
+    try:
+        get_metadata("icpsr", "http://test/error", filters=None)
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
 
 
 @respx.mock

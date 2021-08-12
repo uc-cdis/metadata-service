@@ -47,7 +47,14 @@ async def test_populate_metadata():
                 commons_url="http://commons",
                 columns_to_fields={"column1": "field1"},
             ),
-            {"id1": {"gen3_discovery": {"column1": "some data", "tags": {}}}},
+            {
+                "id1": {
+                    "gen3_discovery": {
+                        "column1": "some data",
+                        "tags": [{"category": "my_category", "name": "my_name"}],
+                    }
+                }
+            },
         )
 
         mock_update.assert_called_with(
@@ -57,14 +64,19 @@ async def test_populate_metadata():
                     "id1": {
                         "gen3_discovery": {
                             "column1": "some data",
-                            "tags": {},
+                            "tags": [
+                                {
+                                    "category": "my_category",
+                                    "name": "my_name",
+                                },
+                            ],
                             "commons_name": "my_commons",
                         }
                     }
                 }
             ],
             ["id1"],
-            {},
+            {"my_category": ["my_name"]},
             {"commons_url": "http://commons"},
             "gen3_discovery",
         )
@@ -131,6 +143,9 @@ async def test_filter_entries():
         [
             {
                 "short_name": {"gen3_discovery": {"my_field": 71}},
+            },
+            {
+                "short_name": {"different_field": {"my_field": 0}},
             },
             {
                 "short_name": {"gen3_discovery": {"my_field": 0}},

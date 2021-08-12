@@ -498,8 +498,8 @@ class Gen3Adapter(RemoteMetadataAdapter):
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
         while moreData:
+            url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
             try:
-                url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
                 response = httpx.get(url)
@@ -516,11 +516,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
                         f"{response.status_code} error occurred while requesting {self.mds_url}."
                     )
                     raise ValueError(f"An error occurred while requesting {mds_url}.")
-            except httpx.RequestError as exc:
-                logger.error(f"An error occurred while requesting {exc.request.url}.")
-                raise ValueError(
-                    f"An error occurred while requesting {exc.request.url}."
-                )
+            except Exception as exc:
+                logger.error(f"An error occurred while requesting {url}.")
+                raise ValueError(f"An error occurred while requesting {url}.")
 
         return results
 
