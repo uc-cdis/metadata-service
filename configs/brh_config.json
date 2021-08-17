@@ -80,6 +80,7 @@
 		"Genomic Data Commons": {
 			"mds_url": "https://gen3.datacommons.io",
 			"commons_url": "portal.gdc.cancer.gov",
+			"study_data_field" : "discovery_metadata",
 			"columns_to_fields": {
 				"_subjects_count" : "subjects_count",
 				"dbgap_accession_number" : "study_id",
