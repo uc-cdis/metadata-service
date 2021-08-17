@@ -345,13 +345,27 @@
 				"data_availability": "pending"
 			},
 			"per_item_values": {
-				"599ddda695679f66768b4569": {
+				"57b45d83d6c9e7e8693ccdfd": {
 					"__manifest": [
 						{
-						"md5sum": "40dcac42435d323ebdb92d615f42d0c3",
-						"file_name": "Naloxone_Data_09112020.xlsx",
-						"file_size": 88921,
-						"object_id": "dg.XXXX/d4d4c6d2-a2e7-463f-9c76-4e21a1731a1d",
+							"md5sum": "40dcac42435d323ebdb92d615f42d0c3",
+							"file_name": "Naloxone_Data_09112020.xlsx",
+							"file_size": 88921,
+							"object_id": "dg.XXXX/77045ea3-595b-4846-9ad0-6d48fe476925",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "93b6b346a400978cde37ab8d778d6412",
+							"file_name": "20180810_Good_Samaritan_Law_Stat_Data.xlsx",
+							"file_size": 24100,
+							"object_id": "dg.XXXX/065cf957-505e-4bf4-929e-c2327742bae1",
+							"commons_url": "externaldata.healdata.org"
+						},
+						{
+							"md5sum": "19ed44f408f221a7af860821c796972a",
+							"file_name": "20170216-RM-Stat-Data.xlsx",
+							"file_size": 36710,
+							"object_id": "dg.XXXX/c3489b65-e8b7-42ac-9a74-2b19e034ce5a",
 							"commons_url": "externaldata.healdata.org"
 						}
 					],
