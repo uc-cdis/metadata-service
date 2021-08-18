@@ -2,7 +2,7 @@ import httpx
 from mds import logger
 
 # extend the default timeout
-httpx.Client(timeout=20.0)
+httpx.Client(timeout=40.0)
 
 
 def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:

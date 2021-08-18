@@ -41,6 +41,7 @@ class AdapterMDSInstance:
     per_item_values: Optional[Dict[str, Any]] = None
     study_data_field: str = "gen3_discovery"
     keep_original_fields: bool = True
+    global_field_filters: List[str] = field(default_factory=list)
 
 
 @dataclass_json

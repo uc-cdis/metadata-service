@@ -32,6 +32,7 @@ def add_clinical_trials_source_url(id: str):
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
+        "strip_email": strip_email,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
     }
@@ -39,6 +40,7 @@ class FieldFilters:
     @classmethod
     def execute(cls, name, value):
         if name not in FieldFilters.filters:
+            logger.warning(f"filter {name} not found: returning original value.")
             return value
         return FieldFilters.filters[name](value)
 
@@ -98,7 +100,7 @@ class RemoteMetadataAdapter(ABC):
         """ needs to be implemented in derived class """
 
     @staticmethod
-    def mapFields(item: dict, mappings: dict) -> dict:
+    def mapFields(item: dict, mappings: dict, global_filters: list = []) -> dict:
         """
         Given a MetaData entry as a dict, and dictionary describing fields to add
         and optionally where to map an item entry from.
@@ -132,14 +134,16 @@ class RemoteMetadataAdapter(ABC):
                 for filter in filters:
                     field_value = FieldFilters.execute(filter, field_value)
 
-                results[key] = field_value
             elif "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
                 field_value = get_json_path_value(expression, item)
-                results[key] = field_value
             else:
-                results[key] = value
+                field_value = value
+
+            for f in global_filters:
+                field_value = FieldFilters.execute(f, field_value)
+            results[key] = field_value
         return results
 
     @staticmethod
@@ -193,10 +197,12 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         return id.replace("http://doi.org/", "").replace("dc:", "")
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         results = item
         if mappings is not None:
-            mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
             if keepOriginalFields:
                 results.update(mapped_fields)
             else:
@@ -217,6 +223,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
 
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
         results = {}
         for record in data["results"]:
@@ -232,7 +239,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     else:
                         item[str.replace(key, "dc:", "")] = value
             normalized_item = ISCPSRDublin.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields
+                item, mappings, keepOriginalFields, globalFieldFilters
             )
             results[item["identifier"]] = {
                 "_guid_type": "discovery_metadata",
@@ -326,14 +333,16 @@ class ClinicalTrials(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         """
         Map item fields to gen3 normalized fields
         using the mapping and adding the location
         """
         results = item
         if mappings is not None:
-            mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
             if keepOriginalFields:
                 results.update(mapped_fields)
             else:
@@ -359,12 +368,14 @@ class ClinicalTrials(RemoteMetadataAdapter):
 
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+
         results = {}
         for item in data["results"]:
             item = item["Study"]
             item = flatten(item)
             normalized_item = ClinicalTrials.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields
+                item, mappings, keepOriginalFields, globalFieldFilters
             )
             results[item["NCTId"]] = {
                 "_guid_type": "discovery_metadata",
@@ -418,14 +429,16 @@ class PDAPS(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         """
         Maps the items fields into Gen3 expected fields
         if keepOriginal is False: only those fields will be included in the final entry
         """
         results = item
         if mappings is not None:
-            mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
             if keepOriginalFields:
                 results.update(mapped_fields)
             else:
@@ -444,11 +457,12 @@ class PDAPS(RemoteMetadataAdapter):
 
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
         results = {}
         for item in data["results"]:
             normalized_item = PDAPS.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields
+                item, mappings, keepOriginalFields, globalFieldFilters
             )
             if "display_id" not in item:
                 continue
@@ -511,11 +525,13 @@ class Gen3Adapter(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields):
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         """"""
         results = item
         if mappings is not None:
-            mapped_fields = RemoteMetadataAdapter.mapFields(item, mappings)
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
             if keepOriginalFields:
                 results.update(mapped_fields)
             else:
@@ -533,11 +549,12 @@ class Gen3Adapter(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         study_field = kwargs.get("study_field", "gen3_discovery")
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
         results = {}
         for guid, record in data["results"].items():
             item = Gen3Adapter.addGen3ExpectedFields(
-                record[study_field], mappings, keepOriginalFields
+                record[study_field], mappings, keepOriginalFields, globalFieldFilters
             )
             results[guid] = {
                 "_guid_type": "discovery_metadata",
@@ -558,6 +575,7 @@ def get_metadata(
     mappings=None,
     perItemValues=None,
     keepOriginalFields=False,
+    globalFieldFilters=[],
 ):
     if adapter_name == "icpsr":
         gather = ISCPSRDublin(mds_url)
@@ -567,6 +585,7 @@ def get_metadata(
             mappings=mappings,
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
+            globalFieldFilters=globalFieldFilters,
         )
         return results
     if adapter_name == "clinicaltrials":
@@ -577,6 +596,7 @@ def get_metadata(
             mappings=mappings,
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
+            globalFieldFilters=globalFieldFilters,
         )
         return results
     if adapter_name == "pdaps":
@@ -587,16 +607,18 @@ def get_metadata(
             mappings=mappings,
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
+            globalFieldFilters=globalFieldFilters,
         )
         return results
     if adapter_name == "gen3":
-        gather = Gen3Adapter(mds_url)
-        json_data = gather.getRemoteDataAsJson(filters=filters)
+        gather = Gen3Adapter()
+        json_data = gather.getRemoteDataAsJson(mds_url=mds_url, filters=filters)
         results = gather.normalizeToGen3MDSFields(
             json_data,
             mappings=mappings,
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
+            globalFieldFilters=globalFieldFilters,
         )
         return results
 

@@ -119,8 +119,10 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
             common.field_mappings,
             common.per_item_values,
             common.keep_original_fields,
+            common.global_field_filters,
         )
         await populate_metadata(name, common, results)
+        logger.info(f"Got {len(results)} from {name}")
 
     res = await datastore.get_status()
     print(res)
@@ -155,6 +157,9 @@ async def filter_entries(
         if value is None or common.select_field["field_value"] != value:
             continue
         filtered.append({key: entry})
+    logger.info(
+        f"Loaded {len(filtered)} entries from {common.mds_url} for {common.commons_url}."
+    )
     return filtered
 
 
