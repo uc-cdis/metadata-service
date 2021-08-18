@@ -622,5 +622,5 @@ def get_metadata(
         )
         return results
 
-    logger.error(f"unknown adapter for commons {name}.")
-    raise Exception(f"unknown adapter for commons: {name}")
+    logger.error(f"unknown adapter for commons {adapter_name}.")
+    raise ValueError(f"unknown adapter for commons: {adapter_name}")

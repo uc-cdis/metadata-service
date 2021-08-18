@@ -2725,3 +2725,23 @@ def test_gen3_adapter():
     }
 
     get_metadata("gen3", "http://test/ok/", None, field_mappings) == expected
+
+    respx.get(
+        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+        status_code=500,
+        content=json_response,
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    try:
+        get_metadata("gen3", "http://test/ok/", None, field_mappings)
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
+
+
+def test_missing_adapter():
+
+    try:
+        get_metadata("notAKnownAdapter", "http://test/ok/", None, None)
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
