@@ -111,7 +111,7 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
         await populate_metadata(name, common, results)
 
     for name, common in commons_config.adapter_commons.items():
-        logger.info(f"populating {name} using adapter: common.adapter")
+        logger.info(f"populating {name} using adapter: {common.adapter}")
         results = adapters.get_metadata(
             common.adapter,
             common.mds_url,
