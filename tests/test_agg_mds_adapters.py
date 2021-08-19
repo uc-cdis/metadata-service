@@ -146,6 +146,14 @@ def test_get_metadata_icpsr():
 
     assert get_metadata("icpsr", "http://test/ok", filters=None) == {}
 
+    res2 = get_metadata(
+        "icpsr",
+        "http://test/ok",
+        filters={"study_ids": [6425]},
+        mappings=field_mappings,
+        keepOriginalFields=True,
+    )
+
     assert get_metadata(
         "icpsr",
         "http://test/ok",
@@ -1135,17 +1143,17 @@ def test_get_metadata_clinicaltrials():
         content_type="text/plain;charset=UTF-8",
     )
 
-    try:
+    assert (
         get_metadata(
             "clinicaltrials",
             "http://test/ok",
-            filters={"term": "should error", "maxItems": 3, "batchSize": 3},
+            filters={"term": "should+error", "maxItems": 3, "batchSize": 3},
             mappings=field_mappings,
             perItemValues=item_values,
             keepOriginalFields=True,
         )
-    except Exception as err:
-        assert isinstance(err, ValueError) == True
+        == {}
+    )
 
 
 @respx.mock
@@ -2774,17 +2782,14 @@ def test_get_metadata_pdaps():
         content_type="text/plain;charset=UTF-8",
     )
 
-    try:
-        get_metadata(
-            "pdaps",
-            "http://test/ok",
-            filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
-            mappings=field_mappings,
-            perItemValues=item_values,
-            keepOriginalFields=True,
-        )
-    except Exception as err:
-        assert isinstance(err, ValueError) == True
+    get_metadata(
+        "pdaps",
+        "http://test/ok",
+        filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
+        mappings=field_mappings,
+        perItemValues=item_values,
+        keepOriginalFields=True,
+    ) == {}
 
 
 @respx.mock

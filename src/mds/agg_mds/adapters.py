@@ -6,6 +6,13 @@ import httpx
 import xmltodict
 import bleach
 import re
+from tenacity import (
+    retry,
+    RetryError,
+    wait_random_exponential,
+    stop_after_attempt,
+    retry_if_exception_type,
+)
 from mds import logger
 
 
@@ -165,19 +172,20 @@ class ISCPSRDublin(RemoteMetadataAdapter):
     parameters: filters which currently should be study_ids=id,id,id...
     """
 
-    def __init__(self, baseURL):
-        self.baseURL = baseURL
-
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": []}
         if "filters" not in kwargs or kwargs["filters"] is None:
+            return results
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
             return results
 
         study_ids = kwargs["filters"].get("study_ids", [])
 
         if len(study_ids) > 0:
             for id in study_ids:
-                url = f"{self.baseURL}?verb=GetRecord&metadataPrefix=oai_dc&identifier={id}"
+                url = f"{mds_url}?verb=GetRecord&metadataPrefix=oai_dc&identifier={id}"
                 response = httpx.get(url)
 
                 if response.status_code == 200:
@@ -263,11 +271,12 @@ class ClinicalTrials(RemoteMetadataAdapter):
                   since the code below does not reduce the size of the results array, default = None
     """
 
-    def __init__(self, baseURL="https://clinicaltrials.gov/api/query/full_studies"):
-        self.baseURL = baseURL
-
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
 
         if "filters" not in kwargs or kwargs["filters"] is None:
             return results
@@ -287,7 +296,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
         try:
             while remaining > 0:
                 response = httpx.get(
-                    f"{self.baseURL}?expr={term}"
+                    f"{mds_url}?expr={term}"
                     f"&fmt=json&min_rnk={offset}&max_rnk={offset + limit - 1}"
                 )
 
@@ -320,15 +329,14 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     limit = min(remaining, batchSize)
                 else:
                     logger.error(
-                        f"A {response.status_code} error occurred while requesting {self.baseURL}"
+                        f"A {response.status_code} error occurred while requesting {mds_url}"
                     )
-                    raise ValueError(
-                        f"An error occurred while requesting {self.baseURL}."
-                    )
+                    raise ValueError(f"An error occurred while requesting {mds_url}.")
 
-        except Exception as ex:
-            logger.error(f"An error occurred while requesting {self.baseURL} {ex}.")
-            raise ValueError(f"An error occurred while requesting {self.baseURL} {ex}.")
+        except ValueError as ex:
+            logger.error(f"An error occurred while requesting {mds_url} {ex}.")
+            # will reraise from above
+            raise ValueError(f"An error occurred while requesting {mds_url} {ex}.")
 
         return results
 
@@ -394,11 +402,17 @@ class PDAPS(RemoteMetadataAdapter):
     Simple adapter for PDAPS
     """
 
-    def __init__(self, baseURL: str = "https://api.monqcle.com/"):
-        self.baseURL = baseURL
-
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
 
         if "filters" not in kwargs or kwargs["filters"] is None:
             return results
@@ -411,20 +425,18 @@ class PDAPS(RemoteMetadataAdapter):
         for id in datasets:
             try:
                 response = httpx.get(
-                    f"{self.baseURL}siteitem/{id}/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
+                    f"{mds_url}/siteitem/{id}/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
                 )
                 if response.status_code == 200:
                     results["results"].append(response.json())
                 else:
                     logger.error(
-                        f"A {response.status_code} error occurred while requesting {self.baseURL}."
+                        f"A {response.status_code} error occurred while requesting {url}."
                     )
-                    raise ValueError(
-                        f"An error occurred while requesting {self.baseURL}."
-                    )
+                    raise ValueError(f"An error occurred while requesting {url}.")
             except:
-                logger.error(f"An error occurred while requesting {self.baseURL}.")
-                raise ValueError(f"An error occurred while requesting {self.baseURL}.")
+                logger.error(f"An error occurred while requesting {url}.")
+                raise ValueError(f"An error occurred while requesting {url}.")
 
         return results
 
@@ -483,6 +495,11 @@ class Gen3Adapter(RemoteMetadataAdapter):
     Simple adapter for Gen3 Metadata Service
     """
 
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=20),
+    )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": {}}
 
@@ -500,6 +517,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         while moreData:
             url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
             try:
+                url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
                 response = httpx.get(url)
@@ -513,12 +531,19 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     offset += numReturned
                 else:
                     logger.error(
-                        f"{response.status_code} error occurred while requesting {self.mds_url}."
+                        f"{response.status_code} error occurred while requesting {url}."
                     )
-                    raise ValueError(f"An error occurred while requesting {mds_url}.")
-            except Exception as exc:
-                logger.error(f"An error occurred while requesting {url}.")
-                raise ValueError(f"An error occurred while requesting {url}.")
+                    raise ValueError(f"An error occurred while requesting {url}.")
+            except httpx.RequestError as exc:
+                logger.error(f"An error occurred while requesting {exc.request.url}.")
+                raise ValueError(
+                    f"An error occurred while requesting {exc.request.url}."
+                )
+            except httpx.TimeoutException as exc:
+                logger.error(
+                    f"An timeout error occurred while requesting {exc.request.url}."
+                )
+                raise
 
         return results
 
@@ -566,50 +591,16 @@ class Gen3Adapter(RemoteMetadataAdapter):
         return results
 
 
-def get_metadata(
-    adapter_name,
+def gather_metadata(
+    gather,
     mds_url,
     filters,
-    mappings=None,
-    perItemValues=None,
-    keepOriginalFields=False,
-    globalFieldFilters=[],
+    mappings,
+    perItemValues,
+    keepOriginalFields,
+    globalFieldFilters,
 ):
-    if adapter_name == "icpsr":
-        gather = ISCPSRDublin(mds_url)
-        json_data = gather.getRemoteDataAsJson(filters=filters)
-        results = gather.normalizeToGen3MDSFields(
-            json_data,
-            mappings=mappings,
-            perItemValues=perItemValues,
-            keepOriginalFields=keepOriginalFields,
-            globalFieldFilters=globalFieldFilters,
-        )
-        return results
-    if adapter_name == "clinicaltrials":
-        gather = ClinicalTrials(mds_url)
-        json_data = gather.getRemoteDataAsJson(filters=filters)
-        results = gather.normalizeToGen3MDSFields(
-            json_data,
-            mappings=mappings,
-            perItemValues=perItemValues,
-            keepOriginalFields=keepOriginalFields,
-            globalFieldFilters=globalFieldFilters,
-        )
-        return results
-    if adapter_name == "pdaps":
-        gather = PDAPS(mds_url)
-        json_data = gather.getRemoteDataAsJson(filters=filters)
-        results = gather.normalizeToGen3MDSFields(
-            json_data,
-            mappings=mappings,
-            perItemValues=perItemValues,
-            keepOriginalFields=keepOriginalFields,
-            globalFieldFilters=globalFieldFilters,
-        )
-        return results
-    if adapter_name == "gen3":
-        gather = Gen3Adapter()
+    try:
         json_data = gather.getRemoteDataAsJson(mds_url=mds_url, filters=filters)
         results = gather.normalizeToGen3MDSFields(
             json_data,
@@ -619,6 +610,44 @@ def get_metadata(
             globalFieldFilters=globalFieldFilters,
         )
         return results
+    except ValueError as exc:
+        logger.error(f"Exception occurred: {exc}. Returning no results")
+    except RetryError:
+        logger.error(f"Multiple retrys {exc.request.url} failed. Returning no results")
+    return {}
 
-    logger.error(f"unknown adapter for commons {adapter_name}.")
-    raise ValueError(f"unknown adapter for commons: {adapter_name}")
+
+def get_metadata(
+    adapter_name,
+    mds_url,
+    filters,
+    mappings=None,
+    perItemValues=None,
+    keepOriginalFields=False,
+    globalFieldFilters=[],
+):
+    gather = None
+    if adapter_name == "icpsr":
+        gather = ISCPSRDublin()
+    if adapter_name == "clinicaltrials":
+        gather = ClinicalTrials()
+    if adapter_name == "pdaps":
+        gather = PDAPS()
+    if adapter_name == "gen3":
+        gather = Gen3Adapter()
+
+    if gather is None:
+        logger.error(
+            f"unknown adapter for commons {adapter_name}. Returning no results."
+        )
+        return {}
+
+    return gather_metadata(
+        gather,
+        mds_url=mds_url,
+        filters=filters,
+        mappings=mappings,
+        perItemValues=perItemValues,
+        keepOriginalFields=keepOriginalFields,
+        globalFieldFilters=globalFieldFilters,
+    )
