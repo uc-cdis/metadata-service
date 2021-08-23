@@ -146,12 +146,12 @@ def test_get_metadata_icpsr():
 
     assert get_metadata("icpsr", "http://test/ok", filters=None) == {}
 
-    res2 = get_metadata(
-        "icpsr",
-        "http://test/ok",
-        filters={"study_ids": [6425]},
-        mappings=field_mappings,
-        keepOriginalFields=True,
+    assert get_metadata("icpsr", mds_url=None, filters={"study_ids": [6425]}) == {}
+
+    respx.get(
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
+        status_code=200,
+        content=xml_response,
     )
 
     assert get_metadata(
@@ -220,83 +220,127 @@ def test_get_metadata_icpsr():
         }
     }
 
-    respx.get(
-        "http://test/error?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
-        status_code=500,
-        content=xml_response,
-    )
-
-    try:
-        get_metadata("icpsr", "http://test/error", filters=None)
-    except Exception as err:
-        assert isinstance(err, ValueError) == True
-
-
-@respx.mock
-def test_add_clinical_trials_source_url():
-    json_response = r"""{
-  "FullStudiesResponse":{
-    "APIVrs":"1.01.03",
-    "DataVrs":"2021:07:06 22:12:28.413",
-    "Expression":"heart attack",
-    "NStudiesAvail":382563,
-    "NStudiesFound":8322,
-    "MinRank":1,
-    "MaxRank":1,
-    "NStudiesReturned":1,
-    "FullStudies":[
-      {
-        "Rank":1,
-        "Study":{
-          "ProtocolSection":{
-            "IdentificationModule":{
-              "NCTId":"NCT01874691",
-              "OrgStudyIdInfo":{
-                "OrgStudyId":"2011BAI11B02-A"
-              }
-            }
-          }
+    item_values = {
+        "10.3886/ICPSR06425.v1": {
+            "__manifest": [
+                {
+                    "md5sum": "7cf87",
+                    "file_name": "TEDS-D-2018-DS0001-bndl-data-spss.zip",
+                    "file_size": 69297783,
+                    "object_id": "dg.XXXX/208f4c52-771e-409a-b810-4bcba3c03c51",
+                }
+            ]
         }
-      }
-    ]
-  }
-}"""
-    field_mappings = {
-        "study_name": "",
-        "project_number": "path:OrgStudyId",
-        "study_url": {
-            "path": "OrgStudyId",
-            "filters": ["add_clinical_trials_source_url"],
-        },
     }
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1",
-        status_code=200,
-        content=json.loads(json_response),
-        content_type="text/plain;charset=UTF-8",
-    )
-
     assert get_metadata(
-        "clinicaltrials",
+        "icpsr",
         "http://test/ok",
-        filters={"term": "heart attack", "maxItems": 1},
+        filters={"study_ids": [6425]},
         mappings=field_mappings,
-        perItemValues={},
         keepOriginalFields=True,
+        perItemValues=item_values,
     ) == {
-        "NCT01874691": {
+        "10.3886/ICPSR06425.v1": {
             "_guid_type": "discovery_metadata",
             "gen3_discovery": {
-                "NCTId": "NCT01874691",
-                "OrgStudyId": "2011BAI11B02-A",
-                "location": "",
-                "project_number": "2011BAI11B02-A",
+                "ipcsr_study_id": "6425",
+                "title": "103rd Congressional District Geographic Entity File, 1990: [United States]",
+                "contributor": "Inter-university Consortium for Political and Social Research [distributor]",
+                "creator": "United States. Bureau of the Census",
+                "description": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
+                "identifier": "10.3886/ICPSR06425.v1",
+                "date": "03-16-1995",
+                "type": "administrative records data",
+                "source": "equivalency files and listings submitted by the appropriate agency or official within each state, usually from the Secretary of State's Office",
+                "coverage": "1990",
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "summary": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
+                "location": "1",
+                "study_url": "https://www.icpsr.umich.edu/web/NAHDAP/studies/6425",
+                "subjects": "",
+                "__manifest": [
+                    {
+                        "md5sum": "7cf87",
+                        "file_name": "TEDS-D-2018-DS0001-bndl-data-spss.zip",
+                        "file_size": 69297783,
+                        "object_id": "dg.XXXX/208f4c52-771e-409a-b810-4bcba3c03c51",
+                    }
+                ],
                 "study_name": "",
-                "study_url": "https://clinicaltrials.gov/ct2/show/2011BAI11B02-A",
+                "study_type": "",
+                "institutions": "Inter-university Consortium for Political and Social Research [distributor]",
+                "year_awarded": "",
+                "investigators": "United States. Bureau of the Census",
+                "project_title": "103rd Congressional District Geographic Entity File, 1990: [United States]",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "10.3886/ICPSR06425.v1",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "administrative records data",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
             },
         }
     }
+
+    # test bad XML response
+    respx.get(
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64257",
+        status_code=200,
+        content="<dsfsdfsd>",
+    )
+
+    assert (
+        get_metadata(
+            "icpsr",
+            "http://test/ok",
+            filters={"study_ids": [64257]},
+            mappings=field_mappings,
+            keepOriginalFields=True,
+        )
+        == {}
+    )
+
+    respx.get(
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64",
+        status_code=404,
+        content={},
+    )
+
+    assert (
+        get_metadata(
+            "icpsr",
+            "http://test/ok",
+            filters={"study_ids": [64]},
+            mappings=field_mappings,
+            keepOriginalFields=True,
+        )
+        == {}
+    )
 
 
 @respx.mock
@@ -438,7 +482,7 @@ def test_get_metadata_clinicaltrials():
                   {
                     "PrimaryOutcomeMeasure":"In-hospital mortality of the patients with acute myocardial infarction in different-level hospitals across China",
                     "PrimaryOutcomeDescription":"Different-level hospitals include Provincial-level, city-level, County-level hospitals from all over China.",
-                    "PrimaryOutcomeTimeFrame":"the duration of hospital stay, an expected average of 2 weeks"
+                    "PrimaryOutcomeTimeFrame":"the duration of hospital stay, an resources average of 2 weeks"
                   }
                 ]
               },
@@ -459,7 +503,7 @@ def test_get_metadata_clinicaltrials():
                 "OtherOutcome":[
                   {
                     "OtherOutcomeMeasure":"the in-hospital cost of Chinese patients with acute myocardial infarction",
-                    "OtherOutcomeTimeFrame":"the duration of hospital stay, an expected average of 2 weeks"
+                    "OtherOutcomeTimeFrame":"the duration of hospital stay, an resources average of 2 weeks"
                   }
                 ]
               }
@@ -652,6 +696,7 @@ def test_get_metadata_clinicaltrials():
         "__manifest": "",
         "study_name": "",
         "study_type": "",
+        "study_url": {"path": "NCTId", "filters": ["add_clinical_trials_source_url"]},
         "institutions": "path:LeadSponsorName",
         "year_awarded": "",
         "investigators": "path:OverallOfficial[0].OverallOfficialName",
@@ -765,7 +810,7 @@ def test_get_metadata_clinicaltrials():
                     {
                         "PrimaryOutcomeMeasure": "In-hospital mortality of the patients with acute myocardial infarction in different-level hospitals across China",
                         "PrimaryOutcomeDescription": "Different-level hospitals include Provincial-level, city-level, County-level hospitals from all over China.",
-                        "PrimaryOutcomeTimeFrame": "the duration of hospital stay, an expected average of 2 weeks",
+                        "PrimaryOutcomeTimeFrame": "the duration of hospital stay, an resources average of 2 weeks",
                     }
                 ],
                 "SecondaryOutcome": [
@@ -783,7 +828,7 @@ def test_get_metadata_clinicaltrials():
                 "OtherOutcome": [
                     {
                         "OtherOutcomeMeasure": "the in-hospital cost of Chinese patients with acute myocardial infarction",
-                        "OtherOutcomeTimeFrame": "the duration of hospital stay, an expected average of 2 weeks",
+                        "OtherOutcomeTimeFrame": "the duration of hospital stay, an resources average of 2 weeks",
                     }
                 ],
                 "EligibilityCriteria": "Inclusion Criteria:\n\nEligible patients must be admitted within 7 days of acute ischemic symptoms and diagnosed acute ST-elevation or non ST-elevation myocardial infarction. Diagnosis criteria must meet Universal Definition for AMI (2012). All participating hospitals are required to enroll consecutive patients with AMI.\n\nExclusion Criteria:\n\nMyocardial infarction related to percutaneous coronary intervention and coronary artery bypass grafting.",
@@ -958,6 +1003,7 @@ def test_get_metadata_clinicaltrials():
                 "__manifest": {"filename": "foo.zip "},
                 "study_name": "",
                 "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/NCT01874691",
                 "institutions": "Chinese Academy of Medical Sciences, Fuwai Hospital",
                 "year_awarded": "",
                 "investigators": "Yuejin Yang, MD.",
@@ -1113,6 +1159,57 @@ def test_get_metadata_clinicaltrials():
       }
     }"""
 
+    json_response3 = r"""{
+      "BadFullStudiesResponse":{
+        "APIVrs":"1.01.03",
+        "DataVrs":"2021:07:06 22:12:28.413",
+        "Expression":"heart attack",
+        "NStudiesAvail":382563,
+        "NStudiesFound":8322,
+        "MinRank":4,
+        "MaxRank":5,
+        "NStudiesReturned":2,
+        "FullStudies":[
+          {
+            "Rank":4,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"4"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary4"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "Rank":5,
+            "Study":{
+              "ProtocolSection":{
+                "IdentificationModule":{
+                  "NCTId":"5"
+                },
+                "DescriptionModule":{
+                  "BriefSummary":"summary5"
+                },
+                "DesignModule":{
+                  "EnrollmentInfo":{
+                    "EnrollmentCount":"100"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }"""
+
     respx.get(
         "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3",
         status_code=200,
@@ -1137,9 +1234,27 @@ def test_get_metadata_clinicaltrials():
     )
 
     respx.get(
-        "http://test/ok?expr=should+error&fmt=json&min_rnk=1&max_rnk=3",
-        status_code=500,
+        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6",
+        status_code=200,
         content=json.loads(json_response2),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    get_metadata(
+        "clinicaltrials",
+        "http://test/ok",
+        filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
+        mappings=field_mappings,
+        perItemValues=item_values,
+        keepOriginalFields=True,
+    )
+
+    ## test missing fields
+
+    respx.get(
+        "http://test/ok?expr=heart+attack+false&fmt=json&min_rnk=1&max_rnk=6",
+        status_code=500,
+        content={},
         content_type="text/plain;charset=UTF-8",
     )
 
@@ -1147,7 +1262,26 @@ def test_get_metadata_clinicaltrials():
         get_metadata(
             "clinicaltrials",
             "http://test/ok",
-            filters={"term": "should+error", "maxItems": 3, "batchSize": 3},
+            filters={"term": "heart attack false", "maxItems": 5, "batchSize": 5},
+            mappings=field_mappings,
+            keepOriginalFields=True,
+        )
+        == {}
+    )
+
+    ## test bad responses
+
+    respx.get(
+        "http://test/ok?expr=should+error+bad+field&fmt=json&min_rnk=1&max_rnk=1",
+        content=json.loads(json_response3),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "clinicaltrials",
+            "http://test/ok",
+            filters={"term": "should+error+bad+field", "maxItems": 1, "batchSize": 1},
             mappings=field_mappings,
             perItemValues=item_values,
             keepOriginalFields=True,
@@ -2870,20 +3004,16 @@ def test_gen3_adapter():
     get_metadata("gen3", "http://test/ok/", None, field_mappings) == expected
 
     respx.get(
-        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+        "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
         status_code=500,
         content=json_response,
         content_type="text/plain;charset=UTF-8",
     )
 
-    try:
-        get_metadata("gen3", "http://test/ok/", None, field_mappings)
-    except Exception as err:
-        assert isinstance(err, ValueError) == True
+    assert get_metadata("gen3", "http://test/error/", None, field_mappings) == {}
 
 
 def test_missing_adapter():
-
     try:
         get_metadata("notAKnownAdapter", "http://test/ok/", None, None)
     except Exception as err:

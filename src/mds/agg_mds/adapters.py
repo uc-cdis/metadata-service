@@ -5,6 +5,7 @@ from jsonpath_ng import parse
 import httpx
 import xmltodict
 import bleach
+import logging
 import re
 from tenacity import (
     retry,
@@ -12,6 +13,7 @@ from tenacity import (
     wait_random_exponential,
     stop_after_attempt,
     retry_if_exception_type,
+    before_sleep_log,
 )
 from mds import logger
 
@@ -94,7 +96,7 @@ def flatten(dictionary, parent_key=False, separator="."):
 class RemoteMetadataAdapter(ABC):
     """
     Abstract base class for a Metadata adapter. You must implement getRemoteDataAsJson to return a possibly empty
-    dictionary and normalizeToGen3MDSField to get closer to the expected Gen3 MDS format, although this will be subject
+    dictionary and normalizeToGen3MDSField to get closer to the resources Gen3 MDS format, although this will be subject
     to change
     """
 
@@ -172,6 +174,11 @@ class ISCPSRDublin(RemoteMetadataAdapter):
     parameters: filters which currently should be study_ids=id,id,id...
     """
 
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": []}
         if "filters" not in kwargs or kwargs["filters"] is None:
@@ -185,18 +192,30 @@ class ISCPSRDublin(RemoteMetadataAdapter):
 
         if len(study_ids) > 0:
             for id in study_ids:
-                url = f"{mds_url}?verb=GetRecord&metadataPrefix=oai_dc&identifier={id}"
-                response = httpx.get(url)
+                try:
+                    url = f"{mds_url}?verb=GetRecord&metadataPrefix=oai_dc&identifier={id}"
+                    response = httpx.get(url)
+                    response.raise_for_status()
+                    if response.status_code == 200:
+                        xmlData = response.text
+                        data_dict = xmltodict.parse(xmlData)
+                        results["results"].append(data_dict)
 
-                if response.status_code == 200:
-                    xmlData = response.text
-                    data_dict = xmltodict.parse(xmlData)
-                    results["results"].append(data_dict)
-                else:
+                except httpx.TimeoutException as exc:
+                    logger.error(f"An timeout error occurred while requesting {url}.")
+                    raise
+                except httpx.HTTPError as exc:
                     logger.error(
-                        f"A {response.status_code} error occurred while requesting {url}"
+                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
                     )
-                    raise ValueError(f"An error occurred while requesting {url}")
+                except ValueError as exc:
+                    logger.error(
+                        f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
+                    )
+                except Exception as exc:
+                    logger.error(
+                        f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
+                    )
 
         return results
 
@@ -271,6 +290,11 @@ class ClinicalTrials(RemoteMetadataAdapter):
                   since the code below does not reduce the size of the results array, default = None
     """
 
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": []}
 
@@ -293,13 +317,14 @@ class ClinicalTrials(RemoteMetadataAdapter):
         offset = 1
         remaining = 1
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
-        try:
-            while remaining > 0:
+
+        while remaining > 0:
+            try:
                 response = httpx.get(
                     f"{mds_url}?expr={term}"
                     f"&fmt=json&min_rnk={offset}&max_rnk={offset + limit - 1}"
                 )
-
+                response.raise_for_status()
                 if response.status_code == 200:
 
                     data = response.json()
@@ -327,16 +352,25 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     remaining = remaining - numReturned
                     offset += numReturned
                     limit = min(remaining, batchSize)
-                else:
-                    logger.error(
-                        f"A {response.status_code} error occurred while requesting {mds_url}"
-                    )
-                    raise ValueError(f"An error occurred while requesting {mds_url}.")
 
-        except ValueError as ex:
-            logger.error(f"An error occurred while requesting {mds_url} {ex}.")
-            # will reraise from above
-            raise ValueError(f"An error occurred while requesting {mds_url} {ex}.")
+            except httpx.TimeoutException as exc:
+                logger.error(f"An timeout error occurred while requesting {url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                )
+                break  # need to break here as cannot be assured of leaving while loop
+            except ValueError as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                )
+                break
+            except Exception as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                )
+                break
 
         return results
 
@@ -414,6 +448,8 @@ class PDAPS(RemoteMetadataAdapter):
         if mds_url is None:
             return results
 
+        mds_url = mds_url.rstrip("/")
+
         if "filters" not in kwargs or kwargs["filters"] is None:
             return results
 
@@ -427,23 +463,25 @@ class PDAPS(RemoteMetadataAdapter):
                 response = httpx.get(
                     f"{mds_url}/siteitem/{id}/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
                 )
+                response.raise_for_status()
+
                 if response.status_code == 200:
                     results["results"].append(response.json())
-                else:
-                    logger.error(
-                        f"A {response.status_code} error occurred while requesting {url}."
-                    )
-                    raise ValueError(f"An error occurred while requesting {url}.")
-            except:
-                logger.error(f"An error occurred while requesting {url}.")
-                raise ValueError(f"An error occurred while requesting {url}.")
+
+            except httpx.TimeoutException as exc:
+                logger.error(f"An timeout error occurred while requesting {url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                )
 
         return results
 
     @staticmethod
     def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         """
-        Maps the items fields into Gen3 expected fields
+        Maps the items fields into Gen3 resources fields
         if keepOriginal is False: only those fields will be included in the final entry
         """
         results = item
@@ -499,6 +537,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         stop=stop_after_attempt(5),
         retry=retry_if_exception_type(httpx.TimeoutException),
         wait=wait_random_exponential(multiplier=1, max=20),
+        before_sleep=before_sleep_log(logger, logging.DEBUG),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         results = {"results": {}}
@@ -521,6 +560,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
                 response = httpx.get(url)
+                response.raise_for_status()
                 if response.status_code == 200:
                     data = response.json()
                     results["results"].update(data)
@@ -529,21 +569,15 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     if numReturned == 0 or numReturned < limit:
                         moreData = False
                     offset += numReturned
-                else:
-                    logger.error(
-                        f"{response.status_code} error occurred while requesting {url}."
-                    )
-                    raise ValueError(f"An error occurred while requesting {url}.")
-            except httpx.RequestError as exc:
-                logger.error(f"An error occurred while requesting {exc.request.url}.")
-                raise ValueError(
-                    f"An error occurred while requesting {exc.request.url}."
-                )
+
             except httpx.TimeoutException as exc:
-                logger.error(
-                    f"An timeout error occurred while requesting {exc.request.url}."
-                )
+                logger.error(f"An timeout error occurred while requesting {url}.")
                 raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Returning { len(results['results'])} results."
+                )
+                break
 
         return results
 

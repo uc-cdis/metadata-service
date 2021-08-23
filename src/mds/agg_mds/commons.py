@@ -10,7 +10,7 @@ import json
 class ColumnsToFields:
     """
     A more complex mapping object for mapping column names to MDS fields
-    allows to explictly mark a field as missing, a default value and it's expected type
+    allows to explictly mark a field as missing, a default value and it's resources type
     """
 
     name: str
