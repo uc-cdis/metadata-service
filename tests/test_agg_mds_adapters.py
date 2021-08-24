@@ -1,6 +1,66 @@
 import respx
 import json
-from mds.agg_mds.adapters import get_metadata
+from mds.agg_mds.adapters import (
+    get_metadata,
+    Gen3Adapter,
+    strip_email,
+    get_json_path_value,
+)
+
+
+def test_strip_email():
+    assert strip_email("this is an email@whatever.com address") == "this is an  address"
+
+
+def test_get_json_path_value():
+    assert get_json_path_value(None, {}) == ""
+
+
+@respx.mock
+def test_get_metadata_gen3():
+    json_response = r"""{}"""
+    respx.get(
+        "http://test/one/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+        status_code=200,
+        content=json_response,
+    )
+
+    assert get_metadata("gen3", "http://test/one/", filters=None) == {}
+
+    assert (
+        get_metadata(
+            "gen3",
+            "http://test/one/",
+            filters=None,
+            mappings={},
+            keepOriginalFields=True,
+        )
+        == {}
+    )
+
+    respx.get(
+        "http://test/two/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+        status_code=500,
+        content=None,
+    )
+
+    try:
+        get_metadata("gen3", "http://test/two/", filters=None)
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
+
+
+def test_addGen3ExpectedFields():
+    study_field = ""
+    mappings = {}
+    keepOriginalFields = False
+    globalFieldFilters = {}
+
+    item = Gen3Adapter.addGen3ExpectedFields(
+        study_field, mappings, keepOriginalFields, globalFieldFilters
+    )
+
+    assert item == {}
 
 
 @respx.mock
@@ -148,6 +208,84 @@ def test_get_metadata_icpsr():
                 "dataset_3_description": "",
                 "dataset_4_description": "",
                 "dataset_5_description": "",
+            },
+        }
+    }
+
+    respx.get(
+        "http://test/error?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
+        status_code=500,
+        content=xml_response,
+    )
+
+    try:
+        get_metadata("icpsr", "http://test/error", filters=None)
+    except Exception as err:
+        assert isinstance(err, ValueError) == True
+
+
+@respx.mock
+def test_add_clinical_trials_source_url():
+    json_response = r"""{
+  "FullStudiesResponse":{
+    "APIVrs":"1.01.03",
+    "DataVrs":"2021:07:06 22:12:28.413",
+    "Expression":"heart attack",
+    "NStudiesAvail":382563,
+    "NStudiesFound":8322,
+    "MinRank":1,
+    "MaxRank":1,
+    "NStudiesReturned":1,
+    "FullStudies":[
+      {
+        "Rank":1,
+        "Study":{
+          "ProtocolSection":{
+            "IdentificationModule":{
+              "NCTId":"NCT01874691",
+              "OrgStudyIdInfo":{
+                "OrgStudyId":"2011BAI11B02-A"
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}"""
+    field_mappings = {
+        "study_name": "",
+        "project_number": "path:OrgStudyId",
+        "study_url": {
+            "path": "OrgStudyId",
+            "filters": ["add_clinical_trials_source_url"],
+        },
+    }
+
+    respx.get(
+        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1",
+        status_code=200,
+        content=json.loads(json_response),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert get_metadata(
+        "clinicaltrials",
+        "http://test/ok",
+        filters={"term": "heart attack", "maxItems": 1},
+        mappings=field_mappings,
+        perItemValues={},
+        keepOriginalFields=True,
+    ) == {
+        "NCT01874691": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "NCTId": "NCT01874691",
+                "OrgStudyId": "2011BAI11B02-A",
+                "location": "",
+                "project_number": "2011BAI11B02-A",
+                "study_name": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/2011BAI11B02-A",
             },
         }
     }
