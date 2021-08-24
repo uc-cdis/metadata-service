@@ -1,7 +1,8 @@
 import pytest
+import httpx
 from mds.agg_mds.mds import pull_mds
 import respx
-from httpx import Response
+from tenacity import RetryError
 
 
 @respx.mock
@@ -27,11 +28,20 @@ def test_pull_mds():
         "commons3": {"gen3_discovery": {}},
     }
 
-    with pytest.raises(ValueError) as excinfo:
+    # changed
+    respx.get(
+        "http://commons2/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
+        content={},
+        status_code=403,
+    )
+    results = pull_mds("http://commons2", "discovery_metadata", 2)
+    assert results == {}
+
+    try:
         respx.get(
-            "http://commons2/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
-            content={},
-            status_code=403,
+            "http://commons3/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
+            content=httpx.TimeoutException,
         )
-        results = pull_mds("http://commons2", "discovery_metadata", 2)
-    assert "An error occurred while requesting" in str(excinfo.value)
+        pull_mds("http://commons3", "discovery_metadata", 2)
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True

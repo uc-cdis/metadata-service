@@ -48,6 +48,7 @@ def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
             raise
         except httpx.HTTPError as exc:
             logger.error(
-                f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping this batch"
+                f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Aborting futher pulls"
             )
+            break
     return results

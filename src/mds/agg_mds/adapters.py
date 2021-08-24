@@ -307,7 +307,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
 
         term = kwargs["filters"].get("term", None)
 
-        if "term" == None:
+        if term == None:
             return results
 
         term = term.replace(" ", "+")
@@ -354,7 +354,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     limit = min(remaining, batchSize)
 
             except httpx.TimeoutException as exc:
-                logger.error(f"An timeout error occurred while requesting {url}.")
+                logger.error(f"An timeout error occurred while requesting {mds_url}.")
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
@@ -469,7 +469,7 @@ class PDAPS(RemoteMetadataAdapter):
                     results["results"].append(response.json())
 
             except httpx.TimeoutException as exc:
-                logger.error(f"An timeout error occurred while requesting {url}.")
+                logger.error(f"An timeout error occurred while requesting {mds_url}.")
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
@@ -647,7 +647,7 @@ def gather_metadata(
     except ValueError as exc:
         logger.error(f"Exception occurred: {exc}. Returning no results")
     except RetryError:
-        logger.error(f"Multiple retrys {exc.request.url} failed. Returning no results")
+        logger.error(f"Multiple retrys failed. Returning no results")
     return {}
 
 

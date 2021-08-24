@@ -1,66 +1,8 @@
 import respx
 import json
-from mds.agg_mds.adapters import (
-    get_metadata,
-    Gen3Adapter,
-    strip_email,
-    get_json_path_value,
-)
-
-
-def test_strip_email():
-    assert strip_email("this is an email@whatever.com address") == "this is an  address"
-
-
-def test_get_json_path_value():
-    assert get_json_path_value(None, {}) == ""
-
-
-@respx.mock
-def test_get_metadata_gen3():
-    json_response = r"""{}"""
-    respx.get(
-        "http://test/one/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=200,
-        content=json_response,
-    )
-
-    assert get_metadata("gen3", "http://test/one/", filters=None) == {}
-
-    assert (
-        get_metadata(
-            "gen3",
-            "http://test/one/",
-            filters=None,
-            mappings={},
-            keepOriginalFields=True,
-        )
-        == {}
-    )
-
-    respx.get(
-        "http://test/two/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=500,
-        content=None,
-    )
-
-    try:
-        get_metadata("gen3", "http://test/two/", filters=None)
-    except Exception as err:
-        assert isinstance(err, ValueError) == True
-
-
-def test_addGen3ExpectedFields():
-    study_field = ""
-    mappings = {}
-    keepOriginalFields = False
-    globalFieldFilters = {}
-
-    item = Gen3Adapter.addGen3ExpectedFields(
-        study_field, mappings, keepOriginalFields, globalFieldFilters
-    )
-
-    assert item == {}
+from mds.agg_mds.adapters import get_metadata
+from tenacity import RetryError, wait_none
+import httpx
 
 
 @respx.mock
@@ -341,6 +283,25 @@ def test_get_metadata_icpsr():
         )
         == {}
     )
+
+    try:
+        from mds.agg_mds.adapters import ISCPSRDublin
+
+        ISCPSRDublin.getRemoteDataAsJson.retry.wait = wait_none()
+
+        respx.get(
+            "http://test/timeouterror?verb=GetRecord&metadataPrefix=oai_dc&identifier=64",
+            content=httpx.TimeoutException,
+        )
+        get_metadata(
+            "icpsr",
+            "http://test/timeouterror/",
+            filters={"study_ids": [64]},
+            mappings=field_mappings,
+            keepOriginalFields=True,
+        )
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
 
 
 @respx.mock
@@ -1249,6 +1210,24 @@ def test_get_metadata_clinicaltrials():
         keepOriginalFields=True,
     )
 
+    get_metadata(
+        "clinicaltrials",
+        None,
+        filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
+        mappings=field_mappings,
+        perItemValues=item_values,
+        keepOriginalFields=True,
+    )
+
+    get_metadata(
+        "clinicaltrials",
+        "http://test/ok",
+        filters={"term_bad": "heart attack", "maxItems": 5, "batchSize": 3},
+        mappings=field_mappings,
+        perItemValues=item_values,
+        keepOriginalFields=True,
+    )
+
     ## test missing fields
 
     respx.get(
@@ -1262,7 +1241,7 @@ def test_get_metadata_clinicaltrials():
         get_metadata(
             "clinicaltrials",
             "http://test/ok",
-            filters={"term": "heart attack false", "maxItems": 5, "batchSize": 5},
+            filters={"term": "heart+attack+false", "maxItems": 5, "batchSize": 5},
             mappings=field_mappings,
             keepOriginalFields=True,
         )
@@ -1288,6 +1267,25 @@ def test_get_metadata_clinicaltrials():
         )
         == {}
     )
+
+    try:
+        from mds.agg_mds.adapters import ClinicalTrials
+
+        ClinicalTrials.getRemoteDataAsJson.retry.wait = wait_none()
+        respx.get(
+            "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1",
+            content=httpx.TimeoutException,
+        )
+        get_metadata(
+            "clinicaltrials",
+            "http://test/ok",
+            filters={"term": "should+error+timeout", "maxItems": 1, "batchSize": 1},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
 
 
 @respx.mock
@@ -2103,6 +2101,15 @@ def test_get_metadata_pdaps():
 
     assert get_metadata("pdaps", "http://test/ok/", filters=None) == {}
 
+    assert (
+        get_metadata(
+            "pdaps",
+            None,
+            filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
+        )
+        == {}
+    )
+
     assert get_metadata(
         "pdaps",
         "http://test/ok/",
@@ -2910,20 +2917,48 @@ def test_get_metadata_pdaps():
     )
 
     respx.get(
-        "http://test/ok/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-        status_code=500,
+        "http://test/err404/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
+        status_code=404,
         content={},
         content_type="text/plain;charset=UTF-8",
     )
 
     get_metadata(
         "pdaps",
-        "http://test/ok",
+        "http://test/err404",
         filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
         mappings=field_mappings,
         perItemValues=item_values,
         keepOriginalFields=True,
     ) == {}
+
+    get_metadata(
+        "pdaps",
+        "http://test/ok",
+        filters={"datasets_error": ["laws-regulating-administration-of-naloxone"]},
+        mappings=field_mappings,
+        perItemValues=item_values,
+        keepOriginalFields=True,
+    ) == {}
+
+    try:
+        from mds.agg_mds.adapters import PDAPS
+
+        PDAPS.getRemoteDataAsJson.retry.wait = wait_none()
+        respx.get(
+            "http://test/timeouterror/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
+            content=httpx.TimeoutException,
+        )
+        get_metadata(
+            "pdaps",
+            "http://test/timeouterror",
+            filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
 
 
 @respx.mock
@@ -3011,6 +3046,18 @@ def test_gen3_adapter():
     )
 
     assert get_metadata("gen3", "http://test/error/", None, field_mappings) == {}
+
+    try:
+        from mds.agg_mds.adapters import Gen3Adapter
+
+        Gen3Adapter.getRemoteDataAsJson.retry.wait = wait_none()
+        respx.get(
+            "http://test/timeouterror/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
+            content=httpx.TimeoutException,
+        )
+        get_metadata("gen3", "http://test/timeouterror/", None, field_mappings)
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
 
 
 def test_missing_adapter():
