@@ -26,6 +26,7 @@ pytest-asyncio = "^0.15.1"
 jsonpath-ng = "^1.5.3"
 elasticsearch = "<7.0"
 bleach = ">=3.3.1"
+tenacity = ">=8.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
