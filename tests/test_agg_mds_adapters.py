@@ -54,8 +54,11 @@ def test_addGen3ExpectedFields():
     study_field = ""
     mappings = {}
     keepOriginalFields = False
+    globalFieldFilters = {}
 
-    item = Gen3Adapter.addGen3ExpectedFields(study_field, mappings, keepOriginalFields)
+    item = Gen3Adapter.addGen3ExpectedFields(
+        study_field, mappings, keepOriginalFields, globalFieldFilters
+    )
 
     assert item == {}
 
