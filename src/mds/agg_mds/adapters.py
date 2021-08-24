@@ -196,11 +196,10 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     url = f"{mds_url}?verb=GetRecord&metadataPrefix=oai_dc&identifier={id}"
                     response = httpx.get(url)
                     response.raise_for_status()
-                    if response.status_code == 200:
-                        xmlData = response.text
-                        data_dict = xmltodict.parse(xmlData)
-                        results["results"].append(data_dict)
 
+                    xmlData = response.text
+                    data_dict = xmltodict.parse(xmlData)
+                    results["results"].append(data_dict)
                 except httpx.TimeoutException as exc:
                     logger.error(f"An timeout error occurred while requesting {url}.")
                     raise
@@ -325,33 +324,30 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     f"&fmt=json&min_rnk={offset}&max_rnk={offset + limit - 1}"
                 )
                 response.raise_for_status()
-                if response.status_code == 200:
 
-                    data = response.json()
-                    if "FullStudiesResponse" not in data:
-                        # something is not right with the response
-                        raise ValueError("unknown response.")
+                data = response.json()
+                if "FullStudiesResponse" not in data:
+                    # something is not right with the response
+                    raise ValueError("unknown response.")
 
-                    if data["FullStudiesResponse"]["NStudiesFound"] == 0:
-                        # search term did not find a value, leave now
-                        break
+                if data["FullStudiesResponse"]["NStudiesFound"] == 0:
+                    # search term did not find a value, leave now
+                    break
 
-                    # first time through set remaining
-                    if offset == 1:
-                        remaining = data["FullStudiesResponse"]["NStudiesFound"]
-                        # limit maxItems to the total number of items if maxItems is greater
-                        if maxItems is not None:
-                            maxItems = maxItems if maxItems < remaining else remaining
+                # first time through set remaining
+                if offset == 1:
+                    remaining = data["FullStudiesResponse"]["NStudiesFound"]
+                    # limit maxItems to the total number of items if maxItems is greater
+                    if maxItems is not None:
+                        maxItems = maxItems if maxItems < remaining else remaining
 
-                    numReturned = data["FullStudiesResponse"]["NStudiesReturned"]
-                    results["results"].extend(
-                        data["FullStudiesResponse"]["FullStudies"]
-                    )
-                    if maxItems is not None and len(results["results"]) >= maxItems:
-                        return results
-                    remaining = remaining - numReturned
-                    offset += numReturned
-                    limit = min(remaining, batchSize)
+                numReturned = data["FullStudiesResponse"]["NStudiesReturned"]
+                results["results"].extend(data["FullStudiesResponse"]["FullStudies"])
+                if maxItems is not None and len(results["results"]) >= maxItems:
+                    return results
+                remaining = remaining - numReturned
+                offset += numReturned
+                limit = min(remaining, batchSize)
 
             except httpx.TimeoutException as exc:
                 logger.error(f"An timeout error occurred while requesting {mds_url}.")
@@ -464,9 +460,7 @@ class PDAPS(RemoteMetadataAdapter):
                     f"{mds_url}/siteitem/{id}/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
                 )
                 response.raise_for_status()
-
-                if response.status_code == 200:
-                    results["results"].append(response.json())
+                results["results"].append(response.json())
 
             except httpx.TimeoutException as exc:
                 logger.error(f"An timeout error occurred while requesting {mds_url}.")
@@ -561,14 +555,14 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     url += f"&{guid_type}.{field_name}={field_value}"
                 response = httpx.get(url)
                 response.raise_for_status()
-                if response.status_code == 200:
-                    data = response.json()
-                    results["results"].update(data)
-                    numReturned = len(data)
 
-                    if numReturned == 0 or numReturned < limit:
-                        moreData = False
-                    offset += numReturned
+                data = response.json()
+                results["results"].update(data)
+                numReturned = len(data)
+
+                if numReturned == 0 or numReturned < limit:
+                    moreData = False
+                offset += numReturned
 
             except httpx.TimeoutException as exc:
                 logger.error(f"An timeout error occurred while requesting {url}.")
