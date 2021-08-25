@@ -3,17 +3,26 @@ from typing import List, Dict
 from typing import Any
 import json
 from mds import logger
+from mds.config import AGG_MDS_NAMESPACE
 
 
 # TODO WFH Why do we have both __manifest and _file_manifest?
-FIELDS_TO_NORMALIZE = ["__manifest", "_file_manifest", "advSearchFilters"]
+# TODO WFH These are bugs. If we have to check whether an object is a string or
+# an object, the data is bad.
+FIELD_NORMALIZERS = {
+    "__manifest": "object",
+    "_file_manifest": "object",
+    "advSearchFilters": "object",
+    "data_dictionary": "object",
+    "sites": "number",
+}
 
 
-AGG_MDS_INDEX = "commons-index"
+AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
 
 
-AGG_MDS_INFO_INDEX = "commons-info-index"
+AGG_MDS_INFO_INDEX = f"{AGG_MDS_NAMESPACE}-commons-info-index"
 AGG_MDS_INFO_TYPE = "commons-info"
 
 
@@ -25,6 +34,9 @@ MAPPING = {
                     "type": "nested",
                 },
                 "tags": {
+                    "type": "nested",
+                },
+                "data_dictionary": {
                     "type": "nested",
                 },
             }
@@ -45,20 +57,29 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
 
 
 async def drop_all():
-    res = elastic_search_client.indices.delete(index="_all", ignore=[400, 404])
-    logger.debug(f"deleted all indexes: {res}")
+    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX]:
+        res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
+        logger.debug(f"deleted index: {index}")
+
     res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=MAPPING)
     logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
+
     res = elastic_search_client.indices.create(
         index=AGG_MDS_INFO_INDEX,
     )
     logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
 
 
-def normalize_string_or_object(doc, key):
-    if key in doc and isinstance(doc[key], str):
-        manifest = doc[key]
-        doc[key] = None if manifest is "" else json.loads(manifest)
+def normalize_field(doc, key, normalize_type):
+    try:
+        if normalize_type == "object" and isinstance(doc[key], str):
+            value = doc[key]
+            doc[key] = None if value is "" else json.loads(value)
+        if normalize_type == "number" and isinstance(doc[key], str):
+            doc[key] = None
+    except:
+        logger.debug(f"error normalizing {key} for a document")
+        doc[key] = None
 
 
 async def update_metadata(
@@ -67,6 +88,7 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
+    study_data_field: str,
 ):
     elastic_search_client.index(
         index=AGG_MDS_INFO_INDEX,
@@ -78,10 +100,11 @@ async def update_metadata(
     for doc in data:
         key = list(doc.keys())[0]
         # Flatten out this structure
-        doc = doc[key]["gen3_discovery"]
+        doc = doc[key][study_data_field]
 
-        for field in FIELDS_TO_NORMALIZE:
-            normalize_string_or_object(doc, field)
+        for field in FIELD_NORMALIZERS.keys():
+            if field in doc:
+                normalize_field(doc, field, FIELD_NORMALIZERS[field])
 
         elastic_search_client.index(
             index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
@@ -145,10 +168,11 @@ async def get_all_metadata(limit, offset):
 
 async def get_all_named_commons_metadata(name):
     try:
-        return elastic_search_client.search(
+        res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
             body={"query": {"match": {"commons_name.keyword": name}}},
         )
+        return [x["_source"] for x in res["hits"]["hits"]]
     except Exception as error:
         logger.error(error)
         return {}

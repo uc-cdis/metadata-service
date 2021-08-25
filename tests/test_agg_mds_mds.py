@@ -1,7 +1,7 @@
-import pytest
-from mds.agg_mds.mds import pull_mds
+import httpx
 import respx
-from httpx import Response
+from tenacity import RetryError, wait_none
+from mds.agg_mds.mds import pull_mds
 
 
 @respx.mock
@@ -18,7 +18,7 @@ def test_pull_mds():
         content={"commons3": {"gen3_discovery": {}}},
     )
 
-    results = pull_mds("http://commons1", 2)
+    results = pull_mds("http://commons1", "discovery_metadata", 2)
     assert mock_route1.called
     assert mock_route2.called
     assert results == {
@@ -27,11 +27,22 @@ def test_pull_mds():
         "commons3": {"gen3_discovery": {}},
     }
 
-    with pytest.raises(ValueError) as excinfo:
+    # changed
+    respx.get(
+        "http://commons2/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
+        content={},
+        status_code=403,
+    )
+    results = pull_mds("http://commons2", "discovery_metadata", 2)
+    assert results == {}
+
+    try:
+        pull_mds.retry.wait = wait_none()
+
         respx.get(
-            "http://commons2/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
-            content={},
-            status_code=403,
+            "http://commons3/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
+            content=httpx.TimeoutException,
         )
-        results = pull_mds("http://commons2", 2)
-    assert "An error occurred while requesting" in str(excinfo.value)
+        pull_mds("http://commons3", "discovery_metadata", 2)
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
