@@ -35,20 +35,20 @@ def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
         try:
             response = httpx.get(url)
             response.raise_for_status()
-            if response.status_code == 200:
-                data = response.json()
-                if len(data) < batchSize:
-                    more = False
-                else:
-                    offset += batchSize
-                results.update(data)
+
+            data = response.json()
+            if len(data) < batchSize:
+                more = False
+            else:
+                offset += batchSize
+            results.update(data)
 
         except httpx.TimeoutException as exc:
             logger.error(f"An timeout error occurred while requesting {url}.")
             raise
         except httpx.HTTPError as exc:
             logger.error(
-                f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Aborting futher pulls"
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Aborting futher pulls"
             )
             break
     return results

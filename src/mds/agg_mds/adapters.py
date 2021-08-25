@@ -1,7 +1,7 @@
 import collections.abc
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union
-from jsonpath_ng import parse
+from jsonpath_ng import parse, JSONPathError
 import httpx
 import xmltodict
 import bleach
@@ -63,7 +63,14 @@ def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
     if expression is None:
         return ""
 
-    jsonpath_expr = parse(expression)
+    try:
+        jsonpath_expr = parse(expression)
+    except JSONPathError as exc:
+        logger.error(
+            f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
+        )
+        return ""
+
     v = jsonpath_expr.find(item)
     if len(v) == 0:  # nothing found use default value of empty string
         return ""

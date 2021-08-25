@@ -1,6 +1,6 @@
 import respx
 import json
-from mds.agg_mds.adapters import get_metadata
+from mds.agg_mds.adapters import get_metadata, get_json_path_value
 from tenacity import RetryError, wait_none
 import httpx
 
@@ -1231,8 +1231,8 @@ def test_get_metadata_clinicaltrials():
     ## test missing fields
 
     respx.get(
-        "http://test/ok?expr=heart+attack+false&fmt=json&min_rnk=1&max_rnk=6",
-        status_code=500,
+        "http://test/error404?expr=heart+attack+false&fmt=json&min_rnk=4&max_rnk=6",
+        status_code=404,
         content={},
         content_type="text/plain;charset=UTF-8",
     )
@@ -1240,7 +1240,7 @@ def test_get_metadata_clinicaltrials():
     assert (
         get_metadata(
             "clinicaltrials",
-            "http://test/ok",
+            "http://test/error404",
             filters={"term": "heart+attack+false", "maxItems": 5, "batchSize": 5},
             mappings=field_mappings,
             keepOriginalFields=True,
@@ -1272,6 +1272,7 @@ def test_get_metadata_clinicaltrials():
         from mds.agg_mds.adapters import ClinicalTrials
 
         ClinicalTrials.getRemoteDataAsJson.retry.wait = wait_none()
+
         respx.get(
             "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1",
             content=httpx.TimeoutException,
@@ -2945,6 +2946,7 @@ def test_get_metadata_pdaps():
         from mds.agg_mds.adapters import PDAPS
 
         PDAPS.getRemoteDataAsJson.retry.wait = wait_none()
+
         respx.get(
             "http://test/timeouterror/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
             content=httpx.TimeoutException,
@@ -3040,17 +3042,21 @@ def test_gen3_adapter():
 
     respx.get(
         "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=500,
+        status_code=404,
         content=json_response,
         content_type="text/plain;charset=UTF-8",
     )
 
     assert get_metadata("gen3", "http://test/error/", None, field_mappings) == {}
 
+    # test for no url passed into Gen3Adapter
+    assert get_metadata("gen3", None, None, field_mappings) == {}
+
     try:
         from mds.agg_mds.adapters import Gen3Adapter
 
         Gen3Adapter.getRemoteDataAsJson.retry.wait = wait_none()
+
         respx.get(
             "http://test/timeouterror/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
             content=httpx.TimeoutException,
@@ -3065,3 +3071,36 @@ def test_missing_adapter():
         get_metadata("notAKnownAdapter", "http://test/ok/", None, None)
     except Exception as err:
         assert isinstance(err, ValueError) == True
+
+
+def test_json_path_expression():
+    sample1 = {
+        "study1": {
+            "summary": "This is a summary",
+            "id": "2334.5.555ad",
+            "contributors": ["Bilbo Baggins"],
+            "datasets": ["results1.csv", "results2.csv", "results3.csv"],
+        },
+        "study3": {
+            "summary": "This is another summary",
+            "id": "333.33222.ad",
+            "datasets": ["results4.csv", "results5.csv", "results6.csv"],
+        },
+    }
+
+    assert get_json_path_value("study1.summary", sample1) == "This is a summary"
+
+    # test non existent path
+    assert get_json_path_value("study2.summary", sample1) == ""
+
+    # test bad path
+    assert get_json_path_value(".contributors", sample1) == ""
+
+    # test single array
+    assert get_json_path_value("study1.contributors", sample1) == ["Bilbo Baggins"]
+
+    # test array whose length is greater than 1
+    assert get_json_path_value("*.datasets", sample1) == [
+        ["results1.csv", "results2.csv", "results3.csv"],
+        ["results4.csv", "results5.csv", "results6.csv"],
+    ]

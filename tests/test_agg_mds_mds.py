@@ -1,8 +1,7 @@
-import pytest
 import httpx
-from mds.agg_mds.mds import pull_mds
 import respx
-from tenacity import RetryError
+from tenacity import RetryError, wait_none
+from mds.agg_mds.mds import pull_mds
 
 
 @respx.mock
@@ -38,6 +37,8 @@ def test_pull_mds():
     assert results == {}
 
     try:
+        pull_mds.retry.wait = wait_none()
+
         respx.get(
             "http://commons3/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
             content=httpx.TimeoutException,
