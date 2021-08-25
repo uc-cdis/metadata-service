@@ -652,6 +652,14 @@ def gather_metadata(
     return {}
 
 
+adapters = {
+    "icpsr": ISCPSRDublin,
+    "clinicaltrials": ClinicalTrials,
+    "pdaps": PDAPS,
+    "gen3": Gen3Adapter,
+}
+
+
 def get_metadata(
     adapter_name,
     mds_url,
@@ -662,14 +670,8 @@ def get_metadata(
     globalFieldFilters=[],
 ):
     gather = None
-    if adapter_name == "icpsr":
-        gather = ISCPSRDublin()
-    if adapter_name == "clinicaltrials":
-        gather = ClinicalTrials()
-    if adapter_name == "pdaps":
-        gather = PDAPS()
-    if adapter_name == "gen3":
-        gather = Gen3Adapter()
+    if adapter_name in adapters:
+        gather = adapters[adapter_name]()
 
     if gather is None:
         logger.error(
