@@ -33,6 +33,10 @@ async def populate_metadata(name: str, common, results):
 
     total_items = len(mds_arr)
 
+    if total_items == 0:
+        logger.warning(f"populating {name} aborted as there are no items to add")
+        return
+
     # prefilter to remove entries not matching a certain field.
     if hasattr(common, "select_field") and common.select_field is not None:
         mds_arr = await filter_entries(common, mds_arr)
@@ -106,12 +110,14 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
     await datastore.drop_all()
 
     for name, common in commons_config.gen3_commons.items():
-        logger.info(f"populating {name} using Gen3 MDS connector")
+        logger.info(f"Populating {name} using Gen3 MDS connector")
         results = pull_mds(common.mds_url, common.guid_type)
-        await populate_metadata(name, common, results)
+        logger.info(f"Received {len(results)} from {name}")
+        if len(results) > 0:
+            await populate_metadata(name, common, results)
 
     for name, common in commons_config.adapter_commons.items():
-        logger.info(f"populating {name} using adapter: {common.adapter}")
+        logger.info(f"Populating {name} using adapter: {common.adapter}")
         results = adapters.get_metadata(
             common.adapter,
             common.mds_url,
@@ -121,8 +127,9 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
             common.keep_original_fields,
             common.global_field_filters,
         )
-        await populate_metadata(name, common, results)
-        logger.info(f"Got {len(results)} from {name}")
+        logger.info(f"Received {len(results)} from {name}")
+        if len(results) > 0:
+            await populate_metadata(name, common, results)
 
     res = await datastore.get_status()
     print(res)
