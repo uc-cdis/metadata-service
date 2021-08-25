@@ -1,7 +1,7 @@
 {
 	"gen3_commons": {
 		"IBD Commons": {
-			"mds_url": "https://ibdgc.datacommons.io5",
+			"mds_url": "https://ibdgc.datacommons.io",
 			"commons_url" : "ibdgc.datacommons.io",
 			"study_data_field" : "my_metadata",
 			"guid_type" : "my_metadata",
