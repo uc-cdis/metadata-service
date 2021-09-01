@@ -7,6 +7,7 @@ from mds.agg_mds.mds import pull_mds
 from mds.agg_mds.commons import MDSInstance, AdapterMDSInstance, Commons, parse_config
 from mds import config, logger
 from pathlib import Path
+from urllib.parse import urlparse
 import argparse
 import sys
 import json
@@ -106,7 +107,9 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
         print("aggregate MDS disabled")
         exit(1)
 
-    await datastore.init(hostname, port)
+    url_parts = urlparse(config.ES_ENDPOINT)
+
+    await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
     await datastore.drop_all()
 
     for name, common in commons_config.gen3_commons.items():

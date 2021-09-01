@@ -33,7 +33,8 @@ services:
       - .:/src
     environment:
       - USE_AGG_MDS=true
-    command: /env/bin/python /src/src/mds/populate.py --config /src/tests/config.json --hostname esproxy-service --port 9200
+      - GEN3_ES_ENDPOINT=http://esproxy-service:9200
+    command: /env/bin/python /src/src/mds/populate.py --config /src/tests/config.json
   db:
     image: postgres
     environment:
