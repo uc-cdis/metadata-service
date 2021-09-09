@@ -173,7 +173,8 @@ The two functions you need to override are: ```getRemoteDataAsJson``` and
 results = {"results": []}
 ```
 where each entry in the array is a JSON/Python dict. This function typically
-requires the least custom code. Feel free to use the existing set of adapters as a guide.
+requires the least custom code. Feel free to use the existing set of adapters as a guide. 
+The code can be found in [adapters.py](https://github.com/uc-cdis/metadata-service/blob/chore/add_adapter_doc/src/mds/agg_mds/adapters.py)
 
 The second function ```normalizeToGen3MDSFields``` is usually quite
 simple to code, and usually requires an additional function which is named ```addGen3ExpectedFields```. The code below is very typical for an adapter.
