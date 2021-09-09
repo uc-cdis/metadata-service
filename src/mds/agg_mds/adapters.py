@@ -30,12 +30,12 @@ def strip_html(s: str):
     return bleach.clean(s, tags=[], strip=True)
 
 
-def add_icpsr_source_url(id: str):
-    return f"https://www.icpsr.umich.edu/web/NAHDAP/studies/{id}"
+def add_icpsr_source_url(study_id: str):
+    return f"https://www.icpsr.umich.edu/web/NAHDAP/studies/{study_id}"
 
 
-def add_clinical_trials_source_url(id: str):
-    return f"https://clinicaltrials.gov/ct2/show/{id}"
+def add_clinical_trials_source_url(study_id: str):
+    return f"https://clinicaltrials.gov/ct2/show/{study_id}"
 
 
 class FieldFilters:
@@ -116,7 +116,7 @@ class RemoteMetadataAdapter(ABC):
         """ needs to be implemented in derived class """
 
     @staticmethod
-    def mapFields(item: dict, mappings: dict, global_filters: list = []) -> dict:
+    def mapFields(item: dict, mappings: dict, global_filters=None) -> dict:
         """
         Given a MetaData entry as a dict, and dictionary describing fields to add
         and optionally where to map an item entry from.
@@ -138,6 +138,9 @@ class RemoteMetadataAdapter(ABC):
         :param mappings:
         :return:
         """
+
+        if global_filters is None:
+            global_filters = []
 
         results = {}
 
@@ -208,7 +211,9 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     data_dict = xmltodict.parse(xmlData)
                     results["results"].append(data_dict)
                 except httpx.TimeoutException as exc:
-                    logger.error(f"An timeout error occurred while requesting {url}.")
+                    logger.error(
+                        f"An timeout error occurred while requesting {exc.request.url}."
+                    )
                     raise
                 except httpx.HTTPError as exc:
                     logger.error(
@@ -245,7 +250,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
             results["investigators"] = ",".join(results["investigators"])
         return results
 
-    def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
         """
         Iterates over the response from the Metadate service and extracts/maps
         required fields using the optional mapping dictionary and optionally sets
@@ -404,7 +409,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
 
         return results
 
-    def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
         """
         Iterates over the response.
         :param data:
@@ -483,7 +488,7 @@ class PDAPS(RemoteMetadataAdapter):
     def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         """
         Maps the items fields into Gen3 resources fields
-        if keepOriginal is False: only those fields will be included in the final entry
+        if keepOriginalFields is False: only those fields will be included in the final entry
         """
         results = item
         if mappings is not None:
@@ -499,7 +504,7 @@ class PDAPS(RemoteMetadataAdapter):
             results["investigators"] = results["investigators"].join(", ")
         return results
 
-    def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
         """
         Iterates over the response.
         :param data:
@@ -583,8 +588,19 @@ class Gen3Adapter(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
-        """"""
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters
+    ) -> Dict[str, Any]:
+        """
+        Given an item (metadata as a dict), map the item's keys into
+        the fields defined in mappings. If the original fields should
+        be preserved set keepOriginalFields to setPerItemValues.
+        * item: metadata to map fields from -> to
+        * mapping: dict to map field_name (possible a JSON Path) to a  normalize_name
+        * keepOriginalFields: if True keep all data in the item, if False only those fields in mappings
+                              will be in the returned item
+        * globalFieldFilters: filters to apply to all fields
+        """
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
@@ -597,11 +613,16 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
         return results
 
-    def normalizeToGen3MDSFields(self, data, **kwargs) -> Tuple[Dict, str]:
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
         """
         Iterates over the response.
-        :param data:
-        :return:
+        * data: input metadata to normalize
+        * kwargs: key value parameters passed as a dict
+        return: dict of results where the keys are identifiers in the Gen3 metadata format:
+                "GUID" : {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": normalize_item_metadata
+                    }
         """
 
         mappings = kwargs.get("mappings", None)
@@ -667,8 +688,11 @@ def get_metadata(
     mappings=None,
     perItemValues=None,
     keepOriginalFields=False,
-    globalFieldFilters=[],
+    globalFieldFilters=None,
 ):
+    if globalFieldFilters is None:
+        globalFieldFilters = []
+
     gather = None
     if adapter_name in adapters:
         gather = adapters[adapter_name]()
