@@ -27,6 +27,7 @@ jsonpath-ng = "^1.5.3"
 elasticsearch = "<7.0"
 bleach = ">=3.3.1"
 tenacity = ">=8.0.0"
+jsonschema = "^2.5.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
@@ -41,6 +42,7 @@ nest-asyncio = "^1.5.1"
 "maintain" = "mds.maintain"
 "index" = "mds.index"
 "objects" = "mds.objects"
+"file_objects" = "mds.file_objects"
 "agg_mds" = "mds.agg_mds"
 
 [build-system]

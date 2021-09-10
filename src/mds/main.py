@@ -91,7 +91,9 @@ class ClientDisconnectMiddleware:
 
 def load_modules(app=None):
     logger.info("Start to load modules.")
-    for ep in entry_points()["mds.modules"]:
+    # FIXME: Identify the cause for duplicate entry points (PXP-8443)
+    # Added a set on entry points to dodge the intermittent duplicate modules issue
+    for ep in set(entry_points()["mds.modules"]):
         mod = ep.load()
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
