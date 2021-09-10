@@ -10,7 +10,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from .admin_login import admin_required
+from .authz import admin_required
 from .models import db, Metadata
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")

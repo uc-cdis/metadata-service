@@ -3,7 +3,7 @@ from enum import Enum
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from fastapi import HTTPException, APIRouter, Security
+from fastapi import HTTPException, APIRouter, Depends, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 import jsonschema
@@ -25,6 +25,7 @@ from starlette.status import (
 )
 
 from . import config, logger
+from .authz import Auth
 from .indexd_schema import POST_RECORD_SCHEMA  # TODO rename/reorg that file
 from .models import FileObject
 from .query import get_metadata
@@ -40,12 +41,13 @@ async def get_file_object() -> list:
     TODO
     """
     requests = await FileObject.query.gino.all()
-    return [r.to_dict() for r in requests]
+    return {"records": [r.to_dict() for r in requests]}
 
 
 @mod.post("/file_objects")
 async def create_file_object(
     body: dict,  # TODO class instead of POST_RECORD_SCHEMA?
+    auth=Depends(Auth),
 ):
     """
     TODO
@@ -56,8 +58,7 @@ async def create_file_object(
         raise HTTPException(HTTP_400_BAD_REQUEST, err)
 
     authz = body.get("authz", [])
-    # TODO check user authorization to create record
-    # auth.authorize("create", authz)
+    await auth.authorize("create", authz)
 
     did = body.get("did")
     form = body["form"]
