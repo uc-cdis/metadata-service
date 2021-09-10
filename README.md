@@ -70,12 +70,17 @@ Try out the API at: <http://localhost:8000/docs>.
 
 ## Run tests
 
+Please note that the name of the test database is prepended with "test_", you
+need to create that database first:
+
+```bash
+psql
+CREATE DATABASE test_metadata;
+```
+
 ```bash
 pytest --cov=src --cov=migrations/versions tests
 ```
-
-Please note that, the name of the test database is prepended with "test_", you
-need to create that database too.
 
 ## Develop with Docker
 
