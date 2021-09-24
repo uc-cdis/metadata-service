@@ -91,7 +91,7 @@ def test_migrate_acls(client, user):
 
     # create the record
     res = client.post("/index/", json=data, headers=user)
-    rec = res.json
+    rec = res.json()
     assert res.status_code == 200
 
     # migrate
@@ -100,7 +100,7 @@ def test_migrate_acls(client, user):
 
     # check that the record has been migrated
     res = client.get("/" + rec["did"])
-    rec = res.json
+    rec = res.json()
     assert res.status_code == 200
     assert rec["acl"] == ["a", "b"]
     assert rec["metadata"] == {}

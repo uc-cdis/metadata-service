@@ -231,21 +231,6 @@ async def get_file_object_ids(
     """
     query = FileObject.query
 
-    # Enable joinedload on all relationships so that we won't have to
-    # do a bunch of selects when we assemble our response.
-    # query = query.options(
-    #     joinedload(IndexRecord.urls).joinedload(IndexRecordUrl.url_metadata)
-    # )
-    # query = query.options(joinedload(IndexRecord.acl))
-    # query = query.options(joinedload(IndexRecord.authz))
-    # query = query.options(joinedload(IndexRecord.hashes))
-    # query = query.options(joinedload(IndexRecord.index_metadata))
-    # query = query.options(joinedload(IndexRecord.aliases))
-
-    # query = query.where(
-    #     db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-    # )
-
     if start is not None:
         query = query.where(FileObject.did > start)
 
@@ -263,54 +248,34 @@ async def get_file_object_ids(
 
     # filter records that have ALL the URLs
     if urls:
-        query = query.where(FileObject.urls.overlap(urls))
-        # for u in urls:
-        #     query = query.where(FileObject.url == u)
+        query = query.where(FileObject.urls.contains(urls))
 
     # filter records that have ALL the ACL elements
     if acl:
-        query = query.where(FileObject.acl.overlap(acl))
-        # for ace in acl:
-        #     query = query.where(FileObject.acl == ace)
+        query = query.where(FileObject.acl.contains(acl))
     elif acl == []:
         query = query.where(FileObject.acl == None)
 
     # filter records that have ALL the authz elements
     if authz:
-        query = query.where(FileObject.authz.overlap(authz))
-        # for u in authz:
-        #     sub = session.query(IndexRecordAuthz.did).filter(
-        #         IndexRecordAuthz.resource == u
-        #     )
-        #     query = query.where(FileObject.did.in_(sub.subquery()))
+        query = query.where(FileObject.authz.contains(authz))
     elif authz == []:
         query = query.where(FileObject.authz == None)
 
-    # TODO
-    # if hashes:
-    #     for h, v in hashes.items():
-    #         sub = session.query(IndexRecordHash.did)
-    #         sub = sub.filter(
-    #             and_(
-    #                 IndexRecordHash.hash_type == h,
-    #                 IndexRecordHash.hash_value == v,
-    #             )
-    #         )
-    #         query = query.where(FileObject.did.in_(sub.subquery()))
+    if hashes:
+        for h, v in hashes.items():
+            query = query.where(FileObject.hashes[h].astext == v)
 
-    # TODO
-    # if metadata:
-    #     for k, v in metadata.items():
-    #         sub = session.query(IndexRecordMetadata.did)
-    #         sub = sub.filter(
-    #             and_(
-    #                 IndexRecordMetadata.key == k, IndexRecordMetadata.value == v
-    #             )
-    #         )
-    #         query = query.where(FileObject.did.in_(sub.subquery()))
+    if metadata:
+        for k, v in metadata.items():
+            query = query.where(FileObject.metadata[k].astext == v)
 
-    # TODO
-    # if urls_metadata:
+    if urls_metadata:
+        # TODO figure out how to filter "url_key" substring of "urls_metadata.
+        # key". ".contains()" doesn't work; it takes a dict, not a string
+        for url_key, url_dict in urls_metadata.items():
+            for k, v in url_dict.items():
+                query = query.where(FileObject.urls_metadata[url_key][k].astext == v)
     #     query = query.join(FileObject.urls).join(IndexRecordUrl.url_metadata)
     #     for url_key, url_dict in urls_metadata.items():
     #         query = query.where(IndexRecordUrlMetadata.url.contains(url_key))

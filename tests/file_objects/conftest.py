@@ -1,5 +1,6 @@
 import base64
-from flask import request
+
+# from flask import request
 import importlib
 import pytest
 import requests
@@ -7,39 +8,44 @@ import mock
 from unittest.mock import patch
 
 # indexd_server and indexd_client is needed as fixtures
-from cdisutilstest.code.conftest import indexd_server, indexd_client  # noqa
-from cdisutilstest.code.indexd_fixture import clear_database
+# from cdisutilstest.code.conftest import indexd_server, indexd_client  # noqa
+# from cdisutilstest.code.indexd_fixture import clear_database
 from gen3authz.client.arborist.client import ArboristClient
 
-from indexd import get_app
-from indexd import auth
-from indexd.auth.errors import AuthError
-from tests import default_test_settings
+# from indexd import get_app
+# from indexd import auth
+# from indexd.auth.errors import AuthError
+# from tests import default_test_settings
+
+
+# @pytest.fixture
+# def app():
+#     # this is to make sure sqlite is initialized
+#     # for every unittest
+#     from indexd import default_settings
+
+#     importlib.reload(default_settings)
+
+#     yield get_app(default_test_settings.settings)
+#     try:
+#         clear_database()
+#     except Exception:
+#         pass
 
 
 @pytest.fixture
-def app():
-    # this is to make sure sqlite is initialized
-    # for every unittest
-    from indexd import default_settings
-
-    importlib.reload(default_settings)
-
-    yield get_app(default_test_settings.settings)
-    try:
-        clear_database()
-    except Exception:
-        pass
+def user():
+    fake_jwt = "1.2.3"
+    return {"Authorization": f"bearer {fake_jwt}"}
 
 
-@pytest.fixture
-def user(app):
-    app.auth.add("test", "test")
-    yield {
-        "Authorization": ("Basic " + base64.b64encode(b"test:test").decode("ascii")),
-        "Content-Type": "application/json",
-    }
-    app.auth.delete("test")
+# def user(app):
+#     app.auth.add("test", "test")
+#     yield {
+#         "Authorization": ("Basic " + base64.b64encode(b"test:test").decode("ascii")),
+#         "Content-Type": "application/json",
+#     }
+#     app.auth.delete("test")
 
 
 @pytest.fixture

@@ -39,11 +39,11 @@ class FileObject(db.Model):
     version = Column(String, index=True)
     uploader = Column(String, index=True)
     urls = Column(ARRAY(String))
-    urls_metadata = Column(JSONB())  # array of objects
+    urls_metadata = Column(JSONB())
     acl = Column(ARRAY(String))
     authz = Column(ARRAY(String))
-    hashes = Column(JSONB())  # array of objects
-    metadata = Column(JSONB())  # array of objects
+    hashes = Column(JSONB())
+    metadata = Column(JSONB())
 
     # TODO alias array
     # name = Column(String, primary_key=True, unique=True)

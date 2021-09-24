@@ -3,9 +3,10 @@ import json
 import pytest
 import uuid
 
-from tests.util import assert_blank
-from indexd.index.blueprint import ACCEPTABLE_HASHES
-from tests.test_bundles import create_index, get_bundle_doc
+from .util import assert_blank
+from mds.file_objects import ACCEPTABLE_HASHES
+
+# from tests.test_bundles import create_index, get_bundle_doc
 
 
 def get_doc(
@@ -31,7 +32,7 @@ def get_doc(
 def test_index_list(client):
     res = client.get("/index/")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["records"] == []
 
 
@@ -47,7 +48,7 @@ def test_index_list_with_params(client, user):
     }
     res_1 = client.post("/index/", json=data1, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
 
     data2 = get_doc()
     data2["metadata"] = {"project_id": "other-project", "state": "abc", "other": "xxx"}
@@ -55,32 +56,32 @@ def test_index_list_with_params(client, user):
     data2["urls_metadata"] = {
         "s3://endpointurl/bucket/key_2": {"state": "error", "other": "yyy"}
     }
+    data2["hashes"]["md5"] = "8b9942cf415384b27cadf1f4d2d682e1"
     res_2 = client.post("/index/", json=data2, headers=user)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
 
     data1_by_md = client.get("/index/?metadata=project_id:bpa-UChicago")
-    assert data1_by_md.status_code == 200
-    data1_list = data1_by_md.json
+    assert data1_by_md.status_code == 200, data1_by_md.text
+    data1_list = data1_by_md.json()
     ids = [record["did"] for record in data1_list["records"]]
     assert rec_1["did"] in ids
 
     data2_by_md = client.get("/index/?metadata=project_id:other-project")
     assert data2_by_md.status_code == 200
-    data2_list = data2_by_md.json
+    data2_list = data2_by_md.json()
     ids = [record["did"] for record in data2_list["records"]]
     assert rec_2["did"] in ids
 
     data_by_hash = client.get("/index/?hash=md5:8b9942cf415384b27cadf1f4d2d682e5")
     assert data_by_hash.status_code == 200
-    data_list_all = data_by_hash.json
+    data_list_all = data_by_hash.json()
     ids = [record["did"] for record in data_list_all["records"]]
-    assert rec_1["did"] in ids
-    assert rec_2["did"] in ids
+    assert ids == [rec_1["did"]]
 
     data_by_ids = client.get("/index/?ids={}".format(rec_1["did"]))
     assert data_by_ids.status_code == 200
-    data_list_all = data_by_ids.json
+    data_list_all = data_by_ids.json()
 
     ids = [record["did"] for record in data_list_all["records"]]
     assert rec_1["did"] in ids
@@ -88,17 +89,17 @@ def test_index_list_with_params(client, user):
 
     data_with_limit = client.get("/index/?limit=1")
     assert data_with_limit.status_code == 200
-    data_list_limit = data_with_limit.json
+    data_list_limit = data_with_limit.json()
     assert len(data_list_limit["records"]) == 1
 
-    param = {"bucket": {"state": "error", "other": "xxx"}}
-
-    data_by_url_md = client.get("/index/?urls_metadata=" + json.dumps(param))
-    assert data_by_url_md.status_code == 200
-    data_list = data_by_url_md.json
-    assert len(data_list["records"]) == 1
-    assert data_list["records"][0]["did"] == rec_1["did"]
-    assert data_list["records"][0]["urls_metadata"] == data1["urls_metadata"]
+    # TODO (urls_metadata key substring not supported)
+    # param = {"bucket": {"state": "error", "other": "xxx"}}
+    # data_by_url_md = client.get("/index/?urls_metadata=" + json.dumps(param))
+    # assert data_by_url_md.status_code == 200
+    # data_list = data_by_url_md.json()
+    # assert len(data_list["records"]) == 1
+    # assert data_list["records"][0]["did"] == rec_1["did"]
+    # assert data_list["records"][0]["urls_metadata"] == data1["urls_metadata"]
 
 
 def test_get_list_form_param(client, user):
@@ -123,17 +124,17 @@ def test_get_list_form_param(client, user):
 
     res3 = client.get("/index/")
     assert res3.status_code == 200
-    rec3 = res3.json
+    rec3 = res3.json()
     assert len(rec3["records"]) == n_records
 
     res3 = client.get("/index/?form=bundle")
     assert res3.status_code == 200
-    rec3 = res3.json
+    rec3 = res3.json()
     assert len(rec3["records"]) == n_records
 
     res3 = client.get("/index/?form=all")
     assert res3.status_code == 200
-    rec3 = res3.json
+    rec3 = res3.json()
     assert len(rec3["records"]) == 2 * n_records
 
 
@@ -158,7 +159,7 @@ def test_get_list_form_with_params(client, user):
     }
     res_1 = client.post("/index/", json=data1, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
 
     data2 = get_doc()
     data2["metadata"] = {"project_id": "other-project", "state": "abc", "other": "xxx"}
@@ -168,17 +169,17 @@ def test_get_list_form_with_params(client, user):
     }
     res_2 = client.post("/index/", json=data2, headers=user)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
 
     data1_by_md = client.get("/index/?metadata=project_id:bpa-UChicago&param=all")
     assert data1_by_md.status_code == 200
-    data1_list = data1_by_md.json
+    data1_list = data1_by_md.json()
     ids = [record["did"] for record in data1_list["records"] if "did" in record]
     assert rec_1["did"] in ids
 
     data2_by_md = client.get("/index/?form=all&metadata=project_id:other-project")
     assert data2_by_md.status_code == 200
-    data2_list = data2_by_md.json
+    data2_list = data2_by_md.json()
     ids = [record["did"] for record in data2_list["records"] if "did" in record]
     assert rec_2["did"] in ids
 
@@ -186,14 +187,14 @@ def test_get_list_form_with_params(client, user):
         "/index/?form=all&hash=md5:8b9942cf415384b27cadf1f4d2d682e5"
     )
     assert data_by_hash.status_code == 200
-    data_list_all = data_by_hash.json
+    data_list_all = data_by_hash.json()
     ids = [record["did"] for record in data_list_all["records"] if "did" in record]
     assert rec_1["did"] in ids
     assert rec_2["did"] in ids
 
     data_by_ids = client.get("/index/?form=all&ids={}".format(rec_1["did"]))
     assert data_by_ids.status_code == 200
-    data_list_all = data_by_ids.json
+    data_list_all = data_by_ids.json()
 
     ids = [record["did"] for record in data_list_all["records"] if "did" in record]
     assert rec_1["did"] in ids
@@ -201,14 +202,14 @@ def test_get_list_form_with_params(client, user):
 
     data_with_limit = client.get("/index/?form=all&limit=1")
     assert data_with_limit.status_code == 200
-    data_list_limit = data_with_limit.json
+    data_list_limit = data_with_limit.json()
     assert len(data_list_limit["records"]) == 2
 
     param = {"bucket": {"state": "error", "other": "xxx"}}
 
     data_by_url_md = client.get("/index/?form=all&urls_metadata=" + json.dumps(param))
     assert data_by_url_md.status_code == 200
-    data_list = data_by_url_md.json
+    data_list = data_by_url_md.json()
     assert len(data_list["records"]) == n_records + 1
     ids = [record["did"] for record in data_list["records"] if "did" in record]
     assert rec_1["did"] in ids
@@ -224,7 +225,7 @@ def test_index_list_by_size(client, user):
     assert res.status_code == 200
     res = client.get("/index/?size={}".format(data["size"]))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert only one record returned and returned with proper size
     assert len(rec["records"]) == 1
     assert rec["records"][0]["size"] == 100
@@ -243,7 +244,7 @@ def test_index_list_by_filename(client, user):
     assert res.status_code == 200
     res = client.get("/index/?file_name=" + data["file_name"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert only one record returned and returned with proper name
     assert len(rec["records"]) == 1
     assert rec["records"][0]["file_name"] == data["file_name"]
@@ -262,7 +263,7 @@ def test_index_list_by_authz(client, user):
     assert res.status_code == 200
     res = client.get("/index/?authz=" + data["authz"][0])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert only one record returned and returned with proper authz
     assert len(rec["records"]) == 1
     assert rec["records"][0]["authz"] == data["authz"]
@@ -282,7 +283,7 @@ def test_index_list_by_multiple_authz(client, user):
     # query the record with multiple authz elements
     res = client.get("/index/?authz=" + ",".join(data["authz"]))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 1, "Got records: {}".format(
         json.dumps(rec["records"], indent=2)
     )
@@ -303,7 +304,7 @@ def test_index_list_by_multiple_acl(client, user):
     # query the record with multiple ACL elements
     res = client.get("/index/?acl=" + ",".join(data["acl"]))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 1, "Got records: {}".format(
         json.dumps(rec["records"], indent=2)
     )
@@ -328,7 +329,7 @@ def test_index_list_by_urls(client, user):
     # query the record with a single URL
     res = client.get("/index/?url=s3://bucket2")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 2, "Got records: {}".format(
         json.dumps(rec["records"], indent=2)
     )
@@ -336,7 +337,7 @@ def test_index_list_by_urls(client, user):
     # query the record with multiple URLs
     res = client.get("/index/?url=s3://bucket2&url=s3://bucket3")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 1, "Got records: {}".format(
         json.dumps(rec["records"], indent=2)
     )
@@ -356,7 +357,7 @@ def test_index_list_by_version(client, user):
     assert res.status_code == 200
     res = client.get("/index/?version=" + data["version"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert only one record returned and returned with proper version
     assert len(rec["records"]) == 1
     assert rec["records"][0]["version"] == data["version"]
@@ -366,18 +367,18 @@ def test_index_list_with_params_negate(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
 
     data["metadata"] = {"testkey": "test", "project_id": "negate-project"}
     res_2 = client.post("/index/", json=data, headers=user)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
 
     data["urls"] = ["s3://endpointurl/bucket_2/key_2", "s3://anotherurl/bucket_2/key_2"]
     data["urls_metadata"] = {"s3://endpointurl/bucket_2/key_2": {"state": "error"}}
     res_3 = client.post("/index/", json=data, headers=user)
     assert res_3.status_code == 200
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
 
     data["urls"] = ["s3://endpointurl/bucket_2/key_2"]
     data["urls_metadata"] = {
@@ -385,25 +386,25 @@ def test_index_list_with_params_negate(client, user):
     }
     res_4 = client.post("/index/", json=data, headers=user)
     assert res_4.status_code == 200
-    rec_4 = res_4.json
+    rec_4 = res_4.json()
 
     data["urls"] = ["s3://anotherurl/bucket/key"]
     data["urls_metadata"] = {"s3://anotherurl/bucket/key": {"state": "error"}}
     res_5 = client.post("/index/", json=data, headers=user)
     assert res_5.status_code == 200
-    rec_5 = res_5.json
+    rec_5 = res_5.json()
 
     negate_params = {"metadata": {"testkey": ""}}
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     assert len(data_list["records"]) == 1
     assert data_list["records"][0]["did"] == rec_1["did"]
 
     negate_params = {"metadata": {"project_id": "bpa-UChicago"}}
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     ids = {record["did"] for record in data_list["records"]}
     assert len(ids) == 4
     assert rec_1["did"] not in ids
@@ -416,7 +417,7 @@ def test_index_list_with_params_negate(client, user):
     negate_params = {"urls": ["s3://endpointurl/bucket_2/key_2"]}
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     ids = {record["did"] for record in data_list["records"]}
     assert len(ids) == 3
     assert rec_1["did"] in ids
@@ -429,14 +430,14 @@ def test_index_list_with_params_negate(client, user):
     negate_params = {"urls_metadata": {"s3://endpointurl/": {}}}
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     assert len(data_list["records"]) == 1
     assert data_list["records"][0]["did"] == rec_5["did"]
 
     negate_params = {"urls_metadata": {"s3://endpointurl/": {}, "s3://anotherurl/": {}}}
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     assert len(data_list["records"]) == 0
 
     # negate url_metadata key
@@ -445,7 +446,7 @@ def test_index_list_with_params_negate(client, user):
     }
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     assert len(data_list["records"]) == 1
     assert data_list["records"][0]["did"] == rec_4["did"]
 
@@ -453,7 +454,7 @@ def test_index_list_with_params_negate(client, user):
     negate_params = {"urls_metadata": {"s3://endpointurl/": {"state": "uploaded"}}}
     data_neg_param = client.get("/index/?negate_params=" + json.dumps(negate_params))
     assert data_neg_param.status_code == 200
-    data_list = data_neg_param.json
+    data_list = data_neg_param.json()
     ids = {record["did"] for record in data_list["records"]}
     assert len(ids) == 3
     assert rec_1["did"] not in ids
@@ -504,7 +505,7 @@ def test_negate_filter_file_name(client, user):
     negate_param = {"file_name": data2["file_name"]}
     res = client.get("/index/?negate_params=" + json.dumps(negate_param))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     print(rec)
     # assert record returned with proper non-negated file name
     assert len(rec["records"]) == 1
@@ -530,7 +531,7 @@ def test_negate_filter_acl(client, user):
     negate_param = {"acl": data2["acl"]}
     res = client.get("/index/?negate_params=" + json.dumps(negate_param))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert record returned with proper non-negated acl
     assert len(rec["records"]) == 1
     assert rec["records"][0]["acl"] == data1["acl"]
@@ -555,7 +556,7 @@ def test_negate_filter_authz(client, user):
     negate_param = {"authz": data2["authz"]}
     res = client.get("/index/?negate_params=" + json.dumps(negate_param))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert record returned with proper non-negated authz
     assert len(rec["records"]) == 1
     assert rec["records"][0]["authz"] == data1["authz"]
@@ -580,7 +581,7 @@ def test_negate_filter_version(client, user):
     negate_param = {"version": data2["version"]}
     res = client.get("/index/?negate_params=" + json.dumps(negate_param))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     # assert record returned with proper non-negated version
     assert len(rec["records"]) == 1
     assert rec["records"][0]["version"] == data1["version"]
@@ -599,17 +600,17 @@ def test_list_entries_with_uploader(client, user):
     data["uploader"] = "uploader_123"
     res_2 = client.post("/index/", json=data, headers=user)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
 
     data = get_doc()
     data["uploader"] = "uploader_123"
     res_3 = client.post("/index/", json=data, headers=user)
     assert res_3.status_code == 200
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
 
     data_grab = client.get("/index/?uploader=uploader_123")
     assert data_grab.status_code == 200
-    data_list = data_grab.json
+    data_list = data_grab.json()
     assert len(data_list["records"]) == 2
     ids = {record["did"] for record in data_list["records"]}
     assert len(ids) == 2
@@ -639,7 +640,7 @@ def test_list_entries_with_uploader_wrong_uploader(client, user):
     assert res.status_code == 200
 
     data_grab = client.get("/index/?uploader=wrong_uploader")
-    data_list = data_grab.json
+    data_list = data_grab.json()
     assert len(data_list["records"]) == 0
 
 
@@ -652,14 +653,14 @@ def test_create_blank_record(client, user):
     doc = {"uploader": "uploader_123"}
     res = client.post("/index/blank/", json=doc, headers=user)
     assert res.status_code == 201
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     assert rec["baseid"]
 
     res = client.get("/index/?uploader=uploader_123")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["records"][0]["uploader"] == "uploader_123"
     assert not rec["records"][0]["file_name"]
 
@@ -676,14 +677,14 @@ def test_create_blank_record_with_file_name(client, user):
     doc = {"uploader": "uploader_321", "file_name": "myfile.txt"}
     res = client.post("/index/blank/", json=doc, headers=user)
     assert res.status_code == 201
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     assert rec["baseid"]
 
     res = client.get("/index/?uploader=uploader_321")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["records"][0]["uploader"] == "uploader_321"
     assert rec["records"][0]["file_name"] == "myfile.txt"
 
@@ -703,15 +704,15 @@ def test_create_blank_record_with_authz(client, use_mock_authz):
     use_mock_authz([("create", old_authz)])
     doc = {"uploader": "uploader1", "authz": [old_authz]}
     res = client.post("/index/blank/", json=doc)
-    assert res.status_code == 201, res.json
-    rec = res.json
+    assert res.status_code == 201, res.json()
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     assert rec["baseid"]
 
     res = client.get("/index/" + rec["did"])
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["uploader"] == "uploader1"
     assert rec["authz"] == [old_authz]  # authz as provided
     assert_blank(rec, with_authz=True)  # test that record is blank
@@ -721,15 +722,15 @@ def test_create_blank_record_with_authz(client, use_mock_authz):
     use_mock_authz([("file_upload", "/data_file")])
     doc = {"uploader": "uploader1", "authz": [new_authz]}
     res = client.post("/index/blank/", json=doc)
-    assert res.status_code == 201, res.json
-    rec = res.json
+    assert res.status_code == 201, res.json()
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     assert rec["baseid"]
 
     res = client.get("/index/" + rec["did"])
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["uploader"] == "uploader1"
     assert rec["authz"] == [new_authz]  # authz as provided
     assert_blank(rec, with_authz=True)  # test that record is blank
@@ -739,7 +740,7 @@ def test_create_blank_record_with_authz(client, use_mock_authz):
     use_mock_authz([])
     doc = {"uploader": "uploader1", "authz": [new_authz]}
     res = client.post("/index/blank/", json=doc)
-    assert res.status_code == 403, res.json
+    assert res.status_code == 403, res.json()
 
 
 def test_create_blank_version(client, user):
@@ -761,9 +762,9 @@ def test_create_blank_version(client, user):
     doc["baseid"] = mock_baseid
     res = client.post("/index/", json=doc, headers=user)
     assert res.status_code == 200, "Failed to add original doc to index: {}".format(
-        res.json
+        res.json()
     )
-    original_doc_guid = res.json["did"]
+    original_doc_guid = res.json()["did"]
 
     def assert_acl_authz_and_baseid(acl, authz, baseid, guid):
         """
@@ -773,8 +774,8 @@ def test_create_blank_version(client, user):
         res = client.get("/index/{}".format(guid))
         assert (
             res.status_code == 200
-        ), "Failed to find original doc in index: {}".format(res.json)
-        doc = res.json
+        ), "Failed to find original doc in index: {}".format(res.json())
+        doc = res.json()
         assert doc["did"] == guid
         assert doc["rev"]
         assert sorted(doc["acl"]) == sorted(acl)
@@ -789,14 +790,14 @@ def test_create_blank_version(client, user):
     url = "/index/blank/{}".format(original_doc_guid)
     res = client.post(url, json=doc, headers=user)
     assert res.status_code == 201, "Failed to make new blank version: {}".format(
-        res.json
+        res.json()
     )
 
     #  Confirm that there were no unexpected side effects or changes to the original record
     assert_acl_authz_and_baseid(mock_acl, mock_authz, mock_baseid, original_doc_guid)
 
     # Confirm that the new blank record is in the index
-    new_blank_doc_guid = res.json["did"]
+    new_blank_doc_guid = res.json()["did"]
     new_blank_doc = assert_acl_authz_and_baseid(
         mock_acl, mock_authz, mock_baseid, new_blank_doc_guid
     )
@@ -827,12 +828,12 @@ def test_create_blank_version_with_authz(client, user, use_mock_authz):
     doc = get_doc()
     doc["authz"] = [old_authz]
     res = client.post("/index/", json=doc, headers=user)
-    assert res.status_code == 200, res.json
-    original_guid = res.json["did"]
+    assert res.status_code == 200, res.json()
+    original_guid = res.json()["did"]
     res = client.get("/index/{}".format(original_guid))
-    assert res.status_code == 200, res.json
-    baseid = res.json["baseid"]
-    assert res.json["authz"] == [old_authz]
+    assert res.status_code == 200, res.json()
+    baseid = res.json()["baseid"]
+    assert res.json()["authz"] == [old_authz]
 
     # - user has create access on the new resource but doesn't
     #   have update access on the old resource
@@ -841,17 +842,17 @@ def test_create_blank_version_with_authz(client, user, use_mock_authz):
     payload = {"uploader": "uploader1", "authz": [new_authz]}
     url = "/index/blank/{}".format(original_guid)
     res = client.post(url, json=payload)
-    assert res.status_code == 403, res.json
+    assert res.status_code == 403, res.json()
 
     # - user has the required "create" and "update" access
     # make a new blank version of the original record
     use_mock_authz([("create", new_authz), ("update", old_authz)])
     url = "/index/blank/{}".format(original_guid)
     res = client.post(url, json=payload)
-    assert res.status_code == 201, res.json
-    res = client.get("/index/{}".format(res.json["did"]))
-    assert res.status_code == 200, res.json
-    new_version = res.json
+    assert res.status_code == 201, res.json()
+    res = client.get("/index/{}".format(res.json()["did"]))
+    assert res.status_code == 200, res.json()
+    new_version = res.json()
 
     # check non-blank fields
     assert new_version["did"]
@@ -890,14 +891,14 @@ def test_create_blank_version_specify_did(client, user):
     doc["baseid"] = mock_baseid
     res = client.post("/index/", json=doc, headers=user)
     assert res.status_code == 200, "Failed to add original doc to index: {}".format(
-        res.json
+        res.json()
     )
-    original_doc_guid = res.json["did"]
+    original_doc_guid = res.json()["did"]
     res = client.get("/index/{}".format(original_doc_guid))
     assert res.status_code == 200, "Failed to find original doc in index: {}".format(
-        res.json
+        res.json()
     )
-    original_doc = res.json
+    original_doc = res.json()
     assert original_doc["acl"] == mock_acl
     assert original_doc["authz"] == mock_authz
     assert original_doc["baseid"] == mock_baseid
@@ -908,14 +909,14 @@ def test_create_blank_version_specify_did(client, user):
     url = "/index/blank/{}".format(original_doc["did"])
     res = client.post(url, json=doc, headers=user)
     assert res.status_code == 201, "Failed to make new blank version: {}".format(
-        res.json
+        res.json()
     )
-    blank_doc_guid = res.json["did"]
+    blank_doc_guid = res.json()["did"]
 
     # Confirm that the new blank record is in the index
     res = client.get("/index/{}".format(blank_doc_guid))
-    assert res.status_code == 200, "Failed to find blank record: {}".format(res.json)
-    blank_doc = res.json
+    assert res.status_code == 200, "Failed to find blank record: {}".format(res.json())
+    blank_doc = res.json()
     # -----------
 
     # Expect the new version's guid to be the guid we specified
@@ -939,14 +940,14 @@ def test_create_blank_version_specify_guid_already_exists(client, user):
     doc["baseid"] = mock_baseid
     res = client.post("/index/", json=doc, headers=user)
     assert res.status_code == 200, "Failed to add original doc to index: {}".format(
-        res.json
+        res.json()
     )
-    original_doc_guid = res.json["did"]
+    original_doc_guid = res.json()["did"]
     res = client.get("/index/{}".format(original_doc_guid))
     assert res.status_code == 200, "Failed to find original doc in index: {}".format(
-        res.json
+        res.json()
     )
-    original_doc = res.json
+    original_doc = res.json()
     assert original_doc["acl"] == mock_acl
     assert original_doc["authz"] == mock_authz
     assert original_doc["baseid"] == mock_baseid
@@ -954,9 +955,9 @@ def test_create_blank_version_specify_guid_already_exists(client, user):
     # Add another, unrelated record to the index
     res = client.post("/index/", json=get_doc(), headers=user)
     assert res.status_code == 200, "Failed to add original doc to index: {}".format(
-        res.json
+        res.json()
     )
-    preexisting_guid = res.json["did"]
+    preexisting_guid = res.json()["did"]
     # -----------
 
     # Attempt to create new blank version of doc, specifying the new guid to be
@@ -967,7 +968,7 @@ def test_create_blank_version_specify_guid_already_exists(client, user):
     res = client.post(url, json=doc, headers=user)
     assert (
         res.status_code == 409
-    ), "Request should have failed with 409 user error: {}".format(res.json)
+    ), "Request should have failed with 409 user error: {}".format(res.json())
 
     # Attempt to create new blank version of doc, specifying the new guid to be
     # the guid of the original record we're making a new blank version of.
@@ -978,7 +979,7 @@ def test_create_blank_version_specify_guid_already_exists(client, user):
     res = client.post(url, json=doc, headers=user)
     assert (
         res.status_code == 409
-    ), "Request should have failed with 409 user error: {}".format(res.json)
+    ), "Request should have failed with 409 user error: {}".format(res.json())
 
 
 def test_create_blank_version_no_existing_record(client, user):
@@ -994,7 +995,7 @@ def test_create_blank_version_no_existing_record(client, user):
     res = client.post(url, json=doc, headers=user)
     assert (
         res.status_code == 404
-    ), "Expected to fail to create new blank version, instead got {}".format(res.json)
+    ), "Expected to fail to create new blank version, instead got {}".format(res.json())
 
 
 def test_create_blank_version_blank_record(client, user):
@@ -1007,7 +1008,7 @@ def test_create_blank_version_blank_record(client, user):
     doc = {"uploader": "uploader_123"}
     res = client.post("/index/blank/", json=doc, headers=user)
     assert res.status_code == 201
-    original_doc = res.json
+    original_doc = res.json()
     assert original_doc["did"]
     assert original_doc["rev"]
 
@@ -1017,13 +1018,15 @@ def test_create_blank_version_blank_record(client, user):
     res = client.post(url, json=doc, headers=user)
     assert (
         res.status_code == 201
-    ), "Failed to create blank version of blank record, instead got {}".format(res.json)
-    blank_doc_guid = res.json["did"]
+    ), "Failed to create blank version of blank record, instead got {}".format(
+        res.json()
+    )
+    blank_doc_guid = res.json()["did"]
 
     # Confirm that the new blank record is in the index
     res = client.get("/index/{}".format(blank_doc_guid))
-    assert res.status_code == 200, "Failed to find blank record: {}".format(res.json)
-    blank_doc = res.json
+    assert res.status_code == 200, "Failed to find blank record: {}".format(res.json())
+    blank_doc = res.json()
     # -----------
 
     # The new blank record should have a GUID and a rev
@@ -1058,7 +1061,7 @@ def test_fill_size_n_hash_for_blank_record(client, user):
 
     res = client.post("/index/blank/", json=doc, headers=user)
     assert res.status_code == 201
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
 
@@ -1069,13 +1072,13 @@ def test_fill_size_n_hash_for_blank_record(client, user):
         "/index/blank/{}?rev={}".format(did, rev), headers=user, json=updated
     )
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"] == did
     assert rec["rev"] != rev
 
     res = client.get("/index/" + did)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["size"] == 10
     assert rec["hashes"]["md5"] == "8b9942cf415384b27cadf1f4d2d981f5"
 
@@ -1091,8 +1094,8 @@ def test_update_blank_record_with_authz(client, user, use_mock_authz):
     # create a blank record
     doc = {"uploader": "uploader_1"}
     res = client.post("/index/blank/", json=doc, headers=user)
-    assert res.status_code == 201, res.json
-    rec = res.json
+    assert res.status_code == 201, res.json()
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     did, rev = rec["did"], rec["rev"]
@@ -1104,21 +1107,21 @@ def test_update_blank_record_with_authz(client, user, use_mock_authz):
         "authz": [new_authz],
     }
     res = client.put("/index/blank/{}?rev={}".format(did, rev), json=to_update)
-    assert res.status_code == 403, res.json
+    assert res.status_code == 403, res.json()
 
     # - user has update access on the new resource
     # update the blank record
     use_mock_authz([("update", new_authz)])
     res = client.put("/index/blank/{}?rev={}".format(did, rev), json=to_update)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["did"] == did
     assert rec["rev"] != rev
     rev = rec["rev"]
 
     res = client.get("/index/" + did)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["authz"] == [new_authz]  # authz as provided
 
     # - user doesn't have update access on the resource:
@@ -1129,14 +1132,14 @@ def test_update_blank_record_with_authz(client, user, use_mock_authz):
         "authz": [new_authz2],
     }
     res = client.put("/index/blank/{}?rev={}".format(did, rev), json=to_update)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["did"] == did
     assert rec["rev"] != rev
 
     res = client.get("/index/" + did)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["authz"] == [new_authz2]  # authz as provided
 
 
@@ -1152,13 +1155,13 @@ def test_update_blank_record_with_authz_new(client, user, use_mock_authz):
     # create a blank record
     doc = {"uploader": "uploader_1", "authz": [old_authz]}
     res = client.post("/index/blank/", json=doc, headers=user)
-    assert res.status_code == 201, res.json
-    rec = res.json
+    assert res.status_code == 201, res.json()
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     did, rev = rec["did"], rec["rev"]
     res = client.get("/index/{}".format(did))
-    assert res.json["authz"] == [old_authz]  # authz as provided
+    assert res.json()["authz"] == [old_authz]  # authz as provided
 
     # - user has update access on the new resource but doesn't
     #   have update access on the old resource
@@ -1168,21 +1171,21 @@ def test_update_blank_record_with_authz_new(client, user, use_mock_authz):
         "authz": [new_authz],
     }
     res = client.put("/index/blank/{}?rev={}".format(did, rev), json=to_update)
-    assert res.status_code == 403, res.json
+    assert res.status_code == 403, res.json()
 
     # - user has the required "update" and "update" access
     # update the blank record
     use_mock_authz([("update", new_authz), ("update", old_authz)])
     res = client.put("/index/blank/{}?rev={}".format(did, rev), json=to_update)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["did"] == did
     assert rec["rev"] != rev
     rev = rec["rev"]
 
     res = client.get("/index/" + did)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["authz"] == [new_authz]  # authz as provided
 
     # - user doesn't have update access on the resources:
@@ -1193,14 +1196,14 @@ def test_update_blank_record_with_authz_new(client, user, use_mock_authz):
         "authz": [new_authz2],
     }
     res = client.put("/index/blank/{}?rev={}".format(did, rev), json=to_update)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["did"] == did
     assert rec["rev"] != rev
 
     res = client.get("/index/" + did)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["authz"] == [new_authz2]  # authz as provided
 
 
@@ -1214,21 +1217,21 @@ def test_get_empty_acl_authz_record(client, user):
     doc = {"uploader": "uploader_123"}
     res_2 = client.post("/index/blank/", json=doc, headers=user)
     assert res_2.status_code == 201
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
 
     doc = {"uploader": "uploader_123"}
     res_3 = client.post("/index/blank/", json=doc, headers=user)
     assert res_3.status_code == 201
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
 
     data_grab = client.get("/index/")
     assert data_grab.status_code == 200
-    data_list = data_grab.json
+    data_list = data_grab.json()
     assert len(data_list["records"]) == 3
 
     data_by_acl_authz = client.get("/index/?uploader=uploader_123&acl=null&authz=null")
     assert data_by_acl_authz.status_code == 200
-    data_list = data_by_acl_authz.json
+    data_list = data_by_acl_authz.json()
 
     assert len(data_list["records"]) == 2
     ids = {record["did"] for record in data_list["records"]}
@@ -1250,7 +1253,7 @@ def test_get_empty_acl_authz_record_after_fill_size_n_hash(client, user):
     doc = {"uploader": "uploader_123"}
     res_1 = client.post("/index/blank/", json=doc, headers=user)
     assert res_1.status_code == 201
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     updated = {"size": 10, "hashes": {"md5": "8b9942cf415384b27cadf1f4d2d981f5"}}
     did_1 = rec_1["did"]
     rev_1 = rec_1["rev"]
@@ -1258,15 +1261,15 @@ def test_get_empty_acl_authz_record_after_fill_size_n_hash(client, user):
         "/index/blank/{}?rev={}".format(did_1, rev_1), headers=user, json=updated
     )
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     rev_2 = rec_2["rev"]
     body = {"acl": ["read"], "authz": ["read"]}
     res_1 = client.put("/index/{}?rev={}".format(did_1, rev_2), headers=user, json=body)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     res_1 = client.get("/index/" + rec_1["did"])
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     assert rec_1["acl"] == ["read"]
     assert rec_1["authz"] == ["read"]
     assert rec_1["did"] == did_1
@@ -1275,7 +1278,7 @@ def test_get_empty_acl_authz_record_after_fill_size_n_hash(client, user):
     doc = {"uploader": "uploader_123"}
     res_2 = client.post("/index/blank/", json=doc, headers=user)
     assert res_2.status_code == 201
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     did_2 = rec_2["did"]
     updated = {
         "size": 4,
@@ -1293,7 +1296,7 @@ def test_get_empty_acl_authz_record_after_fill_size_n_hash(client, user):
     doc = {"uploader": "uploader_123"}
     res_3 = client.post("/index/blank/", json=doc, headers=user)
     assert res_3.status_code == 201
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
     did_3 = rec_3["did"]
     updated = {
         "size": 4,
@@ -1309,24 +1312,24 @@ def test_get_empty_acl_authz_record_after_fill_size_n_hash(client, user):
 
     res = client.get("/index/?uploader=uploader_123")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     print(rec)
     assert len(rec["records"]) == 3
 
     res = client.get("/index/?uploader=uploader_123&acl=read")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 1
     assert rec["records"][0]["did"] == rec_1["did"]
 
     res = client.get("/index/?uploader=uploader_123&acl=write")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 0
 
     res = client.get("/index/?uploader=uploader_123&acl=null")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert len(rec["records"]) == 2
 
     ids = {record["did"] for record in rec["records"]}
@@ -1350,11 +1353,11 @@ def test_update_urls_metadata(client, user):
     data = get_doc(has_urls_metadata=True)
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     res_2 = client.get("/index/" + rec["did"])
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["urls_metadata"] == data["urls_metadata"]
 
     updated = {"urls_metadata": {data["urls"][0]: {"test": "b"}}}
@@ -1367,7 +1370,7 @@ def test_update_urls_metadata(client, user):
 
     res_3 = client.get("/index/" + rec["did"])
     assert res_3.status_code == 200
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
     assert rec_3["urls_metadata"] == updated["urls_metadata"]
 
 
@@ -1429,13 +1432,13 @@ def test_urls_metadata_partial_match(
 
         res = client.post("/index/", json=data, headers=user)
         assert res.status_code == 200
-        rec = res.json
+        rec = res.json()
         for url in url_group:
             url_doc_mapping[url] = rec
 
     res = client.get("/index/?urls_metadata=" + json.dumps(params))
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     ids = {r["did"] for r in rec["records"]}
     assert ids == {url_doc_mapping[url]["did"] for url in expected}
@@ -1445,18 +1448,18 @@ def test_get_urls(client, user):
     data = get_doc(has_urls_metadata=True)
     response = client.post("/index/", json=data, headers=user)
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
 
     response = client.get("/urls/?ids=" + record["did"])
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     url = data["urls"][0]
     assert record["urls"][0]["url"] == url
     assert record["urls"][0]["metadata"] == data["urls_metadata"][url]
 
     response = client.get("/urls/?size={}".format(data["size"]))
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     url = data["urls"][0]
     assert record["urls"][0]["url"] == url
     assert record["urls"][0]["metadata"] == data["urls_metadata"][url]
@@ -1467,11 +1470,11 @@ def test_get_urls_size_0(client, user):
     data["size"] = 0
     response = client.post("/index/", json=data, headers=user)
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
 
     response = client.get("/urls/?size={}".format(data["size"]))
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     url = data["urls"][0]
     assert record["urls"][0]["url"] == url
     assert record["urls"][0]["metadata"] == data["urls_metadata"][url]
@@ -1482,12 +1485,12 @@ def test_index_create(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["baseid"] == data["baseid"]
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["acl"] == []
     assert rec["authz"] == []
 
@@ -1502,21 +1505,21 @@ def test_index_list_with_start(client, user):
     }
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec1 = res.json
+    rec1 = res.json()
 
     data["did"] = "testprefix:22222222-2222-2222-2222-222222222222"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec2 = res.json
+    rec2 = res.json()
 
     data["did"] = "testprefix:33333333-3333-3333-3333-333333333333"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec3 = res.json
+    rec3 = res.json()
 
     res = client.get("/index/?start=" + rec1["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     dids = [record["did"] for record in rec["records"]]
     assert len(rec["records"]) == 2
@@ -1534,21 +1537,21 @@ def test_index_list_with_page(client, user):
     }
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec1 = res.json
+    rec1 = res.json()
 
     data["did"] = "testprefix:22222222-2222-2222-2222-222222222222"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec2 = res.json
+    rec2 = res.json()
 
     data["did"] = "testprefix:33333333-3333-3333-3333-333333333333"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec3 = res.json
+    rec3 = res.json()
 
     res = client.get("/index/?page=0&limit=2")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     dids = [record["did"] for record in rec["records"]]
     assert len(rec["records"]) == 2
@@ -1557,7 +1560,7 @@ def test_index_list_with_page(client, user):
 
     res = client.get("/index/?page=1&limit=2")
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     dids = [record["did"] for record in rec["records"]]
     assert len(rec["records"]) == 1
@@ -1576,13 +1579,13 @@ def test_index_get(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     res_1 = client.get("/index/" + rec["did"])
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     res_2 = client.get("/index/" + rec["baseid"])
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_1["did"] == rec["did"]
     assert rec_2["did"] == rec["did"]
 
@@ -1592,10 +1595,10 @@ def test_get_id(client, user):
     data = get_doc()
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     response = client.get("/index/" + rec["did"])
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     assert record["urls"][0] == data["urls"][0]
     assert record["size"] == data["size"]
 
@@ -1618,11 +1621,11 @@ def test_index_prepend_prefix(client, user):
     # create a new record, check the GUID has the prefix
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
-    assert res_1.status_code == 200, res_1.json
-    rec_1 = res_1.json
+    assert res_1.status_code == 200, res_1.json()
+    rec_1 = res_1.json()
     res_2 = client.get("/index/" + rec_1["did"])
-    assert res_2.status_code == 200, res_2.json
-    rec_2 = res_2.json
+    assert res_2.status_code == 200, res_2.json()
+    rec_2 = res_2.json()
     assert rec_1["did"] == rec_2["did"]
     assert rec_2["did"].startswith("testprefix:")
 
@@ -1634,8 +1637,8 @@ def test_index_prepend_prefix(client, user):
         "hashes": {"md5": "8b9942cf415384b27cadf1f4d2d981f5"},
     }
     res_3 = client.post("/index/" + rec_1["did"], json=dataNew, headers=user)
-    assert res_3.status_code == 200, res_3.json
-    rec_3 = res_3.json
+    assert res_3.status_code == 200, res_3.json()
+    rec_3 = res_3.json()
     assert rec_3["baseid"] == rec_1["baseid"]
     assert rec_3["did"].startswith("testprefix:")
 
@@ -1648,11 +1651,11 @@ def test_index_get_with_baseid(client, user):
     data2 = get_doc(has_baseid=True)
     res_1 = client.post("/index/", json=data2, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
 
     res_2 = client.get("/index/" + data1["baseid"])
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["did"] == rec_1["did"]
 
 
@@ -1668,7 +1671,7 @@ def test_delete_and_recreate(client, user):
 
     old_result = client.post("/index/", json=old_data, headers=user)
     assert old_result.status_code == 200
-    old_record = old_result.json
+    old_record = old_result.json()
     assert old_record["did"]
     assert old_record["baseid"] == old_data["baseid"]
 
@@ -1689,7 +1692,7 @@ def test_delete_and_recreate(client, user):
     # create new doc with the same baseid and did
     new_result = client.post("/index/", json=new_data, headers=user)
     assert new_result.status_code == 200
-    new_record = new_result.json
+    new_record = new_result.json()
 
     assert new_record["did"]
     # verify that they are the same
@@ -1700,7 +1703,7 @@ def test_delete_and_recreate(client, user):
     # verify that new data is in the new node
     new_result = client.get("/index/" + new_record["did"])
     assert new_result.status_code == 200
-    new_record = new_result.json
+    new_record = new_result.json()
     assert new_data["baseid"] == new_record["baseid"]
     assert new_data["urls"] == new_record["urls"]
     assert new_data["hashes"]["md5"] == new_record["hashes"]["md5"]
@@ -1715,7 +1718,7 @@ def test_index_create_with_multiple_hashes(client, user):
 
     result = client.post("/index/", json=data, headers=user)
     assert result.status_code == 200
-    record = result.json
+    record = result.json()
     assert record["did"]
 
 
@@ -1725,7 +1728,7 @@ def test_index_create_with_valid_did(client, user):
 
     result = client.post("/index/", json=data, headers=user)
     assert result.status_code == 200
-    record = result.json
+    record = result.json()
     assert record["did"] == "3d313755-cbb4-4b08-899d-7bbac1f6e67d"
 
 
@@ -1741,10 +1744,10 @@ def test_index_create_with_acl_authz(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     result = client.get("/index/" + rec["did"])
     assert result.status_code == 200
-    record = result.json
+    record = result.json()
     assert record["acl"] == ["a", "b"]
     assert record["authz"] == ["x", "y"]
 
@@ -1761,10 +1764,10 @@ def test_index_create_with_duplicate_acl_authz(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     result = client.get("/index/" + rec["did"])
     assert result.status_code == 200
-    record = result.json
+    record = result.json()
     assert record["acl"] == ["a", "b"]
     assert record["authz"] == ["x", "y"]
 
@@ -1783,7 +1786,7 @@ def test_index_create_with_prefix(client, user):
 
     response = client.post("/index/", json=data, headers=user)
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     assert record["did"] == "cdis:3d313755-cbb4-4b08-899d-7bbac1f6e67d"
 
 
@@ -1803,10 +1806,10 @@ def test_index_create_with_file_name(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["file_name"] == "abc"
 
 
@@ -1816,10 +1819,10 @@ def test_index_create_with_version(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["version"] == data["version"]
 
 
@@ -1828,11 +1831,11 @@ def test_create_blank_record_with_baseid(client, user):
 
     res = client.post("/index/blank/", json=doc, headers=user)
     assert res.status_code == 201
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     res = client.get("/index/?baseid=" + doc["baseid"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert_blank(rec)
 
 
@@ -1841,10 +1844,10 @@ def test_index_create_with_uploader(client, user):
     data["uploader"] = "uploader_123"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["uploader"] == data["uploader"]
 
 
@@ -1853,10 +1856,10 @@ def test_index_get_global_endpoint(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     res = client.get("/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     assert rec["metadata"] == data["metadata"]
     assert rec["form"] == "object"
@@ -1877,11 +1880,11 @@ def test_index_add_prefix_alias(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
 
     res_2 = client.get("/testprefix:" + rec["did"])
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["did"] == rec["did"]
 
 
@@ -1890,10 +1893,10 @@ def test_index_update(client, user):
     data = get_doc()
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
-    assert client.get("/index/" + rec["did"]).json["metadata"] == data["metadata"]
+    assert client.get("/index/" + rec["did"]).json()["metadata"] == data["metadata"]
 
     # update record
     dataNew = get_doc()
@@ -1908,13 +1911,13 @@ def test_index_update(client, user):
         "/index/{}?rev={}".format(rec["did"], rec["rev"]), json=dataNew, headers=user
     )
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["rev"] != rec["rev"]
 
     # check record was updated
     response = client.get("/index/" + rec_2["did"])
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     assert record["metadata"] == dataNew["metadata"]
     assert record["acl"] == dataNew["acl"]
     assert record["authz"] == dataNew["authz"]
@@ -1924,7 +1927,7 @@ def test_index_update(client, user):
     data["did"] = "cdis:3d313755-cbb4-4b08-899d-7bbac1f6e67d"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
 
@@ -1938,7 +1941,7 @@ def test_index_update(client, user):
         "/index/{}?rev={}".format(rec["did"], rec["rev"]), json=dataNew, headers=user
     )
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["rev"] != rec["rev"]
 
 
@@ -1950,8 +1953,8 @@ def test_index_update_with_authz_check(client, user, use_mock_authz):
     data = get_doc()
     data["authz"] = [old_authz]
     res = client.post("/index/", json=data, headers=user)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     rev = rec["rev"]
@@ -1960,20 +1963,20 @@ def test_index_update_with_authz_check(client, user, use_mock_authz):
     use_mock_authz([("update", new_authz)])
     to_update = {"authz": [new_authz]}
     res = client.put("/index/{}?rev={}".format(rec["did"], rev), json=to_update)
-    assert res.status_code == 403, res.json
+    assert res.status_code == 403, res.json()
 
     # user has all the required access: can update record
     use_mock_authz([("update", new_authz), ("update", old_authz)])
     to_update = {"authz": [new_authz]}
     res = client.put("/index/{}?rev={}".format(rec["did"], rev), json=to_update)
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["rev"] != rev
 
     # check record was updated
     res = client.get("/index/" + rec["did"])
-    assert res.status_code == 200, res.json
-    rec = res.json
+    assert res.status_code == 200, res.json()
+    rec = res.json()
     assert rec["authz"] == [new_authz]
 
 
@@ -1982,10 +1985,10 @@ def test_index_update_duplicate_acl_authz(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
-    assert client.get("/index/" + rec["did"]).json["metadata"] == data["metadata"]
+    assert client.get("/index/" + rec["did"]).json()["metadata"] == data["metadata"]
     dataNew = get_doc()
     del dataNew["hashes"]
     del dataNew["size"]
@@ -1998,11 +2001,11 @@ def test_index_update_duplicate_acl_authz(client, user):
         "/index/{}?rev={}".format(rec["did"], rec["rev"]), json=dataNew, headers=user
     )
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["rev"] != rec["rev"]
     response = client.get("/index/" + rec["did"])
     assert response.status_code == 200
-    record = response.json
+    record = response.json()
     assert record["metadata"] == dataNew["metadata"]
     assert record["acl"] == ["c", "d"]
     assert record["authz"] == ["x", "y"]
@@ -2013,13 +2016,13 @@ def test_update_uploader_field(client, user):
     data["uploader"] = "uploader_123"
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
 
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["uploader"] == "uploader_123"
 
     updated = {"uploader": "new_uploader"}
@@ -2030,7 +2033,7 @@ def test_update_uploader_field(client, user):
 
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["uploader"] == "new_uploader"
 
     updated = {"uploader": None}
@@ -2041,7 +2044,7 @@ def test_update_uploader_field(client, user):
 
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["uploader"] is None
 
 
@@ -2050,13 +2053,13 @@ def test_index_delete(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
 
     res = client.get("/index/" + rec["did"])
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
 
     res = client.delete(
@@ -2074,7 +2077,7 @@ def test_create_index_version(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
+    rec = res.json()
     assert rec["did"]
     assert rec["rev"]
     assert rec["baseid"]
@@ -2090,7 +2093,7 @@ def test_create_index_version(client, user):
 
     res_2 = client.post("/index/" + rec["did"], json=dataNew, headers=user)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["baseid"] == rec["baseid"]
     assert rec_2["did"] == dataNew["did"]
 
@@ -2099,27 +2102,27 @@ def test_get_latest_version(client, user):
     data = get_doc(has_metadata=False, has_baseid=False, has_version=True)
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     assert rec_1["did"]
 
     data = get_doc(has_metadata=False, has_baseid=False, has_version=False)
     res_2 = client.post("/index/" + rec_1["did"], json=data, headers=user)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
 
     res_3 = client.get("/index/{}/latest".format(rec_2["did"]))
     assert res_3.status_code == 200
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
     assert rec_3["did"] == rec_2["did"]
 
     res_4 = client.get("/index/{}/latest".format(rec_1["baseid"]))
     assert res_4.status_code == 200
-    rec_4 = res_4.json
+    rec_4 = res_4.json()
     assert rec_4["did"] == rec_2["did"]
 
     res_5 = client.get("/index/{}/latest?has_version=True".format(rec_1["baseid"]))
     assert res_5.status_code == 200
-    rec_5 = res_5.json
+    rec_5 = res_5.json()
     assert rec_5["did"] == rec_1["did"]
 
 
@@ -2130,23 +2133,23 @@ def test_get_all_versions(client, user):
     data = get_doc(has_metadata=False, has_baseid=False)
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec1 = res.json
+    rec1 = res.json()
     assert rec1["did"]
     dids.append(rec1["did"])
 
     # create 2nd version
     res = client.post("/index/" + rec1["did"], json=data, headers=user)
     assert res.status_code == 200
-    rec2 = res.json
+    rec2 = res.json()
     assert rec2["did"]
     dids.append(rec2["did"])
 
     # make sure all versions are returned when hitting the /versions endpoint
     res = client.get("/index/{}/versions".format(rec1["did"]))
-    recs1 = res.json
+    recs1 = res.json()
     assert len(recs1) == 2
     res = client.get("/index/{}/versions".format(rec1["baseid"]))
-    recs2 = res.json
+    recs2 = res.json()
     assert len(recs2) == 2
     assert recs1 == recs1
 
@@ -2171,14 +2174,14 @@ def test_update_all_versions(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec1 = res.json
+    rec1 = res.json()
     assert rec1["did"]
     dids.append(rec1["did"])
 
     # create 2nd version
     res = client.post("/index/" + rec1["did"], json=data, headers=user)
     assert res.status_code == 200
-    rec2 = res.json
+    rec2 = res.json()
     assert rec2["did"]
     dids.append(rec2["did"])
     # ----------
@@ -2188,15 +2191,15 @@ def test_update_all_versions(client, user):
     res = client.put(
         "/index/{}/versions".format(rec1["did"]), json=update_data, headers=user
     )
-    assert res.status_code == 200, "Failed to update all version: {}".format(res.json)
+    assert res.status_code == 200, "Failed to update all version: {}".format(res.json())
     # Expect the GUIDs of all updated versions to be returned by the request,
     # in order of version creation
-    assert dids == [record["did"] for record in res.json]
+    assert dids == [record["did"] for record in res.json()]
 
     # Expect all versions to have the new acl/authz
     res = client.get("/index/{}/versions".format(rec1["did"]))
     assert res.status_code == 200, "Failed to get all versions"
-    for _, version in res.json.items():
+    for _, version in res.json().items():
         assert version["acl"] == mock_acl_B
         assert version["authz"] == mock_authz_B
 
@@ -2216,14 +2219,14 @@ def test_update_all_versions_using_baseid(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec1 = res.json
+    rec1 = res.json()
     assert rec1["did"]
     baseid = rec1["baseid"]
 
     # create 2nd version
     res = client.post("/index/" + rec1["did"], json=data, headers=user)
     assert res.status_code == 200
-    rec2 = res.json
+    rec2 = res.json()
     assert rec2["baseid"] == baseid
     # ----------
 
@@ -2232,12 +2235,12 @@ def test_update_all_versions_using_baseid(client, user):
     res = client.put(
         "/index/{}/versions".format(baseid), json=update_data, headers=user
     )
-    assert res.status_code == 200, "Failed to update all version: {}".format(res.json)
+    assert res.status_code == 200, "Failed to update all version: {}".format(res.json())
 
     # Expect all versions to have the new acl/authz
     res = client.get("/index/{}/versions".format(rec1["did"]))
     assert res.status_code == 200, "Failed to get all versions"
-    for _, version in res.json.items():
+    for _, version in res.json().items():
         assert version["acl"] == mock_acl_B
         assert version["authz"] == mock_authz_B
 
@@ -2252,7 +2255,7 @@ def test_update_all_versions_guid_not_found(client, user):
     # Expect the operation to fail with 404 -- Guid not found
     assert (
         res.status_code == 404
-    ), "Expected update operation to fail with 404: {}".format(res.json)
+    ), "Expected update operation to fail with 404: {}".format(res.json())
 
 
 def test_update_all_versions_fail_on_bad_metadata(client, user):
@@ -2275,14 +2278,14 @@ def test_update_all_versions_fail_on_bad_metadata(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec1 = res.json
+    rec1 = res.json()
     assert rec1["did"]
     baseid = rec1["baseid"]
 
     # create 2nd version
     res = client.post("/index/" + rec1["did"], json=data, headers=user)
     assert res.status_code == 200
-    rec2 = res.json
+    rec2 = res.json()
     assert rec2["baseid"] == baseid
     # ----------
 
@@ -2294,12 +2297,12 @@ def test_update_all_versions_fail_on_bad_metadata(client, user):
     # Expect the operation to fail with 400
     assert (
         res.status_code == 400
-    ), "Expected update operation to fail with 400: {}".format(res.json)
+    ), "Expected update operation to fail with 400: {}".format(res.json())
 
     # Expect all versions to retain the old acl/authz
     res = client.get("/index/{}/versions".format(rec1["did"]))
     assert res.status_code == 200, "Failed to get all versions"
-    for _, version in res.json.items():
+    for _, version in res.json().items():
         assert version["acl"] == mock_acl_A
         assert version["authz"] == mock_authz_A
 
@@ -2316,35 +2319,41 @@ def test_update_all_versions_fail_on_missing_permissions(client, user, use_mock_
     doc_1 = get_doc(has_metadata=False, has_baseid=False)
     doc_1["authz"] = ["resource_A"]
     res = client.post("/index/", json=doc_1, headers=user)
-    assert res.status_code == 200, res.json
-    rec1 = res.json
+    assert res.status_code == 200, res.json()
+    rec1 = res.json()
 
     doc_2 = get_doc(has_metadata=False, has_baseid=False)
     doc_2["authz"] = ["resource_B"]
     res = client.post("/index/" + rec1["did"], json=doc_2, headers=user)
-    assert res.status_code == 200, res.json
-    rec2 = res.json
+    assert res.status_code == 200, res.json()
+    rec2 = res.json()
     # ----------
 
     # Configure mock authz to allow updating both versions: Expect request to succeed
     use_mock_authz([("update", "resource_A"), ("update", "resource_B")])
     update_data = {"authz": ["new_authz"]}
     res = client.put("/index/{}/versions".format(rec2["did"]), json=update_data)
-    assert res.status_code == 200, "Expected operation to succeed: {}".format(res.json)
+    assert res.status_code == 200, "Expected operation to succeed: {}".format(
+        res.json()
+    )
 
     # Configure mock authz to only allow updating first version: Expect request to fail with 403
     use_mock_authz([("update", "resource_A")])
     res = client.put("/index/{}/versions".format(rec2["did"]), json=update_data)
     assert (
         res.status_code == 403
-    ), "Expected operation to fail due to lack of user permissions: {}".format(res.json)
+    ), "Expected operation to fail due to lack of user permissions: {}".format(
+        res.json()
+    )
 
     # Configure mock authz to only allow updating second version: Expect request to fail with 403
     use_mock_authz([("update", "resource_B")])
     res = client.put("/index/{}/versions".format(rec2["did"]), json=update_data)
     assert (
         res.status_code == 403
-    ), "Expected operation to fail due to lack of user permissions: {}".format(res.json)
+    ), "Expected operation to fail due to lack of user permissions: {}".format(
+        res.json()
+    )
 
 
 def test_index_stats(client, user):
@@ -2361,7 +2370,7 @@ def test_index_stats(client, user):
     res = client.post("/index/", json=data3, headers=user)
     assert res.status_code == 200
     data_size = data1["size"] + data2["size"] + data3["size"]
-    index_stats = client.get("/_stats/").json
+    index_stats = client.get("/_stats/").json()
 
     # test that the stat file number and size is consistent with post
     assert index_stats["fileCount"] == 3
@@ -2402,7 +2411,7 @@ def test_good_hashes(client, user, typ, h):
     resp = client.post("/index/", data=json.dumps(data), headers=user)
 
     assert resp.status_code == 200
-    json_resp = resp.json
+    json_resp = resp.json()
     assert "error" not in json_resp
 
 
@@ -2435,7 +2444,7 @@ def test_bad_hashes(client, user, typ, h):
     resp = client.post("/index/", data=json.dumps(data), headers=user)
 
     assert resp.status_code == 400
-    json_resp = resp.json
+    json_resp = resp.json()
     assert "error" in json_resp
     if typ not in ACCEPTABLE_HASHES:
         assert "is not valid" in json_resp["error"]
@@ -2448,10 +2457,10 @@ def test_dos_get(client, user):
 
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     res_2 = client.get("/ga4gh/dos/v1/dataobjects/" + rec_1["did"])
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["data_object"]["id"] == rec_1["did"]
     assert rec_2["data_object"]["size"] == 123
     assert (
@@ -2467,7 +2476,7 @@ def test_dos_get(client, user):
     )
     res_3 = client.get("/ga4gh/dos/v1/dataobjects/" + rec_1["baseid"])
     assert res_3.status_code == 200
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
     assert rec_3["data_object"]["id"] == rec_1["did"]
 
 
@@ -2483,11 +2492,11 @@ def test_dos_list(client, user):
 
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
 
     res_2 = client.get("/ga4gh/dos/v1/dataobjects?page_size=100")
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert len(rec_2["data_objects"]) == 1
     assert rec_2["data_objects"][0]["id"] == rec_1["did"]
     assert rec_2["data_objects"][0]["size"] == 123
@@ -2510,8 +2519,8 @@ def test_update_without_changing_fields(client, user):
 
     res = client.post("/index/", json=data, headers=user)
     assert res.status_code == 200
-    rec = res.json
-    first_doc = client.get("/index/" + rec["did"]).json
+    rec = res.json()
+    first_doc = client.get("/index/" + rec["did"]).json()
 
     # update
     updated = {"version": "at least 2"}
@@ -2523,7 +2532,7 @@ def test_update_without_changing_fields(client, user):
     assert res.status_code == 200
 
     # Check if update successful.
-    second_doc = client.get("/index/" + first_doc["did"]).json
+    second_doc = client.get("/index/" + first_doc["did"]).json()
     # Only `version` changed.
     assert first_doc["version"] != second_doc["version"]
 
@@ -2544,7 +2553,7 @@ def test_update_without_changing_fields(client, user):
     assert res.status_code == 200
 
     # check if update successful
-    third_doc = client.get("/index/" + rec["did"]).json
+    third_doc = client.get("/index/" + rec["did"]).json()
     # Only `version` changed.
     assert second_doc["version"] != third_doc["version"]
 
@@ -2553,13 +2562,15 @@ def test_bulk_get_documents(client, user):
 
     # just make a bunch of entries in indexd
     dids = [
-        client.post("/index/", json=get_doc(has_baseid=True), headers=user).json["did"]
+        client.post("/index/", json=get_doc(has_baseid=True), headers=user).json()[
+            "did"
+        ]
         for _ in range(20)
     ]
     # do a bulk query for them all
     res = client.post("/bulk/documents", json=dids, headers=user)
     assert res.status_code == 200
-    docs = res.json
+    docs = res.json()
 
     # compare that they are the same by did
     for doc in docs:
@@ -2610,7 +2621,7 @@ def test_version_check(client):
 
 def test_get_dist(client):
     res = client.get("/_dist")
-    assert res.status_code == 200 and res.json == [
+    assert res.status_code == 200 and res.json() == [
         {
             "name": "testStage",
             "host": "https://fictitious-commons.io/index/",

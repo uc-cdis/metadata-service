@@ -259,7 +259,7 @@ def test_POST_aliases_nonunique_aliases(client, user, guid, aliases, unused_alia
     res = client.post(
         get_endpoint(guid_A), json=to_payload(unused_aliases), headers=user
     )
-    assert res.status_code == 409, res.json
+    assert res.status_code == 409, res.json()
 
     # expect aliases that were already associated with guid_A to be unchanged.
     res = client.get(get_endpoint(guid_A))
@@ -283,7 +283,7 @@ def test_POST_aliases_GUID_already_has_alias(client, user, guid, aliases):
     res = client.post(
         get_endpoint(guid), json=to_payload(subset_old_aliases), headers=user
     )
-    assert res.status_code == 409, res.json
+    assert res.status_code == 409, res.json()
 
 
 def test_POST_aliases_duplicate_aliases_in_request(
@@ -304,7 +304,7 @@ def test_POST_aliases_duplicate_aliases_in_request(
     res = client.post(
         get_endpoint(guid), json=to_payload(duplicated_new_aliases), headers=user
     )
-    assert res.status_code == 409, res.json
+    assert res.status_code == 409, res.json()
 
     # expect aliases in db to be unchanged
     res = client.get(get_endpoint(guid))
@@ -426,7 +426,7 @@ def test_PUT_aliases_nonunique_aliases(client, user, guid, aliases, unused_alias
     # expect that an attempt to add the original set of random aliases
     # will fail, as some of the aliases are already assigned to a different GUID.
     res = client.put(get_endpoint(guid), json=to_payload(new_aliases), headers=user)
-    assert res.status_code == 409, res.json
+    assert res.status_code == 409, res.json()
 
     # expect aliases that were already associated with GUID to be unchanged.
     res = client.get(get_endpoint(guid))
@@ -506,7 +506,7 @@ def test_PUT_aliases_duplicate_aliases_in_request(
     res = client.put(
         get_endpoint(guid), json=to_payload(duplicated_new_aliases), headers=user
     )
-    assert res.status_code == 409, res.json
+    assert res.status_code == 409, res.json()
 
 
 def test_PUT_aliases_valid_GUID_empty_aliases(client, user, guid, aliases):

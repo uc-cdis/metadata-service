@@ -51,42 +51,42 @@ def test_query_urls(client, test_data):
     # test get all
     res = client.get("/_query/urls/q")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     print(urls_list)
     assert len(urls_list) == versioned_count + unversioned_count
 
     # test list versioned urls
     res = client.get("/_query/urls/q?versioned=true")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     print(urls_list)
     assert len(urls_list) == versioned_count
 
     # test list un versioned
     res = client.get("/_query/urls/q?versioned=false")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     print(urls_list)
     assert len(urls_list) == unversioned_count
 
     # test exclude url
     res = client.get("/_query/urls/q?exclude=awesome-x")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     print(urls_list)
     assert len(urls_list) == versioned_count + unversioned_count - 2 * url_x_count
 
     # test include
     res = client.get("/_query/urls/q?include=awesome-x")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     print(urls_list)
     assert len(urls_list) == 2 * url_x_count
 
     # test include and exclude
     res = client.get("/_query/urls/q?include=endpointurl&exclude=awesome-x")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     print(urls_list)
     assert len(urls_list) == versioned_count + unversioned_count - 2 * url_x_count
 
@@ -102,7 +102,7 @@ def test_query_urls_metadata(client, test_data):
     # test get all
     res = client.get("_query/urls/metadata/q?key=state&value=uploaded&url=awesome-x")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     assert len(urls_list) == 2 * url_x_count
 
     # test list versioned urls
@@ -110,7 +110,7 @@ def test_query_urls_metadata(client, test_data):
         "_query/urls/metadata/q?key=state&value=uploaded&url=awesome-x&versioned=True"
     )
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     assert len(urls_list) == url_x_count
 
     # test list un versioned
@@ -118,11 +118,11 @@ def test_query_urls_metadata(client, test_data):
         "_query/urls/metadata/q?key=state&value=uploaded&url=endpointurl&versioned=False"
     )
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     assert len(urls_list) == unversioned_count
 
     # test unknown state
     res = client.get("_query/urls/metadata/q?key=state&value=uploadedx&url=awesome-x")
     assert res.status_code == 200
-    urls_list = res.json
+    urls_list = res.json()
     assert len(urls_list) == 0

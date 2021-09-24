@@ -46,10 +46,10 @@ def test_drs_get(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     res_2 = client.get("/ga4gh/drs/v1/objects/" + rec_1["did"])
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["id"] == rec_1["did"]
     assert rec_2["size"] == data["size"]
     for k in data["hashes"]:
@@ -69,11 +69,11 @@ def test_drs_multiple_endpointurl(client, user):
     data = get_doc(urls=list(object_urls.values()))
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     res_2 = client.get("/ga4gh/drs/v1/objects/" + rec_1["did"])
 
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["id"] == rec_1["did"]
 
     for url in rec_2["access_methods"]:
@@ -87,7 +87,7 @@ def test_drs_list(client, user):
     submitted_guids = []
     for _ in range(record_length):
         res_1 = client.post("/index/", json=data, headers=user)
-        did = res_1.json["did"]
+        did = res_1.json()["did"]
         submitted_guids.append(did)
         bundle_data = get_bundle_doc(bundles=[did])
         res2 = client.post("/bundle/", json=bundle_data, headers=user)
@@ -95,18 +95,18 @@ def test_drs_list(client, user):
 
     res_2 = client.get("/ga4gh/drs/v1/objects")
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert len(rec_2["drs_objects"]) == 2 * record_length
     assert submitted_guids.sort() == [r["id"] for r in rec_2["drs_objects"]].sort()
 
     res_3 = client.get("/ga4gh/drs/v1/objects/?form=bundle")
     assert res_3.status_code == 200
-    rec_3 = res_3.json
+    rec_3 = res_3.json()
     assert len(rec_3["drs_objects"]) == record_length
 
     res_4 = client.get("/ga4gh/drs/v1/objects/?form=object")
     assert res_4.status_code == 200
-    rec_4 = res_4.json
+    rec_4 = res_4.json()
     assert len(rec_4["drs_objects"]) == record_length
 
 
@@ -122,7 +122,7 @@ def test_get_presigned_url_unauthorized(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     generate_presigned_url_response(rec_1["did"], protocol="s3", status=401)
     res_2 = client.get(
         "/ga4gh/drs/v1/objects/" + rec_1["did"] + "/access/s3",
@@ -136,7 +136,7 @@ def test_get_presigned_url_with_access_id(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     access_id_list = ["s3", "gs", "ftp"]
     for access_id in access_id_list:
         presigned = generate_presigned_url_response(rec_1["did"], protocol=access_id)
@@ -145,14 +145,14 @@ def test_get_presigned_url_with_access_id(client, user):
             headers={"AUTHORIZATION": "12345"},
         )
         assert res_2.status_code == 200
-        assert res_2.json == presigned
+        assert res_2.json() == presigned
 
 
 def test_get_presigned_url_no_access_id(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     generate_presigned_url_response(rec_1["did"], protocol="s3")
     res_2 = client.get(
         "/ga4gh/drs/v1/objects/" + rec_1["did"] + "/access/",
@@ -165,7 +165,7 @@ def test_get_presigned_url_no_bearer_token(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     generate_presigned_url_response(rec_1["did"], protocol="s3")
     res_2 = client.get("/ga4gh/drs/v1/objects/" + rec_1["did"] + "/access/s3")
     assert res_2.status_code == 403
@@ -176,7 +176,7 @@ def test_get_presigned_url_wrong_access_id(client, user):
     data = get_doc()
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     generate_presigned_url_response(rec_1["did"], protocol="s2", status=404)
     res_2 = client.get(
         "/ga4gh/drs/v1/objects/" + rec_1["did"] + "/access/s2",
@@ -190,11 +190,11 @@ def test_get_drs_with_encoded_slash(client, user):
     data["did"] = "dg.TEST/ed8f4658-6acd-4f96-9dd8-3709890c959e"
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     did = "dg.TEST%2Fed8f4658-6acd-4f96-9dd8-3709890c959e"
     res_2 = client.get("/ga4gh/drs/v1/objects/" + did)
     assert res_2.status_code == 200
-    rec_2 = res_2.json
+    rec_2 = res_2.json()
     assert rec_2["id"] == rec_1["did"]
     assert rec_2["size"] == data["size"]
     for k in data["hashes"]:
@@ -211,7 +211,7 @@ def test_get_presigned_url_with_encoded_slash(client, user):
     did = "dg.TEST%2Fed8f4658-6acd-4f96-9dd8-3709890c959e"
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     access_id_list = ["s3", "gs", "ftp"]
     for access_id in access_id_list:
         presigned = generate_presigned_url_response(rec_1["did"], protocol=access_id)
@@ -220,7 +220,7 @@ def test_get_presigned_url_with_encoded_slash(client, user):
             headers={"AUTHORIZATION": "12345"},
         )
         assert res_2.status_code == 200
-        assert res_2.json == presigned
+        assert res_2.json() == presigned
 
 
 @responses.activate
@@ -231,7 +231,7 @@ def test_get_presigned_url_with_query_params(client, user):
     res_1 = client.post("/index/", json=data, headers=user)
     assert res_1.status_code == 200
 
-    rec_1 = res_1.json
+    rec_1 = res_1.json()
     access_id_list = ["s3", "gs", "ftp"]
     for access_id in access_id_list:
         presigned = generate_presigned_url_response(
@@ -249,4 +249,4 @@ def test_get_presigned_url_with_query_params(client, user):
             headers={"AUTHORIZATION": "12345"},
         )
         assert res_2.status_code == 200
-        assert res_2.json == presigned
+        assert res_2.json() == presigned
