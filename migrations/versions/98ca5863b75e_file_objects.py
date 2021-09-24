@@ -25,7 +25,7 @@ def upgrade():
         sa.Column("rev", sa.Unicode(), nullable=False),
         sa.Column("form", sa.Unicode(), nullable=False),
         sa.Column("size", sa.BigInteger(), nullable=False),
-        sa.Column("file_name", sa.Unicode(), nullable=False),
+        sa.Column("file_name", sa.Unicode()),
         sa.Column("version", sa.Unicode()),
         sa.Column("uploader", sa.Unicode()),
         sa.Column("created_date", sa.DateTime(), nullable=False),

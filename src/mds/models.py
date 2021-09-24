@@ -24,6 +24,7 @@ class Metadata(db.Model):
     data = Column(JSONB())
 
 
+# TODO https://ctds-planx.atlassian.net/browse/PXP-6555 add DRS fields
 class FileObject(db.Model):
     __tablename__ = "file_objects"
 
