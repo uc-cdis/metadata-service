@@ -13,7 +13,11 @@ def test_status_success(client):
     resp = client.get("/_status")
     resp.raise_for_status()
     assert resp.status_code == 200
-    assert resp.json() == {"status": "OK", "timestamp": "some time"}
+    assert resp.json() == {
+        "status": "OK",
+        "timestamp": "some time",
+        "aggregate_metadata_enabled": True,
+    }
 
 
 def test_status_aggregate_error(client):

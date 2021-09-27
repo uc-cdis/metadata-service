@@ -18,6 +18,9 @@ def test_version(client):
     starlette.__version__ < "0.14",
     reason="https://github.com/encode/starlette/pull/751",
 )
+@pytest.mark.skip(
+    reason="Above mentioned PR has not been merged, therefore the feature that this test depends on is not in starlette>=0.14",
+)
 def test_lost_client(client):
     with pytest.raises(ReadTimeout):
         client.post(

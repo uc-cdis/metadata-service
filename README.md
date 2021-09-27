@@ -1,4 +1,4 @@
-# DCFS Metadata Service
+# Metadata Service
 
 [![Docker release](https://img.shields.io/github/v/release/uc-cdis/metadata-service?logo=docker&logoColor=white)](https://quay.io/repository/cdis/metadata-service)
 [![GitHub workflow](https://img.shields.io/github/workflow/status/uc-cdis/metadata-service/CI%20Workflow?logo=github)](https://github.com/uc-cdis/metadata-service/actions?query=workflow%3A%22CI+Workflow%22)
@@ -15,9 +15,9 @@ The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged w
 
 ## Aggregation APIs
 
-The aggregated MDS is a service which caches metadata from commons metadata services and becomes a centralize API for browsing Metadata with clients such as the Ecosystem browser.
+The aggregated MDS APIs and scripts copy metadata from one or many metadata services into a single data store. This enables a metadata service to act as a central API for browsing Metadata using clients such as the Ecosystem browser.
 
-The aggregate metadata APIs and migrations are disabled by default unless `USE_AGG_MDS=true` is specified.
+The aggregate metadata APIs and migrations are disabled by default unless `USE_AGG_MDS=true` is specified. The `AGG_MDS_NAMESPACE` should also be defined for shared Elasticserach environments so that a unique index is used per-instance.
 
 The aggregate cache is built using Elasticsearch. See the `docker-compose.yaml` file (specifically the `aggregate_migration` service) for details regarding how aggregate data is populated.
 
@@ -44,13 +44,14 @@ Create a file `.env` in the root directory of the checkout:
 (uncomment to override the default)
 
 ```python
-# DB_HOST = "..."          # default: localhost
-# DB_PORT = ...            # default: 5432
-# DB_USER = "..."          # default: current user
-# DB_PASSWORD = "..."      # default: empty
-# DB_DATABASE = "..."      # default: current user
-# USE_AGG_MDS = "..."      # default: false
-# GEN3_ES_ENDPOINT = "..." # default: empty
+# DB_HOST = "..."           # default: localhost
+# DB_PORT = ...             # default: 5432
+# DB_USER = "..."           # default: current user
+# DB_PASSWORD = "..."       # default: empty
+# DB_DATABASE = "..."       # default: current user
+# USE_AGG_MDS = "..."       # default: false
+# AGG_MDS_NAMESPACE = "..." # default: default_namespace
+# GEN3_ES_ENDPOINT = "..."  # default: empty
 ```
 
 Run database schema migration:
