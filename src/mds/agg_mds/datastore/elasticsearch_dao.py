@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, exceptions as es_exceptions
 from typing import List, Dict
 from typing import Any
 import json
@@ -53,6 +53,9 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
         [hostname],
         scheme="http",
         port=port,
+        timeout=30,
+        max_retries=7,
+        retry_on_timeout=True,
     )
 
 
@@ -61,13 +64,28 @@ async def drop_all():
         res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
         logger.debug(f"deleted index: {index}")
 
-    res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=MAPPING)
-    logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
+    try:
+        res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=MAPPING)
+        logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
+    except es_exceptions.RequestError as ex:
+        if ex.error == "resource_already_exists_exception":
+            logger.warning(f"index already exists: {AGG_MDS_INDEX}")
+            pass  # Index already exists. Ignore.
+        else:  # Other exception - raise it
+            raise ex
 
-    res = elastic_search_client.indices.create(
-        index=AGG_MDS_INFO_INDEX,
-    )
-    logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
+    try:
+        res = elastic_search_client.indices.create(
+            index=AGG_MDS_INFO_INDEX,
+        )
+        logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
+
+    except es_exceptions.RequestError as ex:
+        if ex.error == "resource_already_exists_exception":
+            logger.warning(f"index already exists: {AGG_MDS_INFO_INDEX}")
+            pass  # Index already exists. Ignore.
+        else:  # Other exception - raise it
+            raise ex
 
 
 def normalize_field(doc, key, normalize_type):

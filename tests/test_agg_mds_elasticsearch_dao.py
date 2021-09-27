@@ -14,7 +14,14 @@ async def test_init():
         "mds.agg_mds.datastore.elasticsearch_dao.Elasticsearch", MagicMock()
     ) as mock_client:
         await elasticsearch_dao.init("myhost")
-    mock_client.assert_called_with(["myhost"], port=9200, scheme="http")
+    mock_client.assert_called_with(
+        ["myhost"],
+        port=9200,
+        scheme="http",
+        timeout=30,
+        max_retries=7,
+        retry_on_timeout=True,
+    )
 
 
 @pytest.mark.asyncio
