@@ -1,6 +1,5 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
 from typing import List, Dict
-from typing import Any
 import json
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE

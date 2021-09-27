@@ -1,11 +1,8 @@
-import json
 from unittest.mock import patch, call, MagicMock
-from conftest import AsyncMock
 import pytest
-import mds
 from mds.agg_mds.datastore import elasticsearch_dao
 from mds.agg_mds.datastore.elasticsearch_dao import MAPPING
-import nest_asyncio
+from elasticsearch import Elasticsearch, exceptions as es_exceptions
 
 
 @pytest.mark.asyncio
@@ -44,6 +41,19 @@ async def test_drop_all():
         ],
         any_order=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_create_if_exists():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
+        MagicMock(
+            side_effect=es_exceptions.RequestError(
+                400, "resource_already_exists_exception"
+            )
+        ),
+    ) as mock_indices:
+        await elasticsearch_dao.drop_all()
 
 
 @pytest.mark.asyncio
