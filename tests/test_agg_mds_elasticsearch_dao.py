@@ -46,7 +46,7 @@ async def test_drop_all():
 @pytest.mark.asyncio
 async def test_create_if_exists():
     with patch(
-        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
         MagicMock(
             side_effect=es_exceptions.RequestError(
                 400, "resource_already_exists_exception"
@@ -54,6 +54,19 @@ async def test_create_if_exists():
         ),
     ) as mock_indices:
         await elasticsearch_dao.drop_all()
+
+
+@pytest.mark.asyncio
+async def test_create_index_raise_exception():
+
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
+        MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
+    ) as mock_indices:
+        try:
+            await elasticsearch_dao.drop_all()
+        except Exception as exc:
+            assert isinstance(exc, es_exceptions.RequestError) == True
 
 
 @pytest.mark.asyncio
