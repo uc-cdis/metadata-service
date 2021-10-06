@@ -92,8 +92,8 @@ async def create_object(
 
         # override token iss 
         if config.FORCE_ISSUER:
-          issuer = config.ALLOWED_ISSUERS[0]
-          allowed_issuers =  config.ALLOWED_ISSUERS
+            issuer = config.USER_API
+            allowed_issuers =  list(config.ALLOWED_ISSUERS)
 
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
@@ -170,8 +170,8 @@ async def create_object_for_id(
 
         # override token iss 
         if config.FORCE_ISSUER:
-          issuer = config.ALLOWED_ISSUERS[0]
-          allowed_issuers =  config.ALLOWED_ISSUERS
+            issuer = config.USER_API
+            allowed_issuers =  list(config.ALLOWED_ISSUERS)
 
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid

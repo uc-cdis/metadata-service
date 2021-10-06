@@ -67,9 +67,12 @@ ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 # option to force authutils to prioritize ALLOWED_ISSUERS setting over the issuer from
 # token when redirecting, used during local docker compose setup when the
 # services are on different containers but the hostname is still localhost
-# When FORCE_ISSUER is set to True the ALLOWED_ISSUER must be set 
+# When FORCE_ISSUER is set to True the ALLOWED_ISSUER must be set and contain the 
+# localhost URL http://fence-service/,https://localhost/user, while USER_API should contain
+# the new issuer http://fence-service/
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
-ALLOWED_ISSUERS = list(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
+USER_API = config("USER_API", cast=str, default="")
+ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
 
 
 # Other Services
