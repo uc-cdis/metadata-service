@@ -1,0 +1,15 @@
+on:
+  pull_request
+
+name: Wool
+
+jobs:
+  runWool:
+    name: Run black
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+
+    - uses: uc-cdis/wool@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
