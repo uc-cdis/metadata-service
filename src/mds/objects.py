@@ -87,9 +87,17 @@ async def create_object(
         token (HTTPAuthorizationCredentials, optional): bearer token
     """
     try:
+        issuer = None
+        allowed_issuers = None
+
+        # override token iss 
+        if config.FORCE_ISSUER:
+          issuer = config.ALLOWED_ISSUERS[0]
+          allowed_issuers =  config.ALLOWED_ISSUERS
+
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
-        token_claims = await access_token("user", "openid", issuer=config.ALLOWED_ISSUERS[0] if config.FORCE_ISSUER else None, allowed_issuers=config.ALLOWED_ISSUERS if config.FORCE_ISSUER else None, purpose="access")(token)
+        token_claims = await access_token("user", "openid", issuer=issuer, allowed_issuers=allowed_issuers, purpose="access")(token)
     except Exception as exc:
         logger.error(exc, exc_info=True)
         raise HTTPException(
@@ -157,9 +165,17 @@ async def create_object_for_id(
         token (HTTPAuthorizationCredentials, optional): bearer token
     """
     try:
+        issuer = None
+        allowed_issuers = None
+
+        # override token iss 
+        if config.FORCE_ISSUER:
+          issuer = config.ALLOWED_ISSUERS[0]
+          allowed_issuers =  config.ALLOWED_ISSUERS
+
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
-        token_claims = await access_token("user", "openid", issuer=config.ALLOWED_ISSUERS[0] if config.FORCE_ISSUER else None, allowed_issuers=config.ALLOWED_ISSUERS if config.FORCE_ISSUER else None, purpose="access")(token)
+        token_claims = await access_token("user", "openid", issuer=issuer, allowed_issuers=allowed_issuers, purpose="access")(token)
     except Exception as exc:
         logger.error(exc, exc_info=True)
         raise HTTPException(
