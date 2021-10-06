@@ -63,6 +63,11 @@ DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 # Security
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
+
+# option to force authutils to prioritize ALLOWED_ISSUERS setting over the issuer from
+# token when redirecting, used during local docker compose setup when the
+# services are on different containers but the hostname is still localhost
+# When FORCE_ISSUER is set to True the ALLOWED_ISSUER must be set 
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
 ALLOWED_ISSUERS = list(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
 
