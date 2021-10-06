@@ -64,7 +64,8 @@ DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
-ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
+ALLOWED_ISSUERS = list(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
+
 
 # Other Services
 

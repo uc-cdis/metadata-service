@@ -89,7 +89,7 @@ async def create_object(
     try:
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
-        token_claims = await access_token("user", "openid", purpose="access")(token)
+        token_claims = await access_token("user", "openid", issuer=config.ALLOWED_ISSUERS[0] if config.FORCE_ISSUER else None, allowed_issuers=config.ALLOWED_ISSUERS if config.FORCE_ISSUER else None, purpose="access")(token)
     except Exception as exc:
         logger.error(exc, exc_info=True)
         raise HTTPException(
@@ -159,7 +159,7 @@ async def create_object_for_id(
     try:
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
-        token_claims = await access_token("user", "openid", purpose="access")(token)
+        token_claims = await access_token("user", "openid", issuer=config.ALLOWED_ISSUERS[0] if config.FORCE_ISSUER else None, allowed_issuers=config.ALLOWED_ISSUERS if config.FORCE_ISSUER else None, purpose="access")(token)
     except Exception as exc:
         logger.error(exc, exc_info=True)
         raise HTTPException(
