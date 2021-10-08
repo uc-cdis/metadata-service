@@ -17,7 +17,9 @@ config = Config(".env")
 DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
-
+USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
+AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
+ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
 # Database
 
@@ -29,7 +31,7 @@ DB_PASSWORD = config("DB_PASSWORD", cast=Secret, default=None)
 DB_DATABASE = config("DB_DATABASE", default=None)
 
 if TESTING:
-    DB_DATABASE = "test_" + (DB_DATABASE or "mds")
+    DB_DATABASE = "test_" + (DB_DATABASE or "metadata")
     TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
 
 DB_DSN = config(

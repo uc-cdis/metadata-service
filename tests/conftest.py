@@ -1,4 +1,6 @@
 import importlib
+import json
+from collections import defaultdict
 
 import pytest
 from alembic.config import main
@@ -8,9 +10,12 @@ from starlette.config import environ
 from starlette.testclient import TestClient
 
 from unittest.mock import MagicMock, patch
+import asyncio
 
 environ["TESTING"] = "TRUE"
 from mds import config
+from mds.agg_mds import datastore
+
 
 # NOTE: AsyncMock is included in unittest.mock but ONLY in Python 3.8+
 class AsyncMock(MagicMock):

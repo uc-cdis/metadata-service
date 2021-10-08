@@ -1,0 +1,57 @@
+{
+	"gen3_commons": {
+		"IBD Commons": {
+			"mds_url": "https://ibdgc.datacommons.io",
+			"commons_url" : "ibdgc.datacommons.io",
+			"study_data_field" : "my_metadata",
+			"guid_type" : "my_metadata",
+			"columns_to_fields": {
+				"_subjects_count" : "subjects_count",
+				"study_description" : "brief_summary",
+				"short_name": "dataset_title",
+				"full_name": "dataset_title"
+			}
+		},
+		"BioData Catalyst": {
+			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov",
+			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
+			"columns_to_fields": {
+				"short_name": "name",
+				"_unique_id" : "study_id"
+			}
+		},
+		"MIDRC": {
+			"mds_url": "https://data.midrc.org",
+			"commons_url" : "data.midrc.org",
+			"study_data_field" : "discovery_metadata",
+			"columns_to_fields": {
+				"_subjects_count" : "cases_count",
+				"study_description" : "research_description",
+				"_unique_id": "study_id"
+			}
+		},
+		"NIAID ClinicalData": {
+			"mds_url": "https://accessclinicaldata.niaid.nih.gov",
+			"commons_url" : "accessclinicaldata.niaid.nih.gov",
+			"study_data_field" : "my_metadata",
+			"guid_type" : "my_metadata",
+			"columns_to_fields": {
+				"full_name": "title",
+				"study_id" : "nct_number",
+				"_unique_id": "nct_number",
+				"study_description" : "brief_summary"
+			}
+		},
+		"AnVIL": {
+			"mds_url": "https://internalstaging.theanvil.io",
+			"commons_url": "gen3.theanvil.io",
+			"columns_to_fields": {
+				"name": "name",
+				"full_name": "full_name",
+				"_subjects_count" : "_subjects_count",
+				"_unique_id" : "study_id",
+				"study_description" : "study_description"
+			}
+		}
+	}
+}

@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-createdb -U mds test_mds
+createdb -U metadata_user test_metadata
