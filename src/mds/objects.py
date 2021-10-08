@@ -250,19 +250,18 @@ async def get_objects(
     ),
     filter: str = Query(
         "",
-        description="The filter(s) that will be applied to the "
-        "result (more detail in the docstring).",
+        description="The filter(s) that will be applied to the result. "
+        "The format is filter=(field_name,operator,value), in which "
+        "the field_name is a json key without quotes, operator is one of :eq, :ne, "
+        ":gt, :gte, :lt, :lte, :like, :all, :any, and value is "
+        "a typed json value against which the operator is run "
+        "(examples in the endpoint description).",
     ),
 ) -> JSONResponse:
     """
-    Returns a list of objects and their corresponding Indexd records (please
-    see URL query documentation for more info on which objects get returned).
+    Returns a list of objects and their corresponding Indexd records.
 
-    The filtering functionality was primarily driven by the requirement that a
-    user be able to get all objects having an authz resource matching a
-    user-supplied pattern at any index in the "_resource_paths" array.
-
-    For example, given the following metadata objects:
+    Given the following metadata objects:
 
         {
             "0": {
@@ -312,25 +311,9 @@ async def get_objects(
             }
         }
 
-    how do we design a filtering interface that allows the user to get all
-    objects having an authz string matching the pattern
-    "/programs/%/projects/%" at any index in its "_resource_paths" array? (%
-    has been used as the wildcard so far because that's what Postgres uses as
-    the wildcard for LIKE) In this case, the "1" and "3" objects should be
-    returned.
+    Example requests with filters:
 
-    The filter syntax that was arrived at ending up following the syntax
-    specified by a [Node JS implementation](https://www.npmjs.com/package/json-api#filtering) of the [JSON:API
-    specification](https://jsonapi.org/).
-
-    The format for this syntax is filter=(field_name,operator,value), in which
-    the field_name is a json key without quotes, operator is one of :eq, :ne,
-    :gt, :gte, :lt, :lte, :like, :all, :any (see operators dict), and value is
-    a typed json value against which the operator is run.
-
-    Examples:
-
-        GET /objects?filter=(message,:eq,"morning") returns "2"
+        GET /objects?filter=(message,:eq,"morning") returns "2" (i.e. the MDS object and Indexd record identified by "2")
         GET /objects?filter=(counts.1,:eq,3) returns "3"
         GET /objects?filter=(pet_age,:lte,5) returns "0" and "1"
         GET /objects?filter=(pet_age,:gt,5) returns "2" and "3"
@@ -345,6 +328,25 @@ async def get_objects(
         GET /objects?filter=(or,(_uploader_id,:eq,"101"),(_uploader_id,:eq,"102")) returns "1" and "2"
         GET /objects?filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello")) returns "0", "1", and "2"
     """
+
+    # ADDITIONAL BACKGROUND
+    #
+    # The filtering functionality described above was primarily driven by the
+    # requirement that a user be able to get all objects having an authz
+    # resource matching a user-supplied pattern at any index in
+    # the "_resource_paths" array.
+    #
+    # So looking at the example objects from above, how do we design a
+    # filtering interface that allows the user to get all objects having an
+    # authz string matching the pattern "/programs/%/projects/%" at any index
+    # in the "_resource_paths" array?(% has been used as the wildcard so far
+    # because that's what Postgres uses as the wildcard for LIKE) In this
+    # case, the "1" and "3" objects should be returned.
+    #
+    # The filter syntax that was arrived at ended up following the syntax
+    # specified by a [Node JS implementation]
+    # (https://www.npmjs.com/package/json-api#filtering) of the
+    # [JSON:API specification](https://jsonapi.org/).
 
     metadata_objects = await search_metadata_objects(
         data=data, page=page, limit=limit, filter=filter
