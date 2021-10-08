@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import Any, Dict, List, Optional
-from datetime import datetime
-import json
+from typing import Any, Dict, List, Optional, Union
 
 
 @dataclass_json
@@ -10,7 +8,7 @@ import json
 class ColumnsToFields:
     """
     A more complex mapping object for mapping column names to MDS fields
-    allows to explictly mark a field as missing, a default value and it's resources type
+    allows to explicitly mark a field as missing, a default value and it's resources type
     """
 
     name: str
@@ -18,16 +16,54 @@ class ColumnsToFields:
     default: str = ""
     type: str = "string"
 
+    def get_value(self, info: dict):
+        return info.get(self.name, self.default)
+
+
+@dataclass_json
+@dataclass
+class FieldAggregation:
+    """
+    Provides a description of what fields to compute summary information.
+    The default assumes computing the sum of the field, assuming it is a number
+    the functions supported are: sum and count
+    """
+
+    type: str = "number"
+    function: str = "sum"
+
+
+@dataclass_json
+@dataclass
+class FieldDefinition:
+    """
+    Provides a description of a field defined in the metadata
+    While other fields are defined dynamically, these help "tune"
+    certain fields
+    * type: one of string, number, object, nested (deeper object)
+    * aggregate: aggregation is available
+    """
+
+    type: str = "string"
+    aggregate: bool = False
+
 
 @dataclass_json
 @dataclass
 class MDSInstance:
     mds_url: str
     commons_url: str
-    columns_to_fields: Optional[Dict[str, Any]] = None
+    columns_to_fields: Optional[
+        Union[Dict[str, str], Dict[str, ColumnsToFields]]
+    ] = None
     study_data_field: str = "gen3_discovery"
     guid_type: str = "discovery_metadata"
     select_field: Optional[Dict[str, str]] = None
+
+    def __post_init__(self):
+        for name, value in self.columns_to_fields.items():
+            if isinstance(value, dict):
+                self.columns_to_fields[name] = ColumnsToFields.from_dict(value)
 
 
 @dataclass_json
@@ -50,9 +86,8 @@ class AdapterMDSInstance:
 class Commons:
     gen3_commons: Dict[str, MDSInstance]
     adapter_commons: Dict[str, AdapterMDSInstance]
-    aggregation: List[str] = field(
-        default_factory=lambda: ["_unique_id", "_subjects_count"]
-    )
+    aggregations: Optional[Dict[str, FieldAggregation]]
+    fields: Optional[Dict[str, FieldDefinition]]
 
 
 def parse_config(data: Dict[str, Any]) -> Commons:
@@ -63,7 +98,9 @@ def parse_config(data: Dict[str, Any]) -> Commons:
 
     return Commons.from_dict(
         {
-            "gen3_commons": data.get("gen3_commons", dict()),
-            "adapter_commons": data.get("adapter_commons", dict()),
+            "gen3_commons": data.get("gen3_commons", {}),
+            "adapter_commons": data.get("adapter_commons", {}),
+            "aggregations": data.get("aggregations", {}),
+            "fields": data.get("fields", {}),
         }
     )

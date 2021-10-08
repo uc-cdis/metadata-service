@@ -13,8 +13,8 @@ async def init(hostname, port):
     await client.init(hostname, port)
 
 
-async def drop_all():
-    await client.drop_all()
+async def drop_all(commons_mapping):
+    await client.drop_all(commons_mapping)
 
 
 async def close():
@@ -32,8 +32,20 @@ async def update_metadata(*args):
     await client.update_metadata(*args)
 
 
+async def update_global_info(*args):
+    await client.update_global_info(*args)
+
+
+async def update_config_info(*args):
+    await client.update_config_info(*args)
+
+
 async def get_commons_metadata(*args):
     return await client.get_commons_metadata(*args)
+
+
+async def get_all_tags():
+    return await client.metadata_tags()
 
 
 async def get_all_named_commons_metadata(*args):
@@ -58,6 +70,10 @@ async def get_all_metadata(*args):
 
 async def get_aggregations(*args):
     return await client.get_aggregations(*args)
+
+
+async def get_number_aggregations(*args):
+    return await client.get_number_aggregation_for_field(*args)
 
 
 async def search(*args):

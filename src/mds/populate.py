@@ -3,7 +3,7 @@ from argparse import Namespace
 from typing import Any, Dict, List
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
-from mds.agg_mds.commons import MDSInstance, AdapterMDSInstance, Commons, parse_config
+from mds.agg_mds.commons import MDSInstance, ColumnsToFields, Commons, parse_config
 from mds import config, logger
 from pathlib import Path
 from urllib.parse import urlparse
@@ -58,10 +58,15 @@ async def populate_metadata(name: str, common, results):
             for column, field in common.columns_to_fields.items():
                 if field == column:
                     continue
-                if field in entry[common.study_data_field]:
-                    entry[common.study_data_field][column] = entry[
-                        common.study_data_field
-                    ][field]
+                if isinstance(field, ColumnsToFields):
+                    entry[common.study_data_field][column] = field.get_value(
+                        entry[common.study_data_field]
+                    )
+                else:
+                    if field in entry[common.study_data_field]:
+                        entry[common.study_data_field][column] = entry[
+                            common.study_data_field
+                        ][field]
             return entry
 
         entry = normalize(entry)
@@ -81,12 +86,35 @@ async def populate_metadata(name: str, common, results):
 
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
+
+    # build ES normalization dictionary
+    field_typing = {
+        field: "object" if info.type in ["nested", "array"] else info.type
+        for field, info in commons.fields.items()
+    }
+
     await datastore.update_metadata(
-        name, mds_arr, keys, tags, info, common.study_data_field
+        name, mds_arr, keys, tags, info, field_typing, common.study_data_field
     )
 
 
-async def main(commons_config: Commons, hostname: str, port: int) -> None:
+async def populate_info(commons_config: Commons) -> None:
+    agg_info = {
+        key: value.to_dict() for key, value in commons_config.aggregations.items()
+    }
+    await datastore.update_global_info("aggregations", agg_info)
+
+
+async def populate_config(commons_config: Commons) -> None:
+    array_definition = {
+        "array": [
+            field for field, value in commons.fields.items() if value.type == "array"
+        ]
+    }
+    await datastore.update_config_info(array_definition)
+
+
+async def main(commons_config: Commons) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
@@ -103,13 +131,28 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
     """
 
     if not config.USE_AGG_MDS:
-        print("aggregate MDS disabled")
+        logger.info("aggregate MDS disabled")
         exit(1)
 
     url_parts = urlparse(config.ES_ENDPOINT)
 
     await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
-    await datastore.drop_all()
+
+    # build mapping table for commons index
+
+    field_mapping = {
+        "mappings": {
+            "commons": {
+                "properties": {
+                    field: {"type": {"array": "nested"}.get(info.type, info.type)}
+                    for field, info in commons.fields.items()
+                    if info.type in ["array", "nested"]
+                }
+            }
+        }
+    }
+
+    await datastore.drop_all(commons_mapping=field_mapping)
 
     for name, common in commons_config.gen3_commons.items():
         logger.info(f"Populating {name} using Gen3 MDS connector")
@@ -134,6 +177,10 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
         if len(results) > 0:
             await populate_metadata(name, common, results)
 
+    # populate global information index
+    await populate_info(commons_config)
+    # populate array index information to support guppy
+    await populate_config(commons_config)
     res = await datastore.get_status()
     print(res)
     await datastore.close()
@@ -184,4 +231,4 @@ if __name__ == "__main__":
     """
     args: Namespace = parse_args(sys.argv)
     commons = parse_config_from_file(Path(args.config))
-    asyncio.run(main(commons_config=commons, hostname=args.hostname, port=args.port))
+    asyncio.run(main(commons_config=commons))

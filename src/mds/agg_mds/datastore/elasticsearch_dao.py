@@ -2,13 +2,12 @@ from elasticsearch import Elasticsearch, exceptions as es_exceptions
 from typing import List, Dict
 import json
 from mds import logger
-from mds.config import AGG_MDS_NAMESPACE
-
+from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
 
 # TODO WFH Why do we have both __manifest and _file_manifest?
 # TODO WFH These are bugs. If we have to check whether an object is a string or
-# an object, the data is bad.
-FIELD_NORMALIZERS = {
+#  an object, the data is bad.
+DEFAULT_FIELD_NORMALIZERS = {
     "__manifest": "object",
     "_file_manifest": "object",
     "advSearchFilters": "object",
@@ -16,32 +15,82 @@ FIELD_NORMALIZERS = {
     "sites": "number",
 }
 
-
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
-
 
 AGG_MDS_INFO_INDEX = f"{AGG_MDS_NAMESPACE}-commons-info-index"
 AGG_MDS_INFO_TYPE = "commons-info"
 
+AGG_MDS_CONFIG_INDEX = f"{AGG_MDS_NAMESPACE}-commons-config-index"
+AGG_MDS_CONFIG_TYPE = "commons-config"
 
 MAPPING = {
+    "settings": {
+        "index": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "analysis": {
+                "tokenizer": {
+                    "ngram_tokenizer": {
+                        "type": "ngram",
+                        "min_gram": 2,
+                        "max_gram": 20,
+                        "token_chars": ["letter", "digit"],
+                    }
+                },
+                "analyzer": {
+                    "ngram_analyzer": {
+                        "type": "custom",
+                        "tokenizer": "ngram_tokenizer",
+                        "filter": ["lowercase"],
+                    },
+                    "search_analyzer": {
+                        "type": "custom",
+                        "tokenizer": "keyword",
+                        "filter": "lowercase",
+                    },
+                },
+            },
+        }
+    },
     "mappings": {
         "commons": {
             "properties": {
+                "auth_resource_path": {"type": "keyword"},
                 "__manifest": {
                     "type": "nested",
                 },
                 "tags": {
                     "type": "nested",
+                    "properties": {
+                        "name": {
+                            "type": "text",
+                            "fields": {
+                                "analyzed": {
+                                    "type": "text",
+                                    "term_vector": "with_positions_offsets",
+                                    "analyzer": "ngram_analyzer",
+                                    "search_analyzer": "search_analyzer",
+                                }
+                            },
+                        },
+                        "category": {"type": "text"},
+                    },
                 },
-                "data_dictionary": {
+                "advSearchFilters": {
                     "type": "nested",
                 },
             }
         }
-    }
+    },
 }
+
+CONFIG = {
+    "settings": {"index": {"number_of_shards": 1, "number_of_replicas": 0}},
+    "mappings": {"_doc": {"properties": {"array": {"type": "keyword"}}}},
+}
+
+SAMPLE = {"array": ["tags", "advSearchFilters"]}
 
 elastic_search_client = None
 
@@ -52,19 +101,21 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
         [hostname],
         scheme="http",
         port=port,
-        timeout=30,
-        max_retries=7,
+        timeout=ES_RETRY_INTERVAL,
+        max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
 
 
-async def drop_all():
-    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX]:
+async def drop_all(common_mapping: dict):
+    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_TYPE]:
         res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
         logger.debug(f"deleted index: {index}")
 
     try:
-        res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=MAPPING)
+        res = elastic_search_client.indices.create(
+            index=AGG_MDS_INDEX, body=common_mapping
+        )
         logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
     except es_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
@@ -86,12 +137,24 @@ async def drop_all():
         else:  # Other exception - raise it
             raise ex
 
+    try:
+        res = elastic_search_client.indices.create(
+            index=AGG_MDS_CONFIG_INDEX, body=CONFIG
+        )
+        logger.debug(f"created index {AGG_MDS_CONFIG_INDEX}: {res}")
+    except es_exceptions.RequestError as ex:
+        if ex.error == "resource_already_exists_exception":
+            logger.warning(f"index already exists: {AGG_MDS_CONFIG_INDEX}")
+            pass  # Index already exists. Ignore.
+        else:  # Other exception - raise it
+            raise ex
+
 
 def normalize_field(doc, key, normalize_type):
     try:
         if normalize_type == "object" and isinstance(doc[key], str):
             value = doc[key]
-            doc[key] = None if value is "" else json.loads(value)
+            doc[key] = None if value == "" else json.loads(value)
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
     except:
@@ -105,6 +168,7 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
+    field_normalizers: Dict[str, str],
     study_data_field: str,
 ):
     elastic_search_client.index(
@@ -114,18 +178,34 @@ async def update_metadata(
         body=info,
     )
 
+    unified_field_normalizers = {**field_normalizers}
     for doc in data:
         key = list(doc.keys())[0]
         # Flatten out this structure
         doc = doc[key][study_data_field]
 
-        for field in FIELD_NORMALIZERS.keys():
+        for field in unified_field_normalizers.keys():
             if field in doc:
-                normalize_field(doc, field, FIELD_NORMALIZERS[field])
+                normalize_field(doc, field, unified_field_normalizers[field])
 
         elastic_search_client.index(
             index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
         )
+
+
+async def update_global_info(key, doc) -> None:
+    elastic_search_client.index(
+        index=AGG_MDS_INFO_INDEX, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
+    )
+
+
+async def update_config_info(doc) -> None:
+    elastic_search_client.index(
+        index=AGG_MDS_CONFIG_INDEX,
+        doc_type="_doc",
+        id=AGG_MDS_INDEX,
+        body=doc,
+    )
 
 
 async def get_status():
@@ -157,27 +237,41 @@ async def get_commons():
         return []
 
 
-async def get_all_metadata(limit, offset):
+async def get_all_metadata(limit, offset, flatten=False):
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
             body={"size": limit, "from": offset, "query": {"match_all": {}}},
         )
-        byCommons = {}
-        for record in res["hits"]["hits"]:
-            id = record["_id"]
-            normalized = record["_source"]
-            commons_name = normalized["commons_name"]
-            if commons_name not in byCommons:
-                byCommons[commons_name] = []
-            byCommons[commons_name].append(
-                {
-                    id: {
-                        "gen3_discovery": normalized,
+        if flatten:
+            flat = []
+            for record in res["hits"]["hits"]:
+                id = record["_id"]
+                normalized = record["_source"]
+                flat.append(
+                    {
+                        id: {
+                            "gen3_discovery": normalized,
+                        }
                     }
-                }
-            )
-        return byCommons
+                )
+        else:
+            byCommons = {}
+            for record in res["hits"]["hits"]:
+                id = record["_id"]
+                normalized = record["_source"]
+                commons_name = normalized["commons_name"]
+
+                if commons_name not in byCommons:
+                    byCommons[commons_name] = []
+                byCommons[commons_name].append(
+                    {
+                        id: {
+                            "gen3_discovery": normalized,
+                        }
+                    }
+                )
+            return byCommons
     except Exception as error:
         logger.error(error)
         return {}
@@ -195,9 +289,9 @@ async def get_all_named_commons_metadata(name):
         return {}
 
 
-async def metadata_tags(name):
+async def metadata_tags():
     try:
-        return elastic_search_client.search(
+        res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
             body={
                 "size": 0,
@@ -220,6 +314,16 @@ async def metadata_tags(name):
                 },
             },
         )
+        results = {}
+
+        for info in res["aggregations"]["tags"]["categories"]["buckets"]:
+            results[info["key"]] = {
+                "total": info["doc_count"],
+                "names": [{x["key"]: x["doc_count"] for x in info["name"]["buckets"]}],
+            }
+
+        return results
+
     except Exception as error:
         logger.error(error)
         return []
@@ -265,6 +369,42 @@ async def get_aggregations(name):
     except Exception as error:
         logger.error(error)
         return []
+
+
+async def get_number_aggregation_for_field(field: str):
+    try:
+        # get the total number of documents in a commons namespace
+        query = {
+            "size": 0,
+            "aggs": {
+                field: {"sum": {"field": field}},
+                "missing": {"missing": {"field": field}},
+                "types_count": {"value_count": {"field": field}},
+            },
+        }
+        nested = False
+        parts = field.split(".")
+        if len(parts) == 2:
+            nested = True
+            query["aggs"] = {
+                field: {"nested": {"path": parts[0]}, "aggs": query["aggs"]}
+            }
+
+        res = elastic_search_client.search(index=AGG_MDS_INDEX, body=query)
+
+        agg_results = res["aggregations"][field] if nested else res["aggregations"]
+
+        return {
+            field: {
+                "total_items": res["hits"]["total"],
+                "sum": agg_results[field]["value"],
+                "missing": agg_results["missing"]["doc_count"],
+            }
+        }
+
+    except Exception as error:
+        logger.error(error)
+        return {}
 
 
 async def get_by_guid(guid):
