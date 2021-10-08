@@ -381,7 +381,7 @@ async def get_objects(
     if data:
         response = {
             "items": [
-                {"record": records[guid] if guid in records else {}, "metadata": o}
+                {"record": records.get(guid, {}), "metadata": o}
                 for guid, o in metadata_objects
             ]
         }
