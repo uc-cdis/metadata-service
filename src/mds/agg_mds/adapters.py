@@ -153,7 +153,7 @@ class RemoteMetadataAdapter(ABC):
                 for filter in filters:
                     field_value = FieldFilters.execute(filter, field_value)
 
-            elif "path:" in value:
+            elif isinstance(value, str) and "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
                 field_value = get_json_path_value(expression, item)
@@ -551,11 +551,14 @@ class Gen3Adapter(RemoteMetadataAdapter):
         mds_url = kwargs.get("mds_url", None)
         if mds_url is None:
             return results
-        guid_type = kwargs.get("guid_type", "discovery_metadata")
-        field_name = kwargs.get("field_name", None)
-        field_value = kwargs.get("field_value", None)
-        batchSize = kwargs.get("batchSize", 1000)
-        maxItems = kwargs.get("maxItems", None)
+
+        config = kwargs.get("config", {})
+        guid_type = config.get("guid_type", "discovery_metadata")
+        field_name = config.get("field_name", None)
+        field_value = config.get("field_value", None)
+        batchSize = config.get("batchSize", 1000)
+        maxItems = config.get("maxItems", None)
+
         offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
@@ -626,7 +629,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
         """
 
         mappings = kwargs.get("mappings", None)
-        study_field = kwargs.get("study_field", "gen3_discovery")
+        if "config" in kwargs:
+            config = kwargs["config"]
+            study_field = config.get("study_field", "gen3_discovery")
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
@@ -650,6 +655,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
 def gather_metadata(
     gather,
     mds_url,
+    config,
     filters,
     mappings,
     perItemValues,
@@ -657,9 +663,12 @@ def gather_metadata(
     globalFieldFilters,
 ):
     try:
-        json_data = gather.getRemoteDataAsJson(mds_url=mds_url, filters=filters)
+        json_data = gather.getRemoteDataAsJson(
+            mds_url=mds_url, filters=filters, config=config
+        )
         results = gather.normalizeToGen3MDSFields(
             json_data,
+            config=config,
             mappings=mappings,
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
@@ -685,11 +694,15 @@ def get_metadata(
     adapter_name,
     mds_url,
     filters,
+    config=None,
     mappings=None,
     perItemValues=None,
     keepOriginalFields=False,
     globalFieldFilters=None,
 ):
+    if config is None:
+        config = {}
+
     if globalFieldFilters is None:
         globalFieldFilters = []
 
@@ -707,6 +720,7 @@ def get_metadata(
         gather,
         mds_url=mds_url,
         filters=filters,
+        config=config,
         mappings=mappings,
         perItemValues=perItemValues,
         keepOriginalFields=keepOriginalFields,

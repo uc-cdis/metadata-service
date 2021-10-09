@@ -36,6 +36,7 @@ class AdapterMDSInstance:
     mds_url: str
     commons_url: str
     adapter: str
+    config: Dict[str, Any] = field(default_factory=dict)
     filters: Optional[Dict[str, Any]] = None
     field_mappings: Optional[Dict[str, Any]] = None
     per_item_values: Optional[Dict[str, Any]] = None

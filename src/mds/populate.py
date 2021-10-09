@@ -1,7 +1,6 @@
 import asyncio
 from argparse import Namespace
 from typing import Any, Dict, List
-from collections import Counter
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
 from mds.agg_mds.commons import MDSInstance, AdapterMDSInstance, Commons, parse_config
@@ -125,6 +124,7 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
             common.adapter,
             common.mds_url,
             common.filters,
+            common.config,
             common.field_mappings,
             common.per_item_values,
             common.keep_original_fields,
