@@ -86,6 +86,7 @@ The parameters of an adapter are:
 adapter to a site: NOTE there is no checking to ensure that the correct
 adapters are being used. Usually, in the case of a mismatch, errors are
 logged and nothing is pulled.
+* ```config```: an object defining any additional parameter needed for the adapter.
 * ```filters```: the parameters (or filter
 properties) passed to the adapter, this is adapter specific. In the
 above example, the ```study_id``` parameter is selecting which study ids to
@@ -173,7 +174,7 @@ The two functions you need to override are: ```getRemoteDataAsJson``` and
 results = {"results": []}
 ```
 where each entry in the array is a JSON/Python dict. This function typically
-requires the least custom code. Feel free to use the existing set of adapters as a guide. 
+requires the least custom code. Feel free to use the existing set of adapters as a guide.
 The code can be found in [adapters.py](https://github.com/uc-cdis/metadata-service/blob/chore/add_adapter_doc/src/mds/agg_mds/adapters.py)
 
 The second function ```normalizeToGen3MDSFields``` is usually quite
@@ -227,6 +228,8 @@ def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
     keepOriginalFields = kwargs.get("keepOriginalFields", True)
     globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
+    config = kwargs.get("config", {})
+
     results = {}
     for guid, record in data["results"].items():
         item = Gen3Adapter.addGen3ExpectedFields(
@@ -246,6 +249,7 @@ def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
 
 The code above does the following:
   1. Extract the parameters from the kwargs (dict of parameters)
+     * optionally process any configuration values
   2. For each (id, item) received from the remote metadata API:
     * map study fields to normalize name by calling ```addGen3ExpectedFields```
     * Set the results into a dictionary of metadata GUIDS
