@@ -1022,209 +1022,157 @@ def test_get_object_latest_when_indexd_returns_404_and_guid_not_in_mds(
     assert resp.status_code == 404, resp.text
 
 
-def set_up_metadata_objects(client_fixture):
-    """
-    Create metadata objects from tests/sample_objects.json file.
-    """
-    with open("tests/sample_objects.json") as json_file:
-        data = json.load(json_file)
-
-    for guid, mds_object in data.items():
-        client_fixture.post("/metadata/" + guid, json=mds_object).raise_for_status()
-
-
-def tear_down_metadata_objects(client_fixture):
-    """
-    Delete metadata objects that were created from tests/sample_objects.json
-    file.
-    """
-    with open("tests/sample_objects.json") as json_file:
-        data = json.load(json_file)
-
-    for guid in data.keys():
-        client_fixture.delete("/metadata/" + guid).raise_for_status()
-
-
-def test_get_objects_filter_by_message_equals(client):
+def test_get_objects_filter_by_message_equals(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that the GET /objects endpoint filters correctly when a message-equal
     filter is applied.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get('/objects?data=true&filter=(message,:eq,"morning")')
+    resp_json = resp.json()
 
-        resp = client.get('/objects?data=true&filter=(message,:eq,"morning")')
-        resp_json = resp.json()
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 1
-        assert resp_json["items"][0]["metadata"]["message"] == "morning"
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 1
+    assert resp_json["items"][0]["metadata"]["message"] == "morning"
 
 
-def test_get_objects_filter_by_counts_index_equals(client):
+def test_get_objects_filter_by_counts_index_equals(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that the GET /objects endpoint filters correctly when an array
     index-equal filter is applied
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get("/objects?data=true&filter=(counts.1,:eq,3)")
+    resp_json = resp.json()
 
-        resp = client.get("/objects?data=true&filter=(counts.1,:eq,3)")
-        resp_json = resp.json()
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 1
-        assert resp_json["items"][0]["metadata"]["counts"][1] == 3
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 1
+    assert resp_json["items"][0]["metadata"]["counts"][1] == 3
 
 
-def test_get_objects_filter_using_lte(client):
+def test_get_objects_filter_using_lte(client, set_up_and_teardown_metadata_objects):
     """
     Test that the GET /objects endpoint filters correctly for a less than or
     equal operator.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get("/objects?data=true&filter=(pet_age,:lte,5)")
+    resp_json = resp.json()
+    resp_json["items"].sort(key=lambda o: o["metadata"]["pet_age"])
 
-        resp = client.get("/objects?data=true&filter=(pet_age,:lte,5)")
-        resp_json = resp.json()
-        resp_json["items"].sort(key=lambda o: o["metadata"]["pet_age"])
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 2
-        assert resp_json["items"][0]["metadata"]["pet_age"] == 1
-        assert resp_json["items"][1]["metadata"]["pet_age"] == 5
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 2
+    assert resp_json["items"][0]["metadata"]["pet_age"] == 1
+    assert resp_json["items"][1]["metadata"]["pet_age"] == 5
 
 
-def test_get_objects_filter_using_gt(client):
+def test_get_objects_filter_using_gt(client, set_up_and_teardown_metadata_objects):
     """
     Test that the GET /objects endpoint filters correctly for a greater than
     operator.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get("/objects?data=true&filter=(pet_age,:gt,5)")
+    resp_json = resp.json()
+    resp_json["items"].sort(key=lambda o: o["metadata"]["pet_age"])
 
-        resp = client.get("/objects?data=true&filter=(pet_age,:gt,5)")
-        resp_json = resp.json()
-        resp_json["items"].sort(key=lambda o: o["metadata"]["pet_age"])
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 2
-        assert resp_json["items"][0]["metadata"]["pet_age"] == 10
-        assert resp_json["items"][1]["metadata"]["pet_age"] == 15
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 2
+    assert resp_json["items"][0]["metadata"]["pet_age"] == 10
+    assert resp_json["items"][1]["metadata"]["pet_age"] == 15
 
 
-def test_get_objects_filter_by_any_and_like_with_resource_paths(client):
+def test_get_objects_filter_by_any_and_like_with_resource_paths(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that the GET /objects endpoint filters correctly when an :any filter is
     combined with a :like filter.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get(
+        '/objects?data=true&filter=(_resource_paths,:any,(,:like,"/programs/%/projects/%"))'
+    )
+    resp_json = resp.json()
+    resp_json["items"].sort(key=lambda o: o["metadata"]["_uploader_id"])
 
-        resp = client.get(
-            '/objects?data=true&filter=(_resource_paths,:any,(,:like,"/programs/%/projects/%"))'
-        )
-        resp_json = resp.json()
-        resp_json["items"].sort(key=lambda o: o["metadata"]["_uploader_id"])
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 2
-        assert resp_json["items"][0]["metadata"]["_uploader_id"] == "101"
-        assert resp_json["items"][1]["metadata"]["_uploader_id"] == "103"
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 2
+    assert resp_json["items"][0]["metadata"]["_uploader_id"] == "101"
+    assert resp_json["items"][1]["metadata"]["_uploader_id"] == "103"
 
 
-def test_get_objects_filter_by_counts_all_equal_42(client):
+def test_get_objects_filter_by_counts_all_equal_42(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that the GET /objects endpoint filters correctly when an :all filter
     is combined with an :eq filter.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get("/objects?data=true&filter=(counts,:all,(,:eq,42))")
+    resp_json = resp.json()
 
-        resp = client.get("/objects?data=true&filter=(counts,:all,(,:eq,42))")
-        resp_json = resp.json()
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 1
-        assert resp_json["items"][0]["metadata"]["_uploader_id"] == "102"
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 1
+    assert resp_json["items"][0]["metadata"]["_uploader_id"] == "102"
 
 
-def test_get_objects_filter_by_or_two_different_uploader_ids(client):
+def test_get_objects_filter_by_or_two_different_uploader_ids(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that the GET /objects endpoint filters correctly when two :eq filters
     are combined using an :or filter.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get(
+        '/objects?data=true&filter=(or,(_uploader_id,:eq,"101"),(_uploader_id,:eq,"102"))'
+    )
+    resp_json = resp.json()
+    resp_json["items"].sort(key=lambda o: o["metadata"]["_uploader_id"])
 
-        resp = client.get(
-            '/objects?data=true&filter=(or,(_uploader_id,:eq,"101"),(_uploader_id,:eq,"102"))'
-        )
-        resp_json = resp.json()
-        resp_json["items"].sort(key=lambda o: o["metadata"]["_uploader_id"])
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 2
-        assert resp_json["items"][0]["metadata"]["_uploader_id"] == "101"
-        assert resp_json["items"][1]["metadata"]["_uploader_id"] == "102"
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 2
+    assert resp_json["items"][0]["metadata"]["_uploader_id"] == "101"
+    assert resp_json["items"][1]["metadata"]["_uploader_id"] == "102"
 
 
-def test_get_objects_filter_by_compound_boolean_filter(client):
+def test_get_objects_filter_by_compound_boolean_filter(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test the filtering functionality of the GET /objects endpoint using a
     compound boolean filter.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get(
+        '/objects?data=true&filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello"))'
+    )
+    resp_json = resp.json()
+    resp_json["items"].sort(key=lambda o: o["metadata"]["_uploader_id"])
 
-        resp = client.get(
-            '/objects?data=true&filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello"))'
-        )
-        resp_json = resp.json()
-        resp_json["items"].sort(key=lambda o: o["metadata"]["_uploader_id"])
-
-        assert resp.status_code == 200
-        assert len(resp_json["items"]) == 3
-        assert resp_json["items"][0]["metadata"]["_uploader_id"] == "100"
-        assert resp_json["items"][1]["metadata"]["_uploader_id"] == "101"
-        assert resp_json["items"][2]["metadata"]["_uploader_id"] == "102"
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert len(resp_json["items"]) == 3
+    assert resp_json["items"][0]["metadata"]["_uploader_id"] == "100"
+    assert resp_json["items"][1]["metadata"]["_uploader_id"] == "101"
+    assert resp_json["items"][2]["metadata"]["_uploader_id"] == "102"
 
 
-def test_get_objects_with_data_param_equal_false(client):
+def test_get_objects_with_data_param_equal_false(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that a list of guids is returned from the GET /objects endpoint when
     data param is false.
     """
-    try:
-        set_up_metadata_objects(client)
+    resp = client.get("/objects?data=false")
+    resp_json = resp.json()
+    resp_json.sort()
 
-        resp = client.get("/objects?data=false")
-        resp_json = resp.json()
-        resp_json.sort()
-
-        assert resp.status_code == 200
-        assert resp_json == ["0", "1", "2", "3"]
-    finally:
-        tear_down_metadata_objects(client)
+    assert resp.status_code == 200
+    assert resp_json == ["0", "1", "2", "3"]
 
 
-def test_get_objects_raises_a_400_for_invalid_filter(client):
+def test_get_objects_raises_a_400_for_invalid_filter(
+    client, set_up_and_teardown_metadata_objects
+):
     """
     Test that a 400 is returned from the GET /objects endpoint when an invalid
     filter is provided.
@@ -1232,7 +1180,7 @@ def test_get_objects_raises_a_400_for_invalid_filter(client):
     resp = client.get('/objects?data=true&filter=(message,"morning")')
     assert resp.status_code == 400
 
-    
+
 @respx.mock
 def test_delete_object_when_fence_returns_204(client, valid_upload_file_patcher):
     """

@@ -47,6 +47,23 @@ def client():
         yield client
 
 
+@pytest.fixture()
+def set_up_and_teardown_metadata_objects(client):
+    """
+    Set up and teardown metadata objects based on tests/sample_objects.json
+    file
+    """
+    with open("tests/sample_objects.json") as json_file:
+        data = json.load(json_file)
+    for guid, mds_object in data.items():
+        client.post("/metadata/" + guid, json=mds_object).raise_for_status()
+    yield
+    with open("tests/sample_objects.json") as json_file:
+        data = json.load(json_file)
+    for guid in data.keys():
+        client.delete("/metadata/" + guid).raise_for_status()
+
+
 @pytest.fixture(
     params=[
         "dg.TEST/87fced8d-b9c8-44b5-946e-c465c8f8f3d6",
