@@ -109,11 +109,11 @@ class RemoteMetadataAdapter(ABC):
 
     @abstractmethod
     def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
-        """ needs to be implemented in derived class """
+        """needs to be implemented in derived class"""
 
     @abstractmethod
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
-        """ needs to be implemented in derived class """
+        """needs to be implemented in derived class"""
 
     @staticmethod
     def mapFields(item: dict, mappings: dict, global_filters=None) -> dict:
