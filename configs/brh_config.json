@@ -107,7 +107,7 @@
 	"adapter_commons": {
 		"Kids First": {
 			"mds_url": "https://gen3staging.kidsfirstdrc.org/",
-			"commons_url": "https://kidsfirstdrc.org/",
+			"commons_url": "kidsfirstdrc.org",
 			"adapter": "gen3",
 			"config" : {
 				"guid_type": "metadata_object",
@@ -121,7 +121,7 @@
 				"study_id": "path:_unique_id",
 				"study_description": "path:description",
 				"full_name": "path:full_name",
-				"name": "path:full_name",
+				"short_name": "path:full_name",
 				"commons": "Kids First Data Resource Center",
 				"study_url": "path:link"
 			}
