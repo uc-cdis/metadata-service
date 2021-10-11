@@ -413,47 +413,33 @@ paths:
       - Index
   /objects:
     get:
-      description: "Returns a list of objects and their corresponding Indexd records\
-        \ (please\nsee URL query documentation for more info on which objects get\
-        \ returned).\n\nThe filtering functionality was primarily driven by the requirement\
-        \ that a\nuser be able to get all objects having an authz resource matching\
-        \ a\nuser-supplied pattern at any index in the \"_resource_paths\" array.\n\
-        \nFor example, given the following metadata objects:\n\n    {\n        \"\
-        0\": {\n            \"message\": \"hello\",\n            \"_uploader_id\"\
-        : \"100\",\n            \"_resource_paths\": [\n                \"/programs/a\"\
-        ,\n                \"/programs/b\"\n            ],\n            \"pet\": \"\
-        dog\",\n            \"pet_age\": 1\n        },\n        \"1\": {\n       \
-        \     \"message\": \"greetings\",\n            \"_uploader_id\": \"101\",\n\
-        \            \"_resource_paths\": [\n                \"/open\",\n        \
-        \        \"/programs/c/projects/a\"\n            ],\n            \"pet\":\
-        \ \"ferret\",\n            \"pet_age\": 5,\n            \"sport\": \"soccer\"\
-        \n        },\n        \"2\": {\n            \"message\": \"morning\",\n  \
-        \          \"_uploader_id\": \"102\",\n            \"_resource_paths\": [\n\
-        \                \"/programs/d\",\n                \"/programs/e\"\n     \
-        \       ],\n            \"counts\": [42, 42, 42],\n            \"pet\": \"\
-        ferret\",\n            \"pet_age\": 10,\n            \"sport\": \"soccer\"\
-        \n        },\n        \"3\": {\n            \"message\": \"evening\",\n  \
-        \          \"_uploader_id\": \"103\",\n            \"_resource_paths\": [\n\
-        \                \"/programs/f/projects/a\",\n                \"/admin\"\n\
-        \            ],\n            \"counts\": [1, 3, 5],\n            \"pet\":\
-        \ \"ferret\",\n            \"pet_age\": 15,\n            \"sport\": \"basketball\"\
-        \n        }\n    }\n\nhow do we design a filtering interface that allows the\
-        \ user to get all\nobjects having an authz string matching the pattern\n\"\
-        /programs/%/projects/%\" at any index in its \"_resource_paths\" array? (%\n\
-        has been used as the wildcard so far because that's what Postgres uses as\n\
-        the wildcard for LIKE) In this case, the \"1\" and \"3\" objects should be\n\
-        returned.\n\nThe filter syntax that was arrived at ending up following the\
-        \ syntax\nspecified by a [Node JS implementation](https://www.npmjs.com/package/json-api#filtering)\
-        \ of the [JSON:API\nspecification](https://jsonapi.org/).\n\nThe format for\
-        \ this syntax is filter=(field_name,operator,value), in which\nthe field_name\
-        \ is a json key without quotes, operator is one of :eq, :ne,\n:gt, :gte, :lt,\
-        \ :lte, :like, :all, :any (see operators dict), and value is\na typed json\
-        \ value against which the operator is run.\n\nExamples:\n\n    GET /objects?filter=(message,:eq,\"\
-        morning\") returns \"2\"\n    GET /objects?filter=(counts.1,:eq,3) returns\
-        \ \"3\"\n    GET /objects?filter=(pet_age,:lte,5) returns \"0\" and \"1\"\n\
-        \    GET /objects?filter=(pet_age,:gt,5) returns \"2\" and \"3\"\n\nCompound\
-        \ expressions are supported:\n\n    GET /objects?filter=(_resource_paths,:any,(,:like,\"\
-        /programs/%/projects/%\")) returns \"1\" and \"3\"\n    GET /objects?filter=(counts,:all,(,:eq,42))\
+      description: "Returns a list of objects and their corresponding Indexd records.\n\
+        \nGiven the following metadata objects:\n\n    {\n        \"0\": {\n     \
+        \       \"message\": \"hello\",\n            \"_uploader_id\": \"100\",\n\
+        \            \"_resource_paths\": [\n                \"/programs/a\",\n  \
+        \              \"/programs/b\"\n            ],\n            \"pet\": \"dog\"\
+        ,\n            \"pet_age\": 1\n        },\n        \"1\": {\n            \"\
+        message\": \"greetings\",\n            \"_uploader_id\": \"101\",\n      \
+        \      \"_resource_paths\": [\n                \"/open\",\n              \
+        \  \"/programs/c/projects/a\"\n            ],\n            \"pet\": \"ferret\"\
+        ,\n            \"pet_age\": 5,\n            \"sport\": \"soccer\"\n      \
+        \  },\n        \"2\": {\n            \"message\": \"morning\",\n         \
+        \   \"_uploader_id\": \"102\",\n            \"_resource_paths\": [\n     \
+        \           \"/programs/d\",\n                \"/programs/e\"\n          \
+        \  ],\n            \"counts\": [42, 42, 42],\n            \"pet\": \"ferret\"\
+        ,\n            \"pet_age\": 10,\n            \"sport\": \"soccer\"\n     \
+        \   },\n        \"3\": {\n            \"message\": \"evening\",\n        \
+        \    \"_uploader_id\": \"103\",\n            \"_resource_paths\": [\n    \
+        \            \"/programs/f/projects/a\",\n                \"/admin\"\n   \
+        \         ],\n            \"counts\": [1, 3, 5],\n            \"pet\": \"\
+        ferret\",\n            \"pet_age\": 15,\n            \"sport\": \"basketball\"\
+        \n        }\n    }\n\nExample requests with filters:\n\n    GET /objects?filter=(message,:eq,\"\
+        morning\") returns \"2\" (i.e. the MDS object and Indexd record identified\
+        \ by \"2\")\n    GET /objects?filter=(counts.1,:eq,3) returns \"3\"\n    GET\
+        \ /objects?filter=(pet_age,:lte,5) returns \"0\" and \"1\"\n    GET /objects?filter=(pet_age,:gt,5)\
+        \ returns \"2\" and \"3\"\n\nCompound expressions are supported:\n\n    GET\
+        \ /objects?filter=(_resource_paths,:any,(,:like,\"/programs/%/projects/%\"\
+        )) returns \"1\" and \"3\"\n    GET /objects?filter=(counts,:all,(,:eq,42))\
         \ returns \"2\"\n\nBoolean expressions are also supported:\n\n    GET /objects?filter=(or,(_uploader_id,:eq,\"\
         101\"),(_uploader_id,:eq,\"102\")) returns \"1\" and \"2\"\n    GET /objects?filter=(or,(and,(pet,:eq,\"\
         ferret\"),(sport,:eq,\"soccer\")),(message,:eq,\"hello\")) returns \"0\",\
@@ -495,15 +481,21 @@ paths:
             with page to determine page size.'
           title: Limit
           type: integer
-      - description: The filter(s) that will be applied to the result (more detail
-          in the docstring).
+      - description: The filter(s) that will be applied to the result. The format
+          is filter=(field_name,operator,value), in which the field_name is a json
+          key without quotes, operator is one of :eq, :ne, :gt, :gte, :lt, :lte, :like,
+          :all, :any, and value is a typed json value against which the operator is
+          run (examples in the endpoint description).
         in: query
         name: filter
         required: false
         schema:
           default: ''
-          description: The filter(s) that will be applied to the result (more detail
-            in the docstring).
+          description: The filter(s) that will be applied to the result. The format
+            is filter=(field_name,operator,value), in which the field_name is a json
+            key without quotes, operator is one of :eq, :ne, :gt, :gte, :lt, :lte,
+            :like, :all, :any, and value is a typed json value against which the operator
+            is run (examples in the endpoint description).
           title: Filter
           type: string
       responses:
