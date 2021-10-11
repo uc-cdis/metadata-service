@@ -9,6 +9,7 @@ from starlette.status import HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 
 from parsimonious.exceptions import IncompleteParseError, ParseError, VisitationError
 
+from . import logger
 from .models import db, Metadata
 from .param_parser import filter_param_grammar, FilterVisitor
 
@@ -345,9 +346,17 @@ async def search_metadata_objects(
         if filter_tree:
             filter_tree_visitor = FilterVisitor()
             filter_dict = filter_tree_visitor.visit(filter_tree)
-    except (IncompleteParseError, ParseError, VisitationError):
+    except (IncompleteParseError, ParseError) as e:
+        logger.debug(e, exc_info=True)
         raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"filter URL query param syntax is invalid"
+            HTTP_400_BAD_REQUEST,
+            f"Please check syntax for the provided `filter` URL query param, which could not be correctly parsed from index {e.pos} (zero-indexed) onwards.",
+        )
+    except VisitationError as e:
+        logger.debug(e, exc_info=True)
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST,
+            "Please check syntax for the provided `filter` URL query param, which could not be correctly parsed.",
         )
 
     if data:
