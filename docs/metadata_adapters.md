@@ -231,7 +231,7 @@ def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
     # process any configuration parameters
     config = kwargs.get("config", {})
     study_field = config.get("study_field", "gen3_discovery")
-    
+
     results = {}
     for guid, record in data["results"].items():
         item = Gen3Adapter.addGen3ExpectedFields(
