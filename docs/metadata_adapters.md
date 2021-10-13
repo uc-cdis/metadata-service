@@ -228,15 +228,17 @@ def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
     keepOriginalFields = kwargs.get("keepOriginalFields", True)
     globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
+    # process any configuration parameters
     config = kwargs.get("config", {})
-
+    study_field = config.get("study_field", "gen3_discovery")
+    
     results = {}
     for guid, record in data["results"].items():
         item = Gen3Adapter.addGen3ExpectedFields(
             record[study_field], mappings, keepOriginalFields, globalFieldFilters
         )
         results[guid] = {
-            "_guid_type": "discovery_metadata",
+            "_guid_type": guid_type,
             "gen3_discovery": item,
         }
 

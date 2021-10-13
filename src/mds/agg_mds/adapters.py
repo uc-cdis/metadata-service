@@ -629,9 +629,8 @@ class Gen3Adapter(RemoteMetadataAdapter):
         """
 
         mappings = kwargs.get("mappings", None)
-        if "config" in kwargs:
-            config = kwargs["config"]
-            study_field = config.get("study_field", "gen3_discovery")
+        config = kwargs.get("config", {})
+        study_field = config.get("study_field", "gen3_discovery")
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
