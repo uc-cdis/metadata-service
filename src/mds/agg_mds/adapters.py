@@ -54,14 +54,20 @@ class FieldFilters:
         return FieldFilters.filters[name](value)
 
 
-def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
+def get_json_path_value(
+    expression: str,
+    item: dict,
+    has_default_value: bool = False,
+    default_value: str = "",
+) -> Union[str, List[Any]]:
     """
     Given a JSON Path expression and a dictionary, using the path expression
-    to find the value. If not found return an empty string
+    to find the value. If not found return and default value define return it, else
+    return None
     """
 
     if expression is None:
-        return ""
+        return default_value if has_default_value else None
 
     try:
         jsonpath_expr = parse(expression)
@@ -69,11 +75,11 @@ def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
         )
-        return ""
+        return default_value if has_default_value else None
 
     v = jsonpath_expr.find(item)
-    if len(v) == 0:  # nothing found use default value of empty string
-        return ""
+    if len(v) == 0:  # nothing found, deal with this
+        return default_value if has_default_value else None
 
     if len(v) == 1:  # convert array length 1 to a value
         return v[0].value
@@ -132,6 +138,7 @@ class RemoteMetadataAdapter(ABC):
         field: {
             path: JSON Path
             filters: [process field filters]
+            default_value(optional): Any Value
         }
 
         :param item: dictionary to map fields to
@@ -147,7 +154,11 @@ class RemoteMetadataAdapter(ABC):
         for key, value in mappings.items():
             if isinstance(value, dict):  # have a complex assignment
                 expression = value.get("path", None)
-                field_value = get_json_path_value(expression, item)
+                if hasDefaultValue := "default_value" in value:
+                    default_value = value["default_value"]
+                field_value = get_json_path_value(
+                    expression, item, hasDefaultValue, default_value
+                )
 
                 filters = value.get("filters", [])
                 for filter in filters:
@@ -217,7 +228,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     raise
                 except httpx.HTTPError as exc:
                     logger.error(
-                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                        f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                     )
                 except ValueError as exc:
                     logger.error(
@@ -366,17 +377,17 @@ class ClinicalTrials(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
                 )
                 break  # need to break here as cannot be assured of leaving while loop
             except ValueError as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
             except Exception as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
 
@@ -479,7 +490,7 @@ class PDAPS(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                 )
 
         return results
@@ -584,7 +595,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Returning { len(results['results'])} results."
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results."
                 )
                 break
 
