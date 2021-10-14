@@ -86,9 +86,17 @@ def test_get_metadata_icpsr():
         content=xml_response,
     )
 
-    assert get_metadata("icpsr", "http://test/ok", filters=None) == {}
+    assert get_metadata("icpsr", "http://test/ok", filters=None, config=None) == {}
 
-    assert get_metadata("icpsr", mds_url=None, filters={"study_ids": [6425]}) == {}
+    assert (
+        get_metadata("icpsr", "http://test/ok", filters=None, config={"batchSize": 256})
+        == {}
+    )
+
+    assert (
+        get_metadata("icpsr", mds_url=None, filters={"study_ids": [6425]}, config=None)
+        == {}
+    )
 
     respx.get(
         "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
@@ -180,8 +188,8 @@ def test_get_metadata_icpsr():
         "http://test/ok",
         filters={"study_ids": [6425]},
         mappings=field_mappings,
-        keepOriginalFields=True,
         perItemValues=item_values,
+        keepOriginalFields=True,
     ) == {
         "10.3886/ICPSR06425.v1": {
             "_guid_type": "discovery_metadata",
@@ -2984,7 +2992,7 @@ def test_gen3_adapter():
     }
 
     field_mappings = {
-        "tags": "tags",
+        "tags": "path:tags",
         "_subjects_count": "path:subjects_count",
         "dbgap_accession_number": "path:study_id",
         "study_description": "path:summary",
@@ -3003,7 +3011,7 @@ def test_gen3_adapter():
         "GSE63878": {
             "_guid_type": "discovery_metadata",
             "gen3_discovery": {
-                "tags": "tags",
+                "tags": [{"name": "Array", "category": "Data Type"}],
                 "_subjects_count": 48,
                 "dbgap_accession_number": "",
                 "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
@@ -3013,10 +3021,19 @@ def test_gen3_adapter():
         }
     }
 
-    assert get_metadata("gen3", "http://test/ok/", None, field_mappings) == expected
+    assert (
+        get_metadata(
+            "gen3",
+            "http://test/ok/",
+            None,
+            mappings=field_mappings,
+            keepOriginalFields=False,
+        )
+        == expected
+    )
 
     field_mappings = {
-        "tags": "tags",
+        "tags": [],
         "_subjects_count": "path:subjects_count",
         "dbgap_accession_number": "path:study_id",
         "study_description": "path:summary",
@@ -3028,7 +3045,7 @@ def test_gen3_adapter():
         "GSE63878": {
             "_guid_type": "discovery_metadata",
             "gen3_discovery": {
-                "tags": "tags",
+                "tags": [],
                 "_subjects_count": 48,
                 "dbgap_accession_number": "",
                 "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
@@ -3038,7 +3055,47 @@ def test_gen3_adapter():
         }
     }
 
-    get_metadata("gen3", "http://test/ok/", None, field_mappings) == expected
+    respx.get(
+        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=64&offset=0",
+        status_code=200,
+        content=json_response,
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    get_metadata(
+        "gen3",
+        "http://test/ok/",
+        filters=None,
+        config={"batchSize": 64},
+        mappings=field_mappings,
+        keepOriginalFields=False,
+    ) == expected
+
+    expected = {
+        "GSE63878": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "_subjects_count": 48,
+                "dbgap_accession_number": "dg.333344.222",
+                "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
+                "number_of_datafiles": 0,
+                "investigator": "",
+            },
+        }
+    }
+
+    per_item_override = {"GSE63878": {"dbgap_accession_number": "dg.333344.222"}}
+
+    get_metadata(
+        "gen3",
+        "http://test/ok/",
+        None,
+        config={"batchSize": 64},
+        mappings=field_mappings,
+        keepOriginalFields=False,
+        perItemValues=per_item_override,
+    ) == expected
 
     respx.get(
         "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
@@ -3050,7 +3107,7 @@ def test_gen3_adapter():
     assert get_metadata("gen3", "http://test/error/", None, field_mappings) == {}
 
     # test for no url passed into Gen3Adapter
-    assert get_metadata("gen3", None, None, field_mappings) == {}
+    assert get_metadata("gen3", None, None, None, field_mappings) == {}
 
     try:
         from mds.agg_mds.adapters import Gen3Adapter
