@@ -49,7 +49,8 @@ A metadata service is configurable via a JSON object, with the following format:
       "location": "path:coverage[0]",
       "summary": {
             "path":"description",
-            "filters": ["strip_html"]
+            "filters": ["strip_html"],
+            "default_value" : "N/A"
       },
       ...
     },
@@ -106,10 +107,16 @@ The above methods should allow you to pull any nested value from a metadata entr
 ```json
 "summary": {
       "path":"description",
-      "filters": ["strip_html"]
+      "filters": ["strip_html"],
+      "default_value" : "N/A"
 }
 ```
-In this case, the ```summary``` is set to a JSON object which optionally defines a JSON path and an array of one or more filters to apply. The filters are applied to the text value of the remote field. Furthermore, the filters are applied in the order they appear. The current set of filters are:
+In this case, the ```summary``` is set to a JSON object which optionally defines:
+* a JSON path
+* an array of one or more filters to apply
+* default value to set if that field is not found
+
+The filters are applied to the text value of the remote field. Furthermore, the filters are applied in the order they appear. The current set of filters are:
 
 * strip_html: remove HTML tags from a text field
 * strip_email: remove email addresses from a text field
@@ -123,7 +130,25 @@ def filter_function(s:str) -> str:
 ```
 
 ### Default Values
-Defining default values for fields is quite simple: define the normalized field name and a value. If a remote metadata field has a value, it will override the default.
+Defining default values for fields is handled in one of two way:
+If a field in the metdata does not need a path, simply define the 
+field name and a value. If a remote metadata field has a value, it will override the default.
+If a path is use then use the longer form and set the ```default_value``` to use 
+if the path is not found.
+
+```json
+{
+  ...
+  "summary": {
+    "path": "description",
+    "filters": [
+      "strip_html"
+    ],
+    "default_value": "N/A"
+  },
+  ...
+}
+```
 
 ### Per Item Overrides
 

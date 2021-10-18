@@ -89,8 +89,8 @@ async def populate_metadata(name: str, common, results):
 
     # build ES normalization dictionary
     field_typing = {
-        field: "object" if info.type in ["nested", "array"] else info.type
-        for field, info in commons.fields.items()
+        field: "object" if x.type in ["nested", "array"] else x.type
+        for field, x in commons.fields.items()
     }
 
     await datastore.update_metadata(
@@ -143,11 +143,7 @@ async def main(commons_config: Commons) -> None:
     field_mapping = {
         "mappings": {
             "commons": {
-                "properties": {
-                    field: {"type": {"array": "nested"}.get(info.type, info.type)}
-                    for field, info in commons.fields.items()
-                    if info.type in ["array", "nested"]
-                }
+                "properties": {k: v.to_schema(True) for k, v in commons.fields.items()}
             }
         }
     }
@@ -221,8 +217,13 @@ async def filter_entries(
 
 
 def parse_config_from_file(path: Path) -> Commons:
-    with open(path, "rt") as infile:
-        return parse_config(json.load(infile))
+    if not path.exists():
+        logger.error(f"configuration file: {path} does not exist")
+    try:
+        return parse_config(path.read_text())
+    except IOError as ex:
+        logger.error(f"cannot read configuration file {path}: {ex}")
+        raise ex
 
 
 if __name__ == "__main__":

@@ -90,8 +90,6 @@ CONFIG = {
     "mappings": {"_doc": {"properties": {"array": {"type": "keyword"}}}},
 }
 
-SAMPLE = {"array": ["tags", "advSearchFilters"]}
-
 elastic_search_client = None
 
 
@@ -110,7 +108,7 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
 async def drop_all(common_mapping: dict):
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_TYPE]:
         res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
-        logger.debug(f"deleted index: {index}")
+        logger.debug(f"deleted index: {index}: {res}")
 
     try:
         res = elastic_search_client.indices.create(
@@ -188,9 +186,12 @@ async def update_metadata(
             if field in doc:
                 normalize_field(doc, field, unified_field_normalizers[field])
 
-        elastic_search_client.index(
-            index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
-        )
+        try:
+            elastic_search_client.index(
+                index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
+            )
+        except Exception as ex:
+            print(ex)
 
 
 async def update_global_info(key, doc) -> None:
@@ -391,7 +392,6 @@ async def get_number_aggregation_for_field(field: str):
             }
 
         res = elastic_search_client.search(index=AGG_MDS_INDEX, body=query)
-
         agg_results = res["aggregations"][field] if nested else res["aggregations"]
 
         return {
@@ -405,6 +405,17 @@ async def get_number_aggregation_for_field(field: str):
     except Exception as error:
         logger.error(error)
         return {}
+
+
+async def does_exists(field):
+    try:
+        query = {"size": 0, "query": {"bool": {"must": {"exists": {"field": field}}}}}
+        res = elastic_search_client.search(index=AGG_MDS_INDEX, body=query)
+        if res["hits"]["total"] > 0:
+            return True
+    except Exception as error:
+        logger.error(error)
+    return False
 
 
 async def get_by_guid(guid):

@@ -3,7 +3,6 @@ from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
 
-
 mod = APIRouter()
 
 
@@ -47,21 +46,6 @@ async def metadata_name(name: str):
     Returns the all the metadata from the named commons.
     """
     res = await datastore.get_all_named_commons_metadata(name)
-    if res:
-        return res
-    else:
-        raise HTTPException(
-            HTTP_404_NOT_FOUND,
-            {"message": f"no common exists with the given: {name}", "code": 404},
-        )
-
-
-@mod.get("/aggregate/metadata/{name}/tags")
-async def metadata_tags(name: str):
-    """
-    Returns the tags associated with the named commons.
-    """
-    res = await datastore.get_commons_attribute(name, "tags")
     if res:
         return res
     else:

@@ -19,6 +19,8 @@ from mds import logger
 
 
 def strip_email(text: str):
+    if not isinstance(text, str):
+        return text
     rgx = r"[\w.+-]+@[\w-]+\.[\w.-]+"
     matches = re.findall(rgx, text)
     for cur_word in matches:
@@ -27,14 +29,20 @@ def strip_email(text: str):
 
 
 def strip_html(s: str):
+    if not isinstance(s, str):
+        return s
     return bleach.clean(s, tags=[], strip=True)
 
 
 def add_icpsr_source_url(study_id: str):
+    if not isinstance(study_id, str):
+        return study_id
     return f"https://www.icpsr.umich.edu/web/NAHDAP/studies/{study_id}"
 
 
 def add_clinical_trials_source_url(study_id: str):
+    if not isinstance(study_id, str):
+        return study_id
     return f"https://clinicaltrials.gov/ct2/show/{study_id}"
 
 
@@ -154,8 +162,11 @@ class RemoteMetadataAdapter(ABC):
         for key, value in mappings.items():
             if isinstance(value, dict):  # have a complex assignment
                 expression = value.get("path", None)
+
+                default_value = None
                 if hasDefaultValue := "default_value" in value:
                     default_value = value["default_value"]
+
                 field_value = get_json_path_value(
                     expression, item, hasDefaultValue, default_value
                 )

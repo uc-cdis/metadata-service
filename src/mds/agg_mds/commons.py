@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, TypeVar
 
 
 @dataclass_json
@@ -31,6 +31,10 @@ class FieldAggregation:
 
     type: str = "number"
     function: str = "sum"
+    chart: str = "text"
+
+
+FieldDefinition = TypeVar("FieldDefinition")
 
 
 @dataclass_json
@@ -46,6 +50,31 @@ class FieldDefinition:
 
     type: str = "string"
     aggregate: bool = False
+    properties: Optional[Dict[str, FieldDefinition]] = None
+
+    ES_TYPE_MAPPING = {
+        "array": "nested",
+        "string": "text",
+        "integer": "long",
+    }
+
+    def __post_init__(self):
+        if self.properties is not None:
+            self.properties = {
+                k: FieldDefinition.from_dict(v) for k, v in self.properties.items()
+            }
+
+    def to_schema(self, es_types: bool = False):
+        res = {
+            "type": FieldDefinition.ES_TYPE_MAPPING.get(self.type, self.type)
+            if es_types
+            else self.type
+        }
+        if self.properties is not None:
+            res["properties"] = {
+                k: v.to_schema(True) for k, v in self.properties.items()
+            }
+        return res
 
 
 @dataclass_json
@@ -61,6 +90,9 @@ class MDSInstance:
     select_field: Optional[Dict[str, str]] = None
 
     def __post_init__(self):
+        if self.columns_to_fields is None:
+            return
+
         for name, value in self.columns_to_fields.items():
             if isinstance(value, dict):
                 self.columns_to_fields[name] = ColumnsToFields.from_dict(value)
@@ -83,11 +115,21 @@ class AdapterMDSInstance:
 
 @dataclass_json
 @dataclass
+class Config:
+    fields: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
+    settings: Optional[Dict[str, Any]] = field(default_factory=dict)
+    aggregations: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
+    search_settings: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
+
+
+@dataclass_json
+@dataclass
 class Commons:
-    gen3_commons: Dict[str, MDSInstance]
-    adapter_commons: Dict[str, AdapterMDSInstance]
-    aggregations: Optional[Dict[str, FieldAggregation]]
-    fields: Optional[Dict[str, FieldDefinition]]
+    configuration: Optional[Config] = None
+    gen3_commons: Dict[str, MDSInstance] = field(default_factory=dict)
+    adapter_commons: Dict[str, AdapterMDSInstance] = field(default_factory=dict)
+    aggregations: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
+    fields: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
 
 
 def parse_config(data: Dict[str, Any]) -> Commons:
@@ -96,11 +138,4 @@ def parse_config(data: Dict[str, Any]) -> Commons:
     for the Ecosystem browser. Returns a dictionary of MDSInfo entries
     """
 
-    return Commons.from_dict(
-        {
-            "gen3_commons": data.get("gen3_commons", {}),
-            "adapter_commons": data.get("adapter_commons", {}),
-            "aggregations": data.get("aggregations", {}),
-            "fields": data.get("fields", {}),
-        }
-    )
+    return Commons.from_json(data)
