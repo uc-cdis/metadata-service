@@ -143,7 +143,10 @@ async def main(commons_config: Commons) -> None:
     field_mapping = {
         "mappings": {
             "commons": {
-                "properties": {k: v.to_schema(True) for k, v in commons.fields.items()}
+                "properties": {
+                    k: v.to_schema(True)
+                    for k, v in commons.configuration.schema.items()
+                }
             }
         }
     }

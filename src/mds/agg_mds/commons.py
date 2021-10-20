@@ -45,11 +45,10 @@ class FieldDefinition:
     While other fields are defined dynamically, these help "tune"
     certain fields
     * type: one of string, number, object, nested (deeper object)
-    * aggregate: aggregation is available
     """
 
     type: str = "string"
-    aggregate: bool = False
+    description: str = ""
     properties: Optional[Dict[str, FieldDefinition]] = None
 
     ES_TYPE_MAPPING = {
@@ -116,7 +115,7 @@ class AdapterMDSInstance:
 @dataclass_json
 @dataclass
 class Config:
-    fields: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
+    schema: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
     settings: Optional[Dict[str, Any]] = field(default_factory=dict)
     aggregations: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
     search_settings: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
