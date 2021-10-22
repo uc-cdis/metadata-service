@@ -16,6 +16,7 @@ from tenacity import (
     before_sleep_log,
 )
 from mds import logger
+import json
 
 
 def strip_email(text: str):
@@ -130,7 +131,7 @@ class RemoteMetadataAdapter(ABC):
         """needs to be implemented in derived class"""
 
     @staticmethod
-    def mapFields(item: dict, mappings: dict, global_filters=None) -> dict:
+    def mapFields(item: dict, mappings: dict, global_filters=None, schema=None) -> dict:
         """
         Given a MetaData entry as a dict, and dictionary describing fields to add
         and optionally where to map an item entry from.
@@ -154,6 +155,9 @@ class RemoteMetadataAdapter(ABC):
         :return:
         """
 
+        if schema is None:
+            schema = {}
+
         if global_filters is None:
             global_filters = []
 
@@ -163,9 +167,19 @@ class RemoteMetadataAdapter(ABC):
             if isinstance(value, dict):  # have a complex assignment
                 expression = value.get("path", None)
 
+                hasDefaultValue = False
                 default_value = None
-                if hasDefaultValue := "default_value" in value:
-                    default_value = value["default_value"]
+                # get adapter's default value if set
+                if "default" in value:
+                    hasDefaultValue = True
+                    default_value = value["default"]
+
+                # get schema default value if set
+                if hasDefaultValue is False:
+                    d = schema.get(key, {}).get("default", None)
+                    if d is not None:
+                        hasDefaultValue = True
+                        default_value = d
 
                 field_value = get_json_path_value(
                     expression, item, hasDefaultValue, default_value
@@ -178,12 +192,25 @@ class RemoteMetadataAdapter(ABC):
             elif isinstance(value, str) and "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
-                field_value = get_json_path_value(expression, item)
+
+                hasDefaultValue = False
+                default_value = None
+                if key in schema:
+                    d = schema[key].default
+                    if d is not None:
+                        hasDefaultValue = True
+                        default_value = d
+
+                field_value = get_json_path_value(
+                    expression, item, hasDefaultValue, default_value
+                )
             else:
                 field_value = value
 
             for f in global_filters:
                 field_value = FieldFilters.execute(f, field_value)
+            if key in schema:
+                field_value = schema[key].normalize_value(field_value)
             results[key] = field_value
         return results
 
@@ -257,11 +284,13 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         return id.replace("http://doi.org/", "").replace("dc:", "")
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -284,6 +313,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for record in data["results"]:
@@ -299,7 +329,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     else:
                         item[str.replace(key, "dc:", "")] = value
             normalized_item = ISCPSRDublin.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields, globalFieldFilters
+                item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
             results[item["identifier"]] = {
                 "_guid_type": "discovery_metadata",
@@ -405,7 +435,9 @@ class ClinicalTrials(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
         """
         Map item fields to gen3 normalized fields
         using the mapping and adding the location
@@ -413,7 +445,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -441,13 +473,14 @@ class ClinicalTrials(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for item in data["results"]:
             item = item["Study"]
             item = flatten(item)
             normalized_item = ClinicalTrials.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields, globalFieldFilters
+                item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
             results[item["NCTId"]] = {
                 "_guid_type": "discovery_metadata",
@@ -507,7 +540,9 @@ class PDAPS(RemoteMetadataAdapter):
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
         """
         Maps the items fields into Gen3 resources fields
         if keepOriginalFields is False: only those fields will be included in the final entry
@@ -515,7 +550,7 @@ class PDAPS(RemoteMetadataAdapter):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -536,11 +571,12 @@ class PDAPS(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for item in data["results"]:
             normalized_item = PDAPS.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields, globalFieldFilters
+                item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
             if "display_id" not in item:
                 continue
@@ -614,7 +650,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
     @staticmethod
     def addGen3ExpectedFields(
-        item, mappings, keepOriginalFields, globalFieldFilters
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
     ) -> Dict[str, Any]:
         """
         Given an item (metadata as a dict), map the item's keys into
@@ -629,7 +665,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -655,11 +691,16 @@ class Gen3Adapter(RemoteMetadataAdapter):
         study_field = config.get("study_field", "gen3_discovery")
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for guid, record in data["results"].items():
             item = Gen3Adapter.addGen3ExpectedFields(
-                record[study_field], mappings, keepOriginalFields, globalFieldFilters
+                record[study_field],
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
             )
             results[guid] = {
                 "_guid_type": "discovery_metadata",
@@ -682,6 +723,7 @@ def gather_metadata(
     perItemValues,
     keepOriginalFields,
     globalFieldFilters,
+    schema,
 ):
     try:
         json_data = gather.getRemoteDataAsJson(
@@ -694,6 +736,7 @@ def gather_metadata(
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
             globalFieldFilters=globalFieldFilters,
+            schema=schema,
         )
         return results
     except ValueError as exc:
@@ -720,6 +763,7 @@ def get_metadata(
     perItemValues=None,
     keepOriginalFields=False,
     globalFieldFilters=None,
+    schema=None,
 ):
     if config is None:
         config = {}
@@ -746,4 +790,5 @@ def get_metadata(
         perItemValues=perItemValues,
         keepOriginalFields=keepOriginalFields,
         globalFieldFilters=globalFieldFilters,
+        schema=schema,
     )

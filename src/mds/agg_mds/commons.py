@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 from typing import Any, Dict, List, Optional, Union, TypeVar
+from mds import logger
+import json
 
 
 @dataclass_json
@@ -37,6 +39,32 @@ class FieldAggregation:
 FieldDefinition = TypeVar("FieldDefinition")
 
 
+def string_to_array(s: str) -> List[str]:
+    return [s]
+
+
+def string_to_integer(s: str) -> int:
+    return int(s) if s.isnumeric() else None
+
+
+def string_to_number(s: str) -> Optional[float]:
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def string_to_dict(s: str) -> Optional[Dict[Any, Any]]:
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        return None
+
+
+def dict_to_array(d: dict) -> List[Dict[Any, Any]]:
+    return [d]
+
+
 @dataclass_json
 @dataclass
 class FieldDefinition:
@@ -49,12 +77,31 @@ class FieldDefinition:
 
     type: str = "string"
     description: str = ""
+    default: Optional[Any] = None
     properties: Optional[Dict[str, FieldDefinition]] = None
+    items: Optional[Dict[str, str]] = None
 
     ES_TYPE_MAPPING = {
         "array": "nested",
+        "object": "nested",
         "string": "text",
         "integer": "long",
+        "number": "float",
+    }
+
+    FIELD_NORMALIZATION = {
+        "string_to_array": string_to_array,
+        "string_to_number": string_to_number,
+        "string_to_integer": string_to_integer,
+        "string_to_object": string_to_dict,
+        "dict_to_array": dict_to_array,
+    }
+
+    MAP_TYPE_TO_JSON_SCHEMA_TYPES = {
+        "str": "string",
+        "int": "integer",
+        "list": "array",
+        "dict": "object",
     }
 
     def __post_init__(self):
@@ -63,22 +110,53 @@ class FieldDefinition:
                 k: FieldDefinition.from_dict(v) for k, v in self.properties.items()
             }
 
-    def to_schema(self, es_types: bool = False):
-        res = {
-            "type": FieldDefinition.ES_TYPE_MAPPING.get(self.type, self.type)
-            if es_types
-            else self.type
-        }
+    def get_es_type(self):
+        type = FieldDefinition.ES_TYPE_MAPPING.get(self.type, self.type)
+        if self.type == "array" and self.items and self.items["type"] == "string":
+            type = "text"
+        return type
+
+    def to_schema(self, es_types: bool = False, all_fields: bool = False):
+        """
+        Maps the FieldDefinition to either a JSON schema or a Elastic Search mapping
+        """
+        res = {"type": self.get_es_type() if es_types else self.type}
         if self.properties is not None:
             res["properties"] = {
-                k: v.to_schema(True) for k, v in self.properties.items()
+                k: v.to_schema(es_types, all_fields) for k, v in self.properties.items()
             }
+        if all_fields:
+            if self.items is not None:
+                res["items"] = self.items
+            if self.description is not None:
+                res["description"] = self.description
+            if self.default is not None:
+                res["default"] = self.default
         return res
+
+    def normalize_value(self, value) -> Any:
+        value_type = FieldDefinition.MAP_TYPE_TO_JSON_SCHEMA_TYPES.get(
+            type(value).__name__, type(value).__name__
+        )
+
+        if value_type == self.type:
+            return value
+
+        conversion = f"{value_type}_to_{self.type}"
+        converter = FieldDefinition.FIELD_NORMALIZATION.get(conversion, None)
+        if converter is None:
+            logger.debug(f"error normalizing {value}")
+            return value
+        return converter(value)
 
 
 @dataclass_json
 @dataclass
 class MDSInstance:
+    """
+    Handles pulling and processing data from a Gen3 metadata-service
+    """
+
     mds_url: str
     commons_url: str
     columns_to_fields: Optional[
@@ -129,6 +207,10 @@ class Commons:
     adapter_commons: Dict[str, AdapterMDSInstance] = field(default_factory=dict)
     aggregations: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
     fields: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.configuration is None:
+            self.configuration = Config()
 
 
 def parse_config(data: Dict[str, Any]) -> Commons:

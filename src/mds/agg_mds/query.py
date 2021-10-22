@@ -15,6 +15,21 @@ async def get_commons():
     return await datastore.get_commons()
 
 
+@mod.get("/aggregate/info/{what}")
+async def get_commons(what: str):
+    """
+    Returns information from the aggregate metadata service.
+    """
+    res = await datastore.get_commons_attribute(what, "")
+    if res:
+        return res
+    else:
+        raise HTTPException(
+            HTTP_404_NOT_FOUND,
+            {"message": f"information for {what} not found", "code": 404},
+        )
+
+
 @mod.get("/aggregate/metadata")
 async def metadata(
     _: Request,

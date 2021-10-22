@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
-from typing import List, Dict
+from typing import Any, List, Dict
 import json
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
@@ -106,7 +106,7 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
 
 
 async def drop_all(common_mapping: dict):
-    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_TYPE]:
+    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
         logger.debug(f"deleted index: {index}: {res}")
 
@@ -166,7 +166,7 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
-    field_normalizers: Dict[str, str],
+    field_normalizers: Dict[str, Any],
     study_data_field: str,
 ):
     elastic_search_client.index(

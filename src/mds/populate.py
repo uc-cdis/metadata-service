@@ -9,7 +9,6 @@ from pathlib import Path
 from urllib.parse import urlparse
 import argparse
 import sys
-import json
 
 
 def parse_args(argv: List[str]) -> Namespace:
@@ -75,10 +74,12 @@ async def populate_metadata(name: str, common, results):
         entry[common.study_data_field]["commons_name"] = name
 
         # add to tags
-        for t in entry[common.study_data_field]["tags"]:
-            if t["category"] not in tags:
-                tags[t["category"]] = set()
-            tags[t["category"]].add(t["name"])
+        item_tags = entry[common.study_data_field].get("tags", {})
+        if item_tags is not None:
+            for t in item_tags:
+                if t["category"] not in tags:
+                    tags[t["category"]] = set()
+                tags[t["category"]].add(t["name"])
 
     # process tags set to list
     for k, v in tags.items():
@@ -104,11 +105,20 @@ async def populate_info(commons_config: Commons) -> None:
     }
     await datastore.update_global_info("aggregations", agg_info)
 
+    if commons_config.configuration.schema:
+        json_schema = {
+            k: v.to_schema(all_fields=True)
+            for k, v in commons.configuration.schema.items()
+        }
+        await datastore.update_global_info("schema", json_schema)
+
 
 async def populate_config(commons_config: Commons) -> None:
     array_definition = {
         "array": [
-            field for field, value in commons.fields.items() if value.type == "array"
+            field
+            for field, value in commons.configuration.schema.items()
+            if value.type == "array"
         ]
     }
     await datastore.update_config_info(array_definition)
@@ -119,6 +129,10 @@ async def main(commons_config: Commons) -> None:
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
     {
+        "configuration" : {
+                schema: { dict of data schema for normalized fields }
+                settings: { dict of additional configuration properties }
+        },
        "commons_name" : {
             "metadata" : [ array of metadata entries ],
             "field_mapping" : { dictionary of field_name to column_name },
@@ -171,6 +185,7 @@ async def main(commons_config: Commons) -> None:
             common.per_item_values,
             common.keep_original_fields,
             common.global_field_filters,
+            schema=commons_config.configuration.schema,
         )
         logger.info(f"Received {len(results)} from {name}")
         if len(results) > 0:
