@@ -84,7 +84,7 @@ class FieldDefinition:
     ES_TYPE_MAPPING = {
         "array": "nested",
         "object": "nested",
-        "string": "text",
+        "string": "keyword",
         "integer": "long",
         "number": "float",
     }
@@ -104,6 +104,9 @@ class FieldDefinition:
         "dict": "object",
     }
 
+    def has_default_value(self):
+        return self.default is not None
+
     def __post_init__(self):
         if self.properties is not None:
             self.properties = {
@@ -113,14 +116,28 @@ class FieldDefinition:
     def get_es_type(self):
         type = FieldDefinition.ES_TYPE_MAPPING.get(self.type, self.type)
         if self.type == "array" and self.items and self.items["type"] == "string":
-            type = "text"
-        return type
+            type = "keyword"
+
+        if type == "keyword":
+            return {
+                "type": type,
+                "fields": {
+                    "analyzed": {
+                        "type": "text",
+                        "analyzer": "ngram_analyzer",
+                        "search_analyzer": "search_analyzer",
+                        "term_vector": "with_positions_offsets",
+                    }
+                },
+            }
+
+        return {"type": type}
 
     def to_schema(self, es_types: bool = False, all_fields: bool = False):
         """
         Maps the FieldDefinition to either a JSON schema or a Elastic Search mapping
         """
-        res = {"type": self.get_es_type() if es_types else self.type}
+        res = self.get_es_type() if es_types else {"type": self.type}
         if self.properties is not None:
             res["properties"] = {
                 k: v.to_schema(es_types, all_fields) for k, v in self.properties.items()
@@ -192,9 +209,17 @@ class AdapterMDSInstance:
 
 @dataclass_json
 @dataclass
+class Settings:
+    cache_drs: bool = False
+    drs_indexd_server: str = "https://dataguids.org"
+    timestamp_entry: bool = False
+
+
+@dataclass_json
+@dataclass
 class Config:
+    settings: Settings
     schema: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
-    settings: Optional[Dict[str, Any]] = field(default_factory=dict)
     aggregations: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
     search_settings: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
 

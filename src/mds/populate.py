@@ -88,14 +88,8 @@ async def populate_metadata(name: str, common, results):
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
 
-    # build ES normalization dictionary
-    field_typing = {
-        field: "object" if x.type in ["nested", "array"] else x.type
-        for field, x in commons.fields.items()
-    }
-
     await datastore.update_metadata(
-        name, mds_arr, keys, tags, info, field_typing, common.study_data_field
+        name, mds_arr, keys, tags, info, common.study_data_field
     )
 
 
@@ -111,13 +105,23 @@ async def populate_info(commons_config: Commons) -> None:
             for k, v in commons.configuration.schema.items()
         }
         await datastore.update_global_info("schema", json_schema)
+    await populate_drs_info(commons_config)
+
+
+async def populate_drs_info(commons_config: Commons) -> None:
+    if commons_config.configuration.settings.cache_drs:
+        server = commons_config.configuration.settings.drs_indexd_server
+        if server is not None:
+            drs_data = adapters.get_metadata("drs_indexd", server, None)
+            for id, entry in drs_data.get("cache", {}).items():
+                await datastore.update_global_info(id, entry)
 
 
 async def populate_config(commons_config: Commons) -> None:
     array_definition = {
         "array": [
             field
-            for field, value in commons.configuration.schema.items()
+            for field, value in commons_config.configuration.schema.items()
             if value.type == "array"
         ]
     }
@@ -195,6 +199,7 @@ async def main(commons_config: Commons) -> None:
     await populate_info(commons_config)
     # populate array index information to support guppy
     await populate_config(commons_config)
+
     res = await datastore.get_status()
     print(res)
     await datastore.close()

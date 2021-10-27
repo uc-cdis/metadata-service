@@ -16,7 +16,6 @@ from tenacity import (
     before_sleep_log,
 )
 from mds import logger
-import json
 
 
 def strip_email(text: str):
@@ -176,10 +175,9 @@ class RemoteMetadataAdapter(ABC):
 
                 # get schema default value if set
                 if hasDefaultValue is False:
-                    d = schema.get(key, {}).get("default", None)
-                    if d is not None:
+                    if key in schema and schema[key].default is not None:
                         hasDefaultValue = True
-                        default_value = d
+                        default_value = schema[key].default
 
                 field_value = get_json_path_value(
                     expression, item, hasDefaultValue, default_value
@@ -557,8 +555,8 @@ class PDAPS(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["investigators"], list):
-            results["investigators"] = results["investigators"].join(", ")
+        #     if isinstance(results["investigators"], list):
+        #        results["investigators"] = results["investigators"].join(", ")
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
@@ -714,6 +712,77 @@ class Gen3Adapter(RemoteMetadataAdapter):
         return results
 
 
+class DRSIndexdAdapter(RemoteMetadataAdapter):
+    @staticmethod
+    def clean_dist_entry(s: str) -> str:
+        """
+        Cleans the string returning a proper DRS prefix
+        @param s: string to clean
+        @return: cleaned string
+        """
+        return s.replace("\\.", ".").replace(".*", "")
+
+    @staticmethod
+    def clean_http_url(s: str) -> str:
+        """
+        Cleans input string removing http(s) prefix and all trailing paths
+        @param s: string to clean
+        @return: cleaned string
+        """
+        return (
+            s.replace("/index", "")[::-1]
+            .replace("/", "", 1)[::-1]
+            .replace("http://", "")
+            .replace("https://", "")
+            .replace("/ga4gh/drs/v1/objects", "")
+        )
+
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        from datetime import datetime, timezone
+
+        results = {"results": {}}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        try:
+            response = httpx.get(f"{mds_url}/index/_dist")
+            response.raise_for_status()
+            data = response.json()
+            # process the entries and create a DRS cache
+            results = {
+                "info": {
+                    "created": datetime.now(timezone.utc).strftime(
+                        "%m/%d/%Y %H:%M:%S:%Z"
+                    )
+                },
+                "cache": {},
+            }
+            for entry in data:
+                if entry["type"] != "indexd":
+                    continue
+                host = DRSIndexdAdapter.clean_http_url(entry["host"])
+                name = entry.get("name", "")
+                for x in entry["hints"]:
+                    drs_prefix = DRSIndexdAdapter.clean_dist_entry(x)
+                    results["cache"][drs_prefix] = {
+                        "host": host,
+                        "name": name,
+                        "type": entry["type"],
+                    }
+
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}."
+            )
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        return data
+
+
 def gather_metadata(
     gather,
     mds_url,
@@ -751,6 +820,7 @@ adapters = {
     "clinicaltrials": ClinicalTrials,
     "pdaps": PDAPS,
     "gen3": Gen3Adapter,
+    "drs_indexd": DRSIndexdAdapter,
 }
 
 

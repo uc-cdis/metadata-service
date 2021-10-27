@@ -24,7 +24,22 @@ AGG_MDS_INFO_TYPE = "commons-info"
 AGG_MDS_CONFIG_INDEX = f"{AGG_MDS_NAMESPACE}-commons-config-index"
 AGG_MDS_CONFIG_TYPE = "commons-config"
 
-MAPPING = {
+# Setting Commons Info ES index to only store documents
+# will not be searching on it
+INFO_MAPPING = {
+    "mappings": {
+        AGG_MDS_INFO_TYPE: {
+            "dynamic": False,
+        }
+    }
+}
+
+CONFIG = {
+    "settings": {"index": {"number_of_shards": 1, "number_of_replicas": 0}},
+    "mappings": {"_doc": {"properties": {"array": {"type": "keyword"}}}},
+}
+
+SEARCH_CONFIG = {
     "settings": {
         "index": {
             "number_of_shards": 1,
@@ -52,42 +67,7 @@ MAPPING = {
                 },
             },
         }
-    },
-    "mappings": {
-        "commons": {
-            "properties": {
-                "auth_resource_path": {"type": "keyword"},
-                "__manifest": {
-                    "type": "nested",
-                },
-                "tags": {
-                    "type": "nested",
-                    "properties": {
-                        "name": {
-                            "type": "text",
-                            "fields": {
-                                "analyzed": {
-                                    "type": "text",
-                                    "term_vector": "with_positions_offsets",
-                                    "analyzer": "ngram_analyzer",
-                                    "search_analyzer": "search_analyzer",
-                                }
-                            },
-                        },
-                        "category": {"type": "text"},
-                    },
-                },
-                "advSearchFilters": {
-                    "type": "nested",
-                },
-            }
-        }
-    },
-}
-
-CONFIG = {
-    "settings": {"index": {"number_of_shards": 1, "number_of_replicas": 0}},
-    "mappings": {"_doc": {"properties": {"array": {"type": "keyword"}}}},
+    }
 }
 
 elastic_search_client = None
@@ -111,9 +91,8 @@ async def drop_all(common_mapping: dict):
         logger.debug(f"deleted index: {index}: {res}")
 
     try:
-        res = elastic_search_client.indices.create(
-            index=AGG_MDS_INDEX, body=common_mapping
-        )
+        mapping = {**SEARCH_CONFIG, **common_mapping}
+        res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=mapping)
         logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
     except es_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
@@ -124,7 +103,7 @@ async def drop_all(common_mapping: dict):
 
     try:
         res = elastic_search_client.indices.create(
-            index=AGG_MDS_INFO_INDEX,
+            index=AGG_MDS_INFO_INDEX, body=INFO_MAPPING
         )
         logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
 
@@ -166,7 +145,6 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
-    field_normalizers: Dict[str, Any],
     study_data_field: str,
 ):
     elastic_search_client.index(
@@ -176,15 +154,10 @@ async def update_metadata(
         body=info,
     )
 
-    unified_field_normalizers = {**field_normalizers}
     for doc in data:
         key = list(doc.keys())[0]
         # Flatten out this structure
         doc = doc[key][study_data_field]
-
-        for field in unified_field_normalizers.keys():
-            if field in doc:
-                normalize_field(doc, field, unified_field_normalizers[field])
 
         try:
             elastic_search_client.index(

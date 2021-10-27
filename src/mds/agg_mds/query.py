@@ -2,6 +2,8 @@ from fastapi import HTTPException, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
+from typing import Optional
+
 
 mod = APIRouter()
 
