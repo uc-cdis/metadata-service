@@ -177,6 +177,97 @@ class RemoteMetadataAdapter(ABC):
         json_data = self.getRemoteDataAsJson(**kwargs)
         return self.normalizeToGen3MDSFields(json_data, **kwargs)
 
+class MPSAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for MPS
+    boiler plate taken from IPSRDublin adapter and added MPS-specific needs
+    
+    parameters: filters which currently should be study_ids=id,id,id...
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    
+    def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
+        """ needs to be implemented in derived class """
+        results = {"results": []}
+        if "filters" not in kwargs or kwargs["filters"] is None:
+            return results
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        study_ids = kwargs["filters"].get("study_ids", [])
+
+        if len(study_ids) > 0:
+            for id in study_ids:
+                try:
+                    #get url request put data into datadict
+                    url = f"{mds_url}/{id}"
+                    response = httpx.get(url)
+                    response.raise_for_status()
+
+                    data_dict = json.load(response.text)
+                    results["results"].append(data_dict)
+
+                except httpx.TimeoutException as exc:
+                    logger.error(
+                        f"An timeout error occurred while requesting {exc.request.url}."
+                    )
+                    raise
+                except httpx.HTTPError as exc:
+                    logger.error(
+                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                    )
+                except ValueError as exc:
+                    logger.error(
+                        f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
+                    )
+                except Exception as exc:
+                    logger.error(
+                        f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
+                    )
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+        results = item
+        if mappings is not None:
+            #mapFields fxn: can use as is or can overwrite if need more specialized version
+            mapped_fields = RemoteMetadataAdapter.mapFields( 
+                item, mappings, globalFieldFilters
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+        #add MPS specific stuff if needed (eg turning list of investigators into one string)
+        return results               
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
+        """ needs to be implemented in derived class """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+
+        results = {}
+        for record in data["results"]: #iterate through studies
+            item = {}
+            #iterate through items in metadata
+            for key, value in record.items():
+                normalized_item = MPSAdapter.addGen3ExpectedFields(
+                    item, mappings, keepOriginalFields, globalFieldFilters
+                )
+            results[item["identifier"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+            
 
 class ISCPSRDublin(RemoteMetadataAdapter):
     """
