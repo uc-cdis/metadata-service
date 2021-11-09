@@ -2,6 +2,7 @@ import collections.abc
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union
 from jsonpath_ng import parse, JSONPathError
+import json
 import httpx
 import xmltodict
 import bleach
@@ -207,11 +208,12 @@ class MPSAdapter(RemoteMetadataAdapter):
             for id in study_ids:
                 try:
                     #get url request put data into datadict
-                    url = f"{mds_url}/{id}"
+                    url = f"{mds_url}/{id}/"
+                    print(url)
                     response = httpx.get(url)
                     response.raise_for_status()
 
-                    data_dict = json.load(response.text)
+                    data_dict = json.loads(response.text)
                     results["results"].append(data_dict)
 
                 except httpx.TimeoutException as exc:
@@ -263,11 +265,18 @@ class MPSAdapter(RemoteMetadataAdapter):
                 normalized_item = MPSAdapter.addGen3ExpectedFields(
                     item, mappings, keepOriginalFields, globalFieldFilters
                 )
+                #TODO: is there a certain standard for identifiers or 
+                # is it just some pattern that ensures uniqueness?
+                if key=='id':
+                    item['identifier'] = f"MPS_study_{value}"
+
             results[item["identifier"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
-            
+        
+        return results
+
 
 class ISCPSRDublin(RemoteMetadataAdapter):
     """
@@ -776,6 +785,7 @@ adapters = {
     "icpsr": ISCPSRDublin,
     "clinicaltrials": ClinicalTrials,
     "pdaps": PDAPS,
+    'mps':MPSAdapter,
     "gen3": Gen3Adapter,
 }
 
@@ -806,6 +816,7 @@ def get_metadata(
         )
         return {}
 
+    print(gather)
     return gather_metadata(
         gather,
         mds_url=mds_url,
