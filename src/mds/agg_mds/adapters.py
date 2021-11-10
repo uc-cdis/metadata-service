@@ -191,7 +191,6 @@ class MPSAdapter(RemoteMetadataAdapter):
         retry=retry_if_exception_type(httpx.TimeoutException),
         wait=wait_random_exponential(multiplier=1, max=10),
     )
-    
     def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
         """ needs to be implemented in derived class """
         results = {"results": []}
@@ -209,7 +208,6 @@ class MPSAdapter(RemoteMetadataAdapter):
                 try:
                     #get url request put data into datadict
                     url = f"{mds_url}/{id}/"
-                    print(url)
                     response = httpx.get(url)
                     response.raise_for_status()
 
@@ -258,25 +256,20 @@ class MPSAdapter(RemoteMetadataAdapter):
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
         results = {}
-        for record in data["results"]: #iterate through studies
-            item = {}
-            #iterate through items in metadata
-            for key, value in record.items():
-                normalized_item = MPSAdapter.addGen3ExpectedFields(
-                    item, mappings, keepOriginalFields, globalFieldFilters
-                )
-                #TODO: is there a certain standard for identifiers or 
-                # is it just some pattern that ensures uniqueness?
-                if key=='id':
-                    item['identifier'] = f"MPS_study_{value}"
+        for item in data["results"]: #iterate through studies
+            normalized_item = MPSAdapter.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields, globalFieldFilters
+            )
+            #TODO: is there a certain standard for identifiers or 
+            # is it just some pattern that ensures uniqueness?
+            identifier = f"MPS_study_{item['id']}"
 
-            results[item["identifier"]] = {
+            results[identifier] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
         
         return results
-
 
 class ISCPSRDublin(RemoteMetadataAdapter):
     """
