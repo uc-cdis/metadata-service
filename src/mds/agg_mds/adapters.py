@@ -808,8 +808,7 @@ def get_metadata(
             f"unknown adapter for commons {adapter_name}. Returning no results."
         )
         return {}
-
-    print(gather)
+        
     return gather_metadata(
         gather,
         mds_url=mds_url,
