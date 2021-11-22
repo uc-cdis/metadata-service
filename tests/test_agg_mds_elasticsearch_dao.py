@@ -1,8 +1,34 @@
 from unittest.mock import patch, call, MagicMock
 import pytest
 from mds.agg_mds.datastore import elasticsearch_dao
-from mds.agg_mds.datastore.elasticsearch_dao import MAPPING
+from mds.agg_mds.datastore.elasticsearch_dao import (
+    INFO_MAPPING,
+    AGG_MDS_INDEX,
+    AGG_MDS_INFO_INDEX,
+    AGG_MDS_CONFIG_INDEX,
+    CONFIG,
+    SEARCH_CONFIG,
+)
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
+from mds.config import ES_RETRY_LIMIT, ES_RETRY_INTERVAL
+
+COMMON_MAPPING = {
+    "mappings": {
+        "commons": {
+            "properties": {
+                "__manifest": {
+                    "type": "nested",
+                },
+                "tags": {
+                    "type": "nested",
+                },
+                "data_dictionary": {
+                    "type": "nested",
+                },
+            }
+        }
+    }
+}
 
 
 @pytest.mark.asyncio
@@ -15,8 +41,8 @@ async def test_init():
         ["myhost"],
         port=9200,
         scheme="http",
-        timeout=30,
-        max_retries=7,
+        timeout=ES_RETRY_INTERVAL,
+        max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
 
@@ -27,17 +53,20 @@ async def test_drop_all():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
         MagicMock(),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.drop_all(COMMON_MAPPING)
     mock_indices.delete.assert_has_calls(
         [
-            call(index="default_namespace-commons-index", ignore=[400, 404]),
-            call(index="default_namespace-commons-info-index", ignore=[400, 404]),
-        ]
+            call(index=AGG_MDS_INDEX, ignore=[400, 404]),
+            call(index=AGG_MDS_INFO_INDEX, ignore=[400, 404]),
+            call(index=AGG_MDS_CONFIG_INDEX, ignore=[400, 404]),
+        ],
+        any_order=True,
     )
     mock_indices.create.assert_has_calls(
         [
-            call(body=MAPPING, index="default_namespace-commons-index"),
-            call(index="default_namespace-commons-info-index"),
+            call(body={**SEARCH_CONFIG, **COMMON_MAPPING}, index=AGG_MDS_INDEX),
+            call(body=INFO_MAPPING, index=AGG_MDS_INFO_INDEX),
+            call(body=CONFIG, index=AGG_MDS_CONFIG_INDEX),
         ],
         any_order=True,
     )
@@ -53,7 +82,7 @@ async def test_create_if_exists():
             )
         ),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.drop_all(COMMON_MAPPING)
 
 
 @pytest.mark.asyncio
@@ -64,7 +93,7 @@ async def test_create_index_raise_exception():
         MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
     ) as mock_indices:
         try:
-            await elasticsearch_dao.drop_all()
+            await elasticsearch_dao.drop_all(COMMON_MAPPING)
         except Exception as exc:
             assert isinstance(exc, es_exceptions.RequestError) == True
 
@@ -108,6 +137,7 @@ async def test_update_metadata():
                 index="default_namespace-commons-index",
             ),
         ],
+        any_order=True,
     )
 
 

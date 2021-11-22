@@ -713,6 +713,11 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
 
 class DRSIndexdAdapter(RemoteMetadataAdapter):
+    """
+    Pulls the DRS hostname from a ga4gh (indexd) server to cache
+    them to support local compact DRS resolution.
+    """
+
     @staticmethod
     def clean_dist_entry(s: str) -> str:
         """
