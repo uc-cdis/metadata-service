@@ -11,7 +11,7 @@ from tenacity import (
 )
 
 # extend the default timeout
-httpx.Client(timeout=20.0)
+httpx.Client(timeout=180.0)
 
 
 @retry(

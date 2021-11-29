@@ -52,7 +52,7 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
         [hostname],
         scheme="http",
         port=port,
-        timeout=30,
+        timeout=180,
         max_retries=7,
         retry_on_timeout=True,
     )
