@@ -12,20 +12,6 @@
 				"full_name": "dataset_title"
 			}
 		},
-		"Kids First": {
-			"mds_url": "https://gen3.datacommons.io",
-			"commons_url" : "kidsfirstdrc.org",
-			"study_data_field" : "gen3_discovery",
-			"columns_to_fields": {
-				"_subjects_count" : "subjects_count",
-				"study_description" : "description",
-				"study_id" : "dbgap_accession_number"
-			},
-			"select_field": {
-				"field_name" : "commons",
-				"field_value" : "Kids First"
-			}
-		},
 		"BioData Catalyst": {
 			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov",
 			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
@@ -115,6 +101,29 @@
 			"select_field": {
 				"field_name" : "commons" ,
 				"field_value" : "Cancer Imaging Data Commons"
+			}
+		}
+	},
+	"adapter_commons": {
+		"Kids First": {
+			"mds_url": "https://gen3staging.kidsfirstdrc.org/",
+			"commons_url": "kidsfirstdrc.org",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "metadata_object",
+				"study_field": "dbgap"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:gen3_discovery.tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:description",
+				"full_name": "path:full_name",
+				"short_name": "path:full_name",
+				"commons": "Kids First Data Resource Center",
+				"study_url": "path:link"
 			}
 		}
 	}
