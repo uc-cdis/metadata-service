@@ -268,6 +268,10 @@ class MPSAdapter(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
+            
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
         
         return results
 
