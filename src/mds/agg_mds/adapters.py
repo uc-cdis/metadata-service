@@ -2,7 +2,6 @@ import collections.abc
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union
 from jsonpath_ng import parse, JSONPathError
-import json
 import httpx
 import xmltodict
 import bleach
@@ -211,7 +210,7 @@ class MPSAdapter(RemoteMetadataAdapter):
                     response = httpx.get(url)
                     response.raise_for_status()
 
-                    data_dict = json.loads(response.text)
+                    data_dict = response.json()
                     results["results"].append(data_dict)
 
                 except httpx.TimeoutException as exc:
