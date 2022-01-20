@@ -177,11 +177,12 @@ class RemoteMetadataAdapter(ABC):
         json_data = self.getRemoteDataAsJson(**kwargs)
         return self.normalizeToGen3MDSFields(json_data, **kwargs)
 
+
 class MPSAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for MPS
     boiler plate taken from IPSRDublin adapter and added MPS-specific needs
-    
+
     parameters: filters which currently should be study_ids=id,id,id...
     """
 
@@ -191,7 +192,7 @@ class MPSAdapter(RemoteMetadataAdapter):
         wait=wait_random_exponential(multiplier=1, max=10),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
-        """ needs to be implemented in derived class """
+        """needs to be implemented in derived class"""
         results = {"results": []}
         if "filters" not in kwargs or kwargs["filters"] is None:
             return results
@@ -205,7 +206,7 @@ class MPSAdapter(RemoteMetadataAdapter):
         if len(study_ids) > 0:
             for id in study_ids:
                 try:
-                    #get url request put data into datadict
+                    # get url request put data into datadict
                     url = f"{mds_url}/{id}/"
                     response = httpx.get(url)
                     response.raise_for_status()
@@ -237,29 +238,29 @@ class MPSAdapter(RemoteMetadataAdapter):
     def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         results = item
         if mappings is not None:
-            #mapFields fxn: can use as is or can overwrite if need more specialized version
-            mapped_fields = RemoteMetadataAdapter.mapFields( 
+            # mapFields fxn: can use as is or can overwrite if need more specialized version
+            mapped_fields = RemoteMetadataAdapter.mapFields(
                 item, mappings, globalFieldFilters
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
             else:
                 results = mapped_fields
-        #add MPS specific stuff if needed (eg turning list of investigators into one string)
-        return results               
+        # add MPS specific stuff if needed (eg turning list of investigators into one string)
+        return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
-        """ needs to be implemented in derived class """
+        """needs to be implemented in derived class"""
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
         results = {}
-        for item in data["results"]: #iterate through studies
+        for item in data["results"]:  # iterate through studies
             normalized_item = MPSAdapter.addGen3ExpectedFields(
                 item, mappings, keepOriginalFields, globalFieldFilters
             )
-            #TODO: is there a certain standard for identifiers or 
+            # TODO: is there a certain standard for identifiers or
             # is it just some pattern that ensures uniqueness?
             identifier = f"MPS_study_{item['id']}"
 
@@ -267,12 +268,13 @@ class MPSAdapter(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
-            
+
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
             RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
-        
+
         return results
+
 
 class ISCPSRDublin(RemoteMetadataAdapter):
     """
@@ -781,7 +783,7 @@ adapters = {
     "icpsr": ISCPSRDublin,
     "clinicaltrials": ClinicalTrials,
     "pdaps": PDAPS,
-    'mps':MPSAdapter,
+    "mps": MPSAdapter,
     "gen3": Gen3Adapter,
 }
 
@@ -811,7 +813,7 @@ def get_metadata(
             f"unknown adapter for commons {adapter_name}. Returning no results."
         )
         return {}
-        
+
     return gather_metadata(
         gather,
         mds_url=mds_url,
