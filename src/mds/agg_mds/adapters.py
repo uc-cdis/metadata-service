@@ -517,15 +517,20 @@ class PDAPS(RemoteMetadataAdapter):
 
         results = {}
         for item in data["results"]:
+            # some PDAPS studies doesn't have "display_id" but only "id"
+            # but we need "display_id" to populate "project_number" in MDS
+            if "id" in item:
+                item["display_id"] = item["id"]
             normalized_item = PDAPS.addGen3ExpectedFields(
                 item, mappings, keepOriginalFields, globalFieldFilters
             )
-            if "display_id" not in item:
+            if "display_id" in item:
+                results[item["display_id"]] = {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": normalized_item,
+                }
+            else:
                 continue
-            results[item["display_id"]] = {
-                "_guid_type": "discovery_metadata",
-                "gen3_discovery": normalized_item,
-            }
 
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
