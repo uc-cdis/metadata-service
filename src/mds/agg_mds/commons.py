@@ -29,6 +29,14 @@ class MDSInstance:
     guid_type: str = "discovery_metadata"
     select_field: Optional[Dict[str, str]] = None
 
+    filters: Optional[Dict[str, Any]] = None
+    config: Optional[Dict[str, Any]] = None
+    field_mappings: Optional[Dict[str, Any]] = None
+    per_item_values: Optional[Dict[str, Any]] = None
+    # assume that all gen3-sourced metadata is harmonized and should be kept
+    keep_original_fields: Optional[bool] = True
+    global_field_filters: Optional[Dict[str, Any]] = None
+
 
 @dataclass_json
 @dataclass

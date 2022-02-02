@@ -113,7 +113,17 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
 
     for name, common in commons_config.gen3_commons.items():
         logger.info(f"Populating {name} using Gen3 MDS connector")
-        results = pull_mds(common.mds_url, common.guid_type)
+        results = adapters.get_metadata(
+            "gen3",
+            common.mds_url,
+            common.filters,
+            common.config,
+            common.field_mappings,
+            common.per_item_values,
+            common.keep_original_fields,
+            common.global_field_filters,
+        )
+        # pull_mds(common.mds_url, common.guid_type)
         logger.info(f"Received {len(results)} from {name}")
         if len(results) > 0:
             await populate_metadata(name, common, results)
