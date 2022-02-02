@@ -107,3 +107,6 @@ ENV/
 
 # Docker db
 postgres-data/
+
+# VSCode
+.vscode/
