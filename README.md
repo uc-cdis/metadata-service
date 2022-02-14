@@ -25,8 +25,8 @@ The aggregate cache is built using Elasticsearch. See the `docker-compose.yaml` 
 
 Install required software:
 
-* [PostgreSQL](PostgreSQL) 9.6 or above
-* [Python](https://www.python.org/downloads/) 3.7 or above
+* [PostgreSQL](PostgreSQL) 13 or above
+* [Python](https://www.python.org/downloads/) 3.10 or above
 * [Poetry](https://poetry.eustace.io/docs/#installation)
 
 Then use `poetry install` to install the dependencies. Before that,

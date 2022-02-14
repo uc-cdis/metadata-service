@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:9.6
+        image: postgres:13
         env:
           POSTGRES_USER: metadata_user
           POSTGRES_PASSWORD: metadata_pass
@@ -18,10 +18,10 @@ jobs:
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
     - uses: actions/checkout@v1
-    - name: Set up Python 3.7
+    - name: Set up Python 3.10
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.10
     - uses: actions/cache@preview
       with:
         path: ~/.cache/pypoetry/virtualenvs
