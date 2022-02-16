@@ -500,8 +500,7 @@ class PDAPS(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["
-                              "], list):
+        if isinstance(results["investigators_name"], list):
             results["investigators_name"] = results["investigators_name"].join(", ")
         return results
 
