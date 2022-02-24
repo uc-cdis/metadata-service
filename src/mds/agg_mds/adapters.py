@@ -246,6 +246,8 @@ class ISCPSRDublin(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
+        if isinstance(results["investigators"], list):
+            results["investigators"] = ",".join(results["investigators"])
         if isinstance(results["investigators_name"], list):
             results["investigators_name"] = ",".join(results["investigators_name"])
         return results
@@ -500,6 +502,8 @@ class PDAPS(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
+        if isinstance(results["investigators"], list):
+            results["investigators"] = ",".join(results["investigators"])
         if isinstance(results["investigators_name"], list):
             results["investigators_name"] = results["investigators_name"].join(", ")
         return results
