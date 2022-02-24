@@ -247,7 +247,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                 results = mapped_fields
 
         if isinstance(results["investigators"], list):
-            results["investigators"] = ",".join(results["investigators"])
+            results["investigators"] = results["investigators"].join(", ")
         if isinstance(results["investigators_name"], list):
             results["investigators_name"] = ",".join(results["investigators_name"])
         return results
