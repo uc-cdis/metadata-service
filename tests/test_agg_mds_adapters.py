@@ -975,7 +975,7 @@ def test_get_metadata_clinicaltrials():
                 "study_url": "https://clinicaltrials.gov/ct2/show/NCT01874691",
                 "institutions": "Chinese Academy of Medical Sciences, Fuwai Hospital",
                 "year_awarded": "",
-                "investigators": "Yuejin Yang, MD.",
+                "investigators_name": "Yuejin Yang, MD.",
                 "protocol_name": "",
                 "study_summary": "",
                 "_file_manifest": "",
@@ -2054,7 +2054,7 @@ def test_get_metadata_pdaps():
         "study_type": "",
         "institutions": "Temple University",
         "year_awarded": "",
-        "investigators": "path:preview[0].created_by",
+        "investigators_name": "path:preview[0].created_by",
         "project_title": "path:preview[0].title",
         "protocol_name": "",
         "study_summary": "path:preview[0].description",
@@ -2889,7 +2889,7 @@ def test_get_metadata_pdaps():
       "study_type": "",
       "institutions": "Temple University",
       "year_awarded": "",
-      "investigators": "elizabeth.platt@temple.edu",
+      "investigators_name": "elizabeth.platt@temple.edu",
       "project_title": "Naloxone Overdose Prevention Laws",
       "protocol_name": "",
       "study_summary": "\nUnintentional drug overdose is a leading cause of preventable death in the United States. Administering naloxone hydrochloride (“naloxone”) can reverse an opioid overdose and prevent these unintentional deaths. This dataset focuses on state laws that provide civil or criminal immunity to licensed healthcare providers or lay responders for opioid antagonist administration.</span></span></p>\r\n\n\nThis is a longitudinal dataset displaying laws from January 1, 2001 through July 1, 2017.</span></p>",
@@ -2995,7 +2995,7 @@ def test_gen3_adapter():
         "tags": "path:tags",
         "_subjects_count": "path:subjects_count",
         "dbgap_accession_number": "path:study_id",
-        "study_description": "path:summary",
+        "study_description": "path:study_description_summary",
         "number_of_datafiles": "path:data_files_count",
         "investigator": "path:contributor",
     }
@@ -3036,7 +3036,7 @@ def test_gen3_adapter():
         "tags": [],
         "_subjects_count": "path:subjects_count",
         "dbgap_accession_number": "path:study_id",
-        "study_description": "path:summary",
+        "study_description": "path:study_description_summary",
         "number_of_datafiles": "path:data_files_count",
         "investigator": {"path": "contributor", "filters": ["strip_email"]},
     }
@@ -3145,10 +3145,13 @@ def test_json_path_expression():
         },
     }
 
-    assert get_json_path_value("study1.summary", sample1) == "This is a summary"
+    assert (
+        get_json_path_value("study1.study_description_summary", sample1)
+        == "This is a summary"
+    )
 
     # test non existent path
-    assert get_json_path_value("study2.summary", sample1) == ""
+    assert get_json_path_value("study2.study_description_summary", sample1) == ""
 
     # test bad path
     assert get_json_path_value(".contributors", sample1) == ""
