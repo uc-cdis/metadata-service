@@ -125,6 +125,27 @@
 				"commons": "Kids First Data Resource Center",
 				"study_url": "path:link"
 			}
+		},
+		"Genomic Data Commons": {
+			"mds_url": "https://gen3.datacommons.io",
+			"commons_url": "portal.gdc.cancer.gov",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "metadata_object",
+				"study_field": "dbgap"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:gen3_discovery.tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:description",
+				"full_name": "path:full_name",
+				"short_name": "path:full_name",
+				"commons": "Kids First Data Resource Center",
+				"study_url": "path:link"
+			}
 		}
 	}
 }

@@ -235,7 +235,7 @@ class Commons:
 
     def __post_init__(self):
         if self.configuration is None:
-            self.configuration = Config()
+            self.configuration = Config(settings=Settings())
 
 
 def parse_config(data: Dict[str, Any]) -> Commons:
