@@ -109,6 +109,10 @@ async def populate_info(commons_config: Commons) -> None:
 
 
 async def populate_drs_info(commons_config: Commons) -> None:
+    if len(commons_config.configuration.settings) == 0:
+        return
+    if len(commons_config.configuration.settings.cache_dir):
+        return
     if commons_config.configuration.settings.cache_drs:
         server = commons_config.configuration.settings.drs_indexd_server
         if server is not None:
