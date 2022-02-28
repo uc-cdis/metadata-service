@@ -246,8 +246,10 @@ class ISCPSRDublin(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["investigators"], list):
+        if isinstance(results.get("investigators"), list):
             results["investigators"] = ",".join(results["investigators"])
+        if isinstance(results.get("investigators_name"), list):
+            results["investigators_name"] = ",".join(results["investigators_name"])
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
@@ -500,8 +502,10 @@ class PDAPS(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["investigators"], list):
+        if isinstance(results.get("investigators"), list):
             results["investigators"] = results["investigators"].join(", ")
+        if isinstance(results.get("investigators_name"), list):
+            results["investigators_name"] = results["investigators_name"].join(", ")
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
