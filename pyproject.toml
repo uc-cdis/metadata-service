@@ -6,7 +6,7 @@ authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
 fastapi = "^0.65.2"
 uvicorn = {extras = ["standard"], version="^0.11.2"}
 gunicorn = "^20.0.4"
@@ -29,7 +29,7 @@ bleach = ">=3.3.1"
 tenacity = ">=8.0.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.3"
+pytest = "^6.2.5"
 pytest-cov = "^2.8"
 pyyaml = "^5.3.1"
 requests = "^2.22"
