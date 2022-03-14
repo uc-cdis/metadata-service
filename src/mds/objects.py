@@ -388,7 +388,7 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
 
 @mod.delete("/objects/{guid:path}")
 async def delete_object(
-    guid: str, request: Request, token: HTTPAuthorizationCredentials = Security(bearer)
+    guid: str,request: Request,  delete_file_locations=False, token: HTTPAuthorizationCredentials = Security(bearer)
 ) -> JSONResponse:
     """
     Delete the metadata for the specified object. Remove the object from
@@ -405,13 +405,28 @@ async def delete_object(
         500: if fence does not return 204 or 403 or there is an error deleting metadata
     """
     try:
-        fence_endpoint = urljoin(config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}")
-        auth_header = str(request.headers.get("Authorization", ""))
-        headers = {"Authorization": auth_header}
-        fence_response = await request.app.async_client.delete(
-            fence_endpoint, headers=headers
-        )
-        fence_response.raise_for_status()
+        if delete_file_locations:
+            fence_endpoint = urljoin(config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}")
+            auth_header = str(request.headers.get("Authorization", ""))
+            headers = {"Authorization": auth_header}
+            fence_response = await request.app.async_client.delete(
+                fence_endpoint, headers=headers
+            )
+            fence_response.raise_for_status()
+            msg = "fence_response"
+            err_msg = "Error during request to fence"
+
+        else:
+            indexd_endpoint = urljoin(config.INDEXING_SERVICE_ENDPOINT, f"index/{guid}")
+            auth_header = str(request.headers.get("Authorization", ""))
+            headers = {"Authorization": auth_header}
+            indexd_response = await request.app.async_client.delete(
+                indexd_endpoint, headers=headers
+            )
+            indexd_response.raise_for_status()
+            msg = "indexd_response"
+            err_msg = "Error during request to indexd"
+            
         await (
             Metadata.delete.where(Metadata.guid == guid)
             .returning(*Metadata)
@@ -422,10 +437,10 @@ async def delete_object(
         logger.debug(err)
         if err.response:
             raise HTTPException(
-                err.response.status_code, {"fence_response": err.response.text}
+                err.response.status_code, {msg: err.response.text}
             )
         raise HTTPException(
-            HTTP_500_INTERNAL_SERVER_ERROR, "Error during request to fence"
+            HTTP_500_INTERNAL_SERVER_ERROR, err_msg
         )
 
 
