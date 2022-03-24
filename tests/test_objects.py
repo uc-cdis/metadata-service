@@ -1042,7 +1042,7 @@ def test_delete_object_when_fence_returns_204(client, valid_upload_file_patcher)
         f"{config.DATA_ACCESS_SERVICE_ENDPOINT}/data/{created_guid}", status_code=204
     )
 
-    delete_response = client.delete(f"/objects/{created_guid}")
+    delete_response = client.delete(f"/objects/{created_guid}?delete_file_locations")
     assert delete_response.status_code == 204
     assert fence_delete_mock.called
     get_metadata_response = client.get(f"/metadata/{created_guid}")
@@ -1072,7 +1072,7 @@ def test_delete_object_when_fence_returns_403(client, valid_upload_file_patcher)
         content={"err": "mocked authentication error from fence"},
     )
 
-    delete_response = client.delete(f"/objects/{created_guid}")
+    delete_response = client.delete(f"/objects/{created_guid}?delete_file_locations")
     assert delete_response.status_code == 403
     assert fence_delete_mock.called
     get_metadata_response = client.get(f"/metadata/{created_guid}")
@@ -1101,8 +1101,112 @@ def test_delete_object_when_fence_returns_500(client, valid_upload_file_patcher)
         content={"err": "mocked internal server error from fence"},
     )
 
+    delete_response = client.delete(f"/objects/{created_guid}?delete_file_locations")
+    assert delete_response.status_code == 500
+    assert fence_delete_mock.called
+    get_metadata_response = client.get(f"/metadata/{created_guid}")
+    assert get_metadata_response.status_code == 200
+
+@respx.mock
+def test_delete_object_when_indexd_returns_204(client, valid_upload_file_patcher):
+    """
+    Test the DELETE endpoint when indexd returns a 204 for specified guid.
+    Should proxy to indexd's DELETE /index/file_id endpoint then delete metadata.
+    A 204 response from indexd implies delete permissions on guid.
+    """
+    file_data = {
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
+    created_guid = client.post(
+        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+    ).json()["guid"]
+
+    mock_rev = "abc123"
+    indexd_get_mock = respx.get(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}", status_code=200, content={"did": created_guid, "rev": mock_rev}
+    )
+
+    indexd_delete_mock = respx.delete(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/{created_guid}?rev={mock_rev}", status_code=204
+    )
+
+    delete_response = client.delete(f"/objects/{created_guid}")
+    assert delete_response.status_code == 204
+    assert indexd_delete_mock.called
+    assert indexd_get_mock.called
+    get_metadata_response = client.get(f"/metadata/{created_guid}")
+    assert get_metadata_response.status_code == 404
+
+
+@respx.mock
+def test_delete_object_when_indexd_returns_403(client, valid_upload_file_patcher):
+    """
+    Test the DELETE endpoint when indexd returns a 403 for specified guid.
+    Should proxy to fence's DELETE /data/file_id endpoint and not delete metadata.
+    A 403 response from indexd implies insufficient permissions to delete metadata.
+    """
+    file_data = {
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
+    created_guid = client.post(
+        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+    ).json()["guid"]
+
+    mock_rev = "abc123"
+    indexd_get_mock = respx.get(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}", status_code=200, content={"did": created_guid, "rev": mock_rev}
+    )
+
+    indexd_delete_mock = respx.delete(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/{created_guid}?rev={mock_rev}",
+        status_code=403,
+        content={"err": "mocked authentication error from indexd"},
+    )
+
+    delete_response = client.delete(f"/objects/{created_guid}")
+    assert delete_response.status_code == 403
+    assert indexd_delete_mock.called
+    assert indexd_get_mock.called
+    get_metadata_response = client.get(f"/metadata/{created_guid}")
+    assert get_metadata_response.status_code == 200
+
+
+@respx.mock
+def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher):
+    """
+    Test the DELETE endpoint when indexd returns a 500 for specified guid.
+    Should proxy to indexd's DELETE /indexd/file_id endpoint and not delete metadata.
+    """
+    file_data = {
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
+    created_guid = client.post(
+        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+    ).json()["guid"]
+
+    mock_rev = "abc123"
+    indexd_get_mock = respx.get(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}", status_code=200, content={"did": created_guid, "rev": mock_rev}
+    )
+
+    fence_delete_mock = respx.delete(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/{created_guid}?rev={mock_rev}",
+        status_code=500,
+        content={"err": "mocked internal server error from indexd"},
+    )
+
     delete_response = client.delete(f"/objects/{created_guid}")
     assert delete_response.status_code == 500
     assert fence_delete_mock.called
+    assert indexd_get_mock.called
     get_metadata_response = client.get(f"/metadata/{created_guid}")
     assert get_metadata_response.status_code == 200
