@@ -429,26 +429,25 @@ async def delete_object(
                 indexd_endpoint, params = {"rev": rev}, headers=headers
             )
         response.raise_for_status()
-        await (
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        status_code = err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code, f"Error during request to {svc_name}"
+        )
+    await (
         Metadata.delete.where(Metadata.guid == guid)
         .returning(*Metadata)
         .gino.first()
         )
-        return JSONResponse({}, HTTP_204_NO_CONTENT)
-    except httpx.HTTPError as err:
-        logger.debug(err)
-        if err.response:
-            raise HTTPException(
-                err.response.status_code, {f"{svc_name}_response": err.response.text}
-            )
-        raise HTTPException(
-            HTTP_500_INTERNAL_SERVER_ERROR, f"Error during request to {svc_name}"
-        )
+    return JSONResponse({}, HTTP_204_NO_CONTENT)
 
 async def get_indexd_revision(guid, request):
-    response = await get_object(guid, request)
-    indexd_document =  json.loads(response.body)
-    return indexd_document['record']['rev'] if "record" in indexd_document and "rev" in indexd_document['record'] else None
+    endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+    response = await request.app.async_client.get(endpoint)
+    response.raise_for_status()
+    indexd_record = response.json()
+    return indexd_record.get('rev')
 
 async def _get_metadata(mds_key: str) -> dict:
     """
