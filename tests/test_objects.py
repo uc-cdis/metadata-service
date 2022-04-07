@@ -1107,6 +1107,7 @@ def test_delete_object_when_fence_returns_500(client, valid_upload_file_patcher)
     get_metadata_response = client.get(f"/metadata/{created_guid}")
     assert get_metadata_response.status_code == 200
 
+
 @respx.mock
 def test_delete_object_when_indexd_returns_204(client, valid_upload_file_patcher):
     """
@@ -1126,11 +1127,14 @@ def test_delete_object_when_indexd_returns_204(client, valid_upload_file_patcher
 
     mock_rev = "abc123"
     indexd_get_mock = respx.get(
-        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}", status_code=200, content={"did": created_guid, "rev": mock_rev}
+        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}",
+        status_code=200,
+        content={"did": created_guid, "rev": mock_rev},
     )
 
     indexd_delete_mock = respx.delete(
-        f"{config.INDEXING_SERVICE_ENDPOINT}/index/{created_guid}?rev={mock_rev}", status_code=204
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/{created_guid}?rev={mock_rev}",
+        status_code=204,
     )
 
     delete_response = client.delete(f"/objects/{created_guid}")
@@ -1160,7 +1164,9 @@ def test_delete_object_when_indexd_returns_403(client, valid_upload_file_patcher
 
     mock_rev = "abc123"
     indexd_get_mock = respx.get(
-        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}", status_code=200, content={"did": created_guid, "rev": mock_rev}
+        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}",
+        status_code=200,
+        content={"did": created_guid, "rev": mock_rev},
     )
 
     indexd_delete_mock = respx.delete(
@@ -1195,7 +1201,9 @@ def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher
 
     mock_rev = "abc123"
     indexd_get_mock = respx.get(
-        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}", status_code=200, content={"did": created_guid, "rev": mock_rev}
+        f"{config.INDEXING_SERVICE_ENDPOINT}/{created_guid}",
+        status_code=200,
+        content={"did": created_guid, "rev": mock_rev},
     )
 
     fence_delete_mock = respx.delete(

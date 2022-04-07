@@ -392,9 +392,9 @@ async def delete_object(
     guid: str, request: Request, token: HTTPAuthorizationCredentials = Security(bearer)
 ) -> JSONResponse:
     """
-    Delete the metadata for the specified object and also delete the record from indexd. 
+    Delete the metadata for the specified object and also delete the record from indexd.
     [Optional] Remove the object from existing bucket location(s) by proxying to
-    fence DELETE /data/file_id by using an additional query parameter `delete_file_locations`.  
+    fence DELETE /data/file_id by using an additional query parameter `delete_file_locations`.
     Uses the response status code from fence/indexd to determine whether user has
     permission to delete metadata.
 
@@ -410,44 +410,47 @@ async def delete_object(
     if "delete_file_locations" in request.query_params:
         if request.query_params["delete_file_locations"]:
             raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"Query param `delete_file_locations` should not contain any value"
-        )
+                HTTP_400_BAD_REQUEST,
+                f"Query param `delete_file_locations` should not contain any value",
+            )
         delete_file_locations = True
     svc_name = "fence" if "delete_file_locations" in request.query_params else "indexd"
     try:
         auth_header = str(request.headers.get("Authorization", ""))
         headers = {"Authorization": auth_header}
         if delete_file_locations:
-            fence_endpoint = urljoin(config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}")
+            fence_endpoint = urljoin(
+                config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}"
+            )
             response = await request.app.async_client.delete(
                 fence_endpoint, headers=headers
-            )  
+            )
         else:
             rev = await get_indexd_revision(guid, request)
             indexd_endpoint = urljoin(config.INDEXING_SERVICE_ENDPOINT, f"index/{guid}")
             response = await request.app.async_client.delete(
-                indexd_endpoint, params = {"rev": rev}, headers=headers
+                indexd_endpoint, params={"rev": rev}, headers=headers
             )
         response.raise_for_status()
     except httpx.HTTPError as err:
         logger.debug(err)
-        status_code = err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
-        raise HTTPException(
-            status_code, f"Error during request to {svc_name}"
+        status_code = (
+            err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
         )
+        raise HTTPException(status_code, f"Error during request to {svc_name}")
     await (
-        Metadata.delete.where(Metadata.guid == guid)
-        .returning(*Metadata)
-        .gino.first()
-        )
+        Metadata.delete.where(Metadata.guid == guid).returning(*Metadata).gino.first()
+    )
     return JSONResponse({}, HTTP_204_NO_CONTENT)
+
 
 async def get_indexd_revision(guid, request):
     endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
     response = await request.app.async_client.get(endpoint)
     response.raise_for_status()
     indexd_record = response.json()
-    return indexd_record.get('rev')
+    return indexd_record.get("rev")
+
 
 async def _get_metadata(mds_key: str) -> dict:
     """
