@@ -445,11 +445,11 @@ paths:
   /objects/{guid}:
     delete:
       description: "Delete the metadata for the specified object and also delete the\
-        \ record from indexd. \n[Optional] Remove the object from existing bucket\
-        \ location(s) by proxying to\nfence DELETE /data/file_id by using an additional\
-        \ query parameter `delete_file_locations`.  \nUses the response status code\
-        \ from fence/indexd to determine whether user has\npermission to delete metadata.\n\
-        \nArgs:\n    guid (str): indexd GUID or alias, or MDS key\n    request (Request):\
+        \ record from indexd.\n[Optional] Remove the object from existing bucket location(s)\
+        \ by proxying to\nfence DELETE /data/file_id by using an additional query\
+        \ parameter `delete_file_locations`.\nUses the response status code from fence/indexd\
+        \ to determine whether user has\npermission to delete metadata.\n\nArgs:\n\
+        \    guid (str): indexd GUID or alias, or MDS key\n    request (Request):\
         \ starlette request (which contains reference to FastAPI app)\nReturns:\n\
         \    204: if record and metadata are deleted\n    403: if fence/indexd returns\
         \ a 403 unauthorized response\n    500: if fence/indexd does not return 204\
