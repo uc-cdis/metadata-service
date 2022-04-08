@@ -406,6 +406,16 @@ async def delete_object(
         403: if fence/indexd returns a 403 unauthorized response
         500: if fence/indexd does not return 204 or 403 or there is an error deleting metadata
     """
+    # Attempt to get the row, then attempt delete the row from Metadata table
+    metadata_obj = (
+        await Metadata.select("guid", "data").where(Metadata.guid == guid).gino.first()
+    )
+    if metadata_obj:
+        metadata_obj = dict(metadata_obj)
+    await (
+        Metadata.delete.where(Metadata.guid == guid).returning(*Metadata).gino.first()
+    )
+
     delete_file_locations = False
     if "delete_file_locations" in request.query_params:
         if request.query_params["delete_file_locations"]:
@@ -434,13 +444,14 @@ async def delete_object(
         response.raise_for_status()
     except httpx.HTTPError as err:
         logger.debug(err)
+        # Recreate data in metadata table in case of any exception
+        if metadata_obj:
+            await Metadata.create(guid=metadata_obj["guid"], data=metadata_obj["data"])
         status_code = (
             err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
         )
         raise HTTPException(status_code, f"Error during request to {svc_name}")
-    await (
-        Metadata.delete.where(Metadata.guid == guid).returning(*Metadata).gino.first()
-    )
+
     return JSONResponse({}, HTTP_204_NO_CONTENT)
 
 
