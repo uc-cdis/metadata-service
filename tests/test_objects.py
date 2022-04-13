@@ -30,7 +30,7 @@ def test_create_no_auth_header(client, valid_upload_file_patcher):
         "metadata": {"foo": "bar"},
     }
 
-    resp = client.post("/objects", json=data)
+    resp = client.post("/objects/upload", json=data)
     assert str(resp.status_code) == "401"
 
     fake_guid = "dg.hello/test_guid"
@@ -54,7 +54,7 @@ def test_create_invalid_token(client, valid_upload_file_patcher):
     }
 
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
     assert str(resp.status_code) == "401"
 
@@ -80,12 +80,12 @@ def test_create_invalid_token(client, valid_upload_file_patcher):
 )
 def test_authz_version_not_supported(client, valid_upload_file_patcher, data):
     """
-    Test create /objects response when the authz provided is not supported.
+    Test create /objects/upload response when the authz provided is not supported.
     Assume valid input, ensure correct response.
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "400"
@@ -141,12 +141,12 @@ def test_authz_version_not_supported(client, valid_upload_file_patcher, data):
 )
 def test_create(client, valid_upload_file_patcher, data):
     """
-    Test create /objects response for a valid user with authorization and
+    Test create /objects/upload response for a valid user with authorization and
     valid input, ensure correct response.
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
     resp.raise_for_status()
 
@@ -187,7 +187,7 @@ def test_create(client, valid_upload_file_patcher, data):
 )
 def test_create_no_access_to_upload(client, no_authz_upload_file_patcher, data):
     """
-    Test create /objects response for a user WITHOUT authorization to upload.
+    Test create /objects/upload response for a user WITHOUT authorization to upload.
     Assume valid input, ensure correct response.
 
     NOTE: the no_authz_upload_file_patcher fixture forces a 403 from external api call
@@ -195,7 +195,7 @@ def test_create_no_access_to_upload(client, no_authz_upload_file_patcher, data):
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "403"
@@ -232,14 +232,14 @@ def test_create_no_access_to_create_aliases(
     client, no_authz_create_aliases_patcher, data
 ):
     """
-    Test create /objects response for a user WITHOUT authorization to create aliases.
+    Test create /objects/upload response for a user WITHOUT authorization to create aliases.
 
     NOTE: the no_authz_create_aliases_patcher fixture forces a 403 from external api call
           for uploading data
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     if data.get("aliases"):
@@ -288,7 +288,7 @@ def test_create_no_access_to_create_aliases(
 )
 def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data):
     """
-    Test create /objects response for a user with valid authorization and
+    Test create /objects/upload response for a user with valid authorization and
     valid input, but some aliases already exist. We get a 409 from
     indexd's alias creation endpoint. The MDS endpoint should return 409.
     """
@@ -298,7 +298,7 @@ def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data
     )
 
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert resp.status_code == 409
@@ -327,7 +327,7 @@ def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data
 )
 def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
     """
-    Test create /objects response when external api returns a failure.
+    Test create /objects/upload response when external api returns a failure.
     Assume valid input, ensure correct response.
 
     NOTE: the upload_failure_file_patcher fixture forces a 500 from external api call
@@ -335,7 +335,7 @@ def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "500"
@@ -365,7 +365,7 @@ def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
 )
 def test_external_api_aliases_failure(client, create_aliases_failure_patcher, data):
     """
-    Test create /objects response when external api returns a failure.
+    Test create /objects/upload response when external api returns a failure.
     Assume valid input, ensure correct response.
 
     NOTE: the create_aliases_failure_patcher fixture forces a 500 from external api call
@@ -373,7 +373,7 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "500"
@@ -385,6 +385,37 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
 
     assert create_aliases_failure_patcher["data_upload_mock"].called
     assert create_aliases_failure_patcher["create_aliases_mock"].called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "data",
+    [
+        # 'upload' is not an allowed value for alias
+        {
+            "file_name": "test.txt",
+            "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+            "aliases": ["upload", "alias2", "alias3"],
+            "metadata": {"foo": "bar"},
+        },
+    ],
+)
+def test_create_guid_unallowed_alias(client, valid_upload_file_patcher, data):
+    """
+    Test create /objects/upload response for an unallowed alias value.
+    The MDS endpoint should return 400.
+    """
+    fake_jwt = "1.2.3"
+    resp = client.post(
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+    )
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
 
 
 @respx.mock
@@ -1035,7 +1066,7 @@ def test_delete_object_when_fence_returns_204(client, valid_upload_file_patcher)
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     fence_delete_mock = respx.delete(
@@ -1063,7 +1094,7 @@ def test_delete_object_when_fence_returns_403(client, valid_upload_file_patcher)
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     fence_delete_mock = respx.delete(
@@ -1092,7 +1123,7 @@ def test_delete_object_when_fence_returns_500(client, valid_upload_file_patcher)
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     fence_delete_mock = respx.delete(

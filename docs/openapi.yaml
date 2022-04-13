@@ -411,14 +411,14 @@ paths:
       summary: Create Metadata Indexes
       tags:
       - Index
-  /objects:
+  /objects/upload:
     post:
       description: "Create object placeholder and attach metadata, return Upload url\
         \ to the user.\n\nArgs:\n    body (CreateObjInput): input body for create\
         \ object\n    request (Request): starlette request (which contains reference\
         \ to FastAPI app)\n    token (HTTPAuthorizationCredentials, optional): bearer\
         \ token"
-      operationId: create_object_objects_post
+      operationId: create_object_objects_upload_post
       requestBody:
         content:
           application/json:

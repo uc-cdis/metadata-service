@@ -73,7 +73,7 @@ class CreateObjForIdInput(BaseModel):
     metadata: dict = None
 
 
-@mod.post("/objects")
+@mod.post("/objects/upload")
 async def create_object(
     body: CreateObjInput,
     request: Request,
@@ -113,6 +113,13 @@ async def create_object(
             HTTP_400_BAD_REQUEST,
             f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
         )
+
+    logger.debug(f"checking for allowable aliases")
+    for alias in aliases:
+        if not _is_allowable_guid_or_alias(alias):
+            raise HTTPException(
+                HTTP_400_BAD_REQUEST, f"alias has an unallowed value: {alias}"
+            )
 
     metadata = metadata or {}
 
@@ -687,6 +694,12 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
 
 def _is_authz_version_supported(authz):
     return str(authz.get("version", "")) == "0"
+
+
+def _is_allowable_guid_or_alias(guid: str):
+    """ guid should not be 'upload' """
+    allowed = guid != "upload"
+    return allowed
 
 
 def init_app(app):
