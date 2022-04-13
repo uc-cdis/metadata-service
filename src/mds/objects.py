@@ -697,7 +697,7 @@ def _is_authz_version_supported(authz):
 
 
 def _is_allowable_guid_or_alias(guid: str):
-    """ guid should not be 'upload' """
+    # guid or alias should not be 'upload'
     allowed = guid != "upload"
     return allowed
 
