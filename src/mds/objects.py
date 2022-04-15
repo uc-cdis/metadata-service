@@ -672,8 +672,6 @@ async def _create_url_for_blank_record(guid: str, auth_header: str, request: Req
 async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: str):
     # add default metadata to db
     additional_object_metadata = {
-        "_resource_paths": authz.get("resource_paths", []),
-        "_uploader_id": uploader,
         "_upload_status": FileUploadStatus.NOT_STARTED,
     }
     logger.debug(f"attempting to update guid {blank_guid} with metadata: {metadata}")
