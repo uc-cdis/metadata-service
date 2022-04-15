@@ -166,6 +166,7 @@ def test_create(client, valid_upload_file_patcher, data):
     assert client.get(f"/metadata/{resp.json().get('guid')}").json() == resp.json().get(
         "metadata"
     )
+    assert resp.json().get("authz") == data.get("authz")
 
     assert valid_upload_file_patcher["data_upload_mock"].called
 

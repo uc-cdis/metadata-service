@@ -137,10 +137,11 @@ async def create_object(
     metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
 
     response = {
+        "upload_url": signed_upload_url,
+        "authz": authz,
         "guid": blank_guid,
         "aliases": aliases,
         "metadata": metadata,
-        "upload_url": signed_upload_url,
     }
 
     return JSONResponse(response, HTTP_201_CREATED)
