@@ -25,7 +25,7 @@ def upgrade():
         sa.Column("guid", sa.Unicode(), nullable=False),
         sa.Column(
             "id",
-            sa.Integer(),
+            sa.BigInteger(),
             server_default=sa.text("nextval('metadata_index_id_seq')"),
             nullable=True,
         ),
