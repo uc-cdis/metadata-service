@@ -23,8 +23,8 @@ class Metadata(db.Model):
     data = db.Column(JSONB())
 
 
-class MetadataIndex(db.Model):
-    __tablename__ = "metadata_index"
+class MetadataInternal(db.Model):
+    __tablename__ = "metadata_internal"
 
     id_sec = Sequence(__tablename__ + "_id_seq")
     guid = db.Column(db.Unicode(), primary_key=True)

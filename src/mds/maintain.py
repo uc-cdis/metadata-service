@@ -9,7 +9,7 @@ from starlette.responses import JSONResponse
 from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
 
 from .admin_login import admin_required
-from .models import db, Metadata
+from .models import db, Metadata, MetadataInternal
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 
@@ -18,7 +18,10 @@ mod = APIRouter()
 
 @mod.post("/metadata")
 async def batch_create_metadata(
-    request: Request, data_list: list, overwrite: bool = True
+    request: Request,
+    data_list: list,
+    overwrite: bool = True,
+    add_internal_id: bool = False,
 ):
     """Create metadata in batch."""
     request.scope.get("add_close_watcher", lambda: None)()
@@ -39,6 +42,10 @@ async def batch_create_metadata(
             for data in data_list:
                 if await stmt.scalar(data) == 0:
                     created.append(data["guid"])
+                    if add_internal_id:
+                        await conn.prepare(
+                            insert(MetadataInternal).values(guid=bindparam("guid"))
+                        )
                 else:
                     updated.append(data["guid"])
         else:
@@ -52,11 +59,17 @@ async def batch_create_metadata(
                     conflict.append(data["guid"])
                 else:
                     created.append(data["guid"])
+                    if add_internal_id:
+                        await conn.prepare(
+                            insert(MetadataInternal).values(guid=bindparam("guid"))
+                        )
     return dict(created=created, updated=updated, conflict=conflict)
 
 
 @mod.post("/metadata/{guid:path}")
-async def create_metadata(guid, data: dict, overwrite: bool = False):
+async def create_metadata(
+    guid, data: dict, overwrite: bool = False, add_internal_id: bool = False
+):
     """Create metadata for the GUID."""
     created = True
     if overwrite:
@@ -79,6 +92,8 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
         except UniqueViolationError:
             raise HTTPException(HTTP_409_CONFLICT, f"Conflict: {guid}")
     if created:
+        if add_internal_id:
+            await db.first(insert(MetadataInternal).values(guid=bindparam("guid")))
         return JSONResponse(rv["data"], HTTP_201_CREATED)
     else:
         return rv["data"]
@@ -114,6 +129,7 @@ async def delete_metadata(guid):
         .gino.first()
     )
     if metadata:
+        MetadataInternal.delete.where(MetadataInternal.guid == guid)
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
