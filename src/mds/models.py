@@ -1,5 +1,6 @@
 from gino.ext.starlette import Gino
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Integer, Sequence
 
 from . import config
 
@@ -25,5 +26,6 @@ class Metadata(db.Model):
 class MetadataIndex(db.Model):
     __tablename__ = "metadata_index"
 
+    id_sec = Sequence(__tablename__ + "_id_seq")
     guid = db.Column(db.Unicode(), primary_key=True)
-    data = db.Column(JSONB())
+    id = db.Column(Integer, id_sec, server_default=id_sec.next_value())
