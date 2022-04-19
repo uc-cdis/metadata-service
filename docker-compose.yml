@@ -38,7 +38,7 @@ services:
       - GEN3_ES_ENDPOINT=http://esproxy-service:9200
     command: sh -c 'while [[ "$$(curl --connect-timeout 2 -s -o /dev/null -w ''%{http_code}'' $$GEN3_ES_ENDPOINT)" != "200" ]]; do echo "wait for " $$GEN3_ES_ENDPOINT; sleep 5; done; echo es backend is available;/env/bin/python /src/src/mds/populate.py --config /src/tests/config.json'
   db:
-    image: postgres
+    image: postgres:13.3
     environment:
       - POSTGRES_USER=metadata_user
       - POSTGRES_HOST_AUTH_METHOD=trust

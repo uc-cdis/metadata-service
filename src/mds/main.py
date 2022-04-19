@@ -25,7 +25,7 @@ def get_app():
         title="Framework Services Object Management Service",
         version=pkg_resources.get_distribution("mds").version,
         debug=config.DEBUG,
-        openapi_prefix=config.URL_PREFIX,
+        root_path=config.URL_PREFIX,
     )
     app.include_router(router)
     db.init_app(app)

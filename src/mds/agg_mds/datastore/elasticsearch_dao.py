@@ -91,7 +91,7 @@ def normalize_field(doc, key, normalize_type):
     try:
         if normalize_type == "object" and isinstance(doc[key], str):
             value = doc[key]
-            doc[key] = None if value is "" else json.loads(value)
+            doc[key] = None if value == "" else json.loads(value)
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
     except:

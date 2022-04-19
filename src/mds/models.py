@@ -20,3 +20,10 @@ class Metadata(db.Model):
 
     guid = db.Column(db.Unicode(), primary_key=True)
     data = db.Column(JSONB())
+
+
+class MetadataIndex(db.Model):
+    __tablename__ = "metadata_index"
+
+    guid = db.Column(db.Unicode(), primary_key=True)
+    data = db.Column(JSONB())
