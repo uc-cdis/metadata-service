@@ -94,7 +94,12 @@ async def create_metadata(
     if created:
         return_data = rv["data"]
         if add_internal_id:
-            rv = await MetadataInternal.insert().values(guid=guid)
+            rv = (
+                await MetadataInternal.insert()
+                .values(guid=guid, data=data)
+                .returning(*MetadataInternal)
+                .gino.first()
+            )
         return JSONResponse(return_data, HTTP_201_CREATED)
     else:
         return rv["data"]
