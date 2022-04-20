@@ -92,9 +92,10 @@ async def create_metadata(
         except UniqueViolationError:
             raise HTTPException(HTTP_409_CONFLICT, f"Conflict: {guid}")
     if created:
+        return_data = rv["data"]
         if add_internal_id:
-            await db.first(insert(MetadataInternal).values(guid))
-        return JSONResponse(rv["data"], HTTP_201_CREATED)
+            rv = await MetadataInternal.insert().values(guid=guid)
+        return JSONResponse(return_data, HTTP_201_CREATED)
     else:
         return rv["data"]
 
