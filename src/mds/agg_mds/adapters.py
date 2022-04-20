@@ -295,8 +295,10 @@ class ISCPSRDublin(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["investigators"], list):
+        if isinstance(results.get("investigators"), list):
             results["investigators"] = ",".join(results["investigators"])
+        if isinstance(results.get("investigators_name"), list):
+            results["investigators_name"] = ",".join(results["investigators_name"])
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
@@ -555,8 +557,10 @@ class PDAPS(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        #     if isinstance(results["investigators"], list):
-        #        results["investigators"] = results["investigators"].join(", ")
+        if isinstance(results.get("investigators"), list):
+            results["investigators"] = results["investigators"].join(", ")
+        if isinstance(results.get("investigators_name"), list):
+            results["investigators_name"] = results["investigators_name"].join(", ")
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
@@ -573,15 +577,20 @@ class PDAPS(RemoteMetadataAdapter):
 
         results = {}
         for item in data["results"]:
+            # some PDAPS studies doesn't have "display_id" but only "id"
+            # but we need "display_id" to populate "project_number" in MDS
+            if "id" in item:
+                item["display_id"] = item["id"]
             normalized_item = PDAPS.addGen3ExpectedFields(
                 item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
-            if "display_id" not in item:
+            if "display_id" in item:
+                results[item["display_id"]] = {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": normalized_item,
+                }
+            else:
                 continue
-            results[item["display_id"]] = {
-                "_guid_type": "discovery_metadata",
-                "gen3_discovery": normalized_item,
-            }
 
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
