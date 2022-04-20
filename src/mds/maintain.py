@@ -96,7 +96,7 @@ async def create_metadata(
         if add_internal_id:
             rv = (
                 await MetadataInternal.insert()
-                .values(guid=guid, data=data)
+                .values(guid=guid)
                 .returning(*MetadataInternal)
                 .gino.first()
             )
