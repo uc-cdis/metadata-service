@@ -93,7 +93,7 @@ async def create_metadata(
             raise HTTPException(HTTP_409_CONFLICT, f"Conflict: {guid}")
     if created:
         if add_internal_id:
-            await db.first(insert(MetadataInternal).values(guid=bindparam("guid")))
+            await db.first(insert(MetadataInternal).values(guid))
         return JSONResponse(rv["data"], HTTP_201_CREATED)
     else:
         return rv["data"]
