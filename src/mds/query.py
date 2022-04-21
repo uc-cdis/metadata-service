@@ -1,8 +1,9 @@
 from fastapi import HTTPException, Query, APIRouter
 from starlette.requests import Request
-from starlette.status import HTTP_404_NOT_FOUND
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
-from .models import db, Metadata
+from .models import db, Metadata, MetadataInternal
+from mds import config
 
 mod = APIRouter()
 
@@ -19,6 +20,10 @@ async def search_metadata(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    internal_id: bool = Query(
+        False,
+        description="Switch to including the internal accession-style ID with data (true), or not (false). Only works when returning metadata",
+    ),
 ):
     """Search the metadata.
 
@@ -60,21 +65,49 @@ async def search_metadata(
     """
     limit = min(limit, 2000)
     queries = {}
+    include_internal_id = internal_id
     for key, value in request.query_params.multi_items():
-        if key not in {"data", "limit", "offset"}:
+        if key not in {"data", "limit", "offset", "internal_id"}:
+            if key == config.DB_GEN3_INTERNAL_ID_ALIAS:
+                include_internal_id = True
             queries.setdefault(key, []).append(value)
+
+    query = Metadata.query
+    if include_internal_id:
+        query = Metadata.outerjoin(MetadataInternal).select()
 
     def add_filter(query):
         for path, values in queries.items():
-            query = query.where(
-                db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-            )
+            if path == config.DB_GEN3_INTERNAL_ID_ALIAS:
+                try:
+                    query = query.where(
+                        db.or_(MetadataInternal.id == int(v) for v in values)
+                    )
+                except ValueError as error:
+                    raise HTTPException(
+                        HTTP_500_INTERNAL_SERVER_ERROR,
+                        f"Invalid internal ID value: {error}",
+                    )
+            else:
+                query = query.where(
+                    db.or_(
+                        Metadata.data[list(path.split("."))].astext == v for v in values
+                    )
+                )
         return query.offset(offset).limit(limit)
 
     if data:
+        if include_internal_id:
+            return {
+                metadata.guid: {
+                    **metadata.data,
+                    config.DB_GEN3_INTERNAL_ID_ALIAS: metadata.id,
+                }
+                for metadata in await add_filter(query).gino.all()
+            }
         return {
             metadata.guid: metadata.data
-            for metadata in await add_filter(Metadata.query).gino.all()
+            for metadata in await add_filter(query).gino.all()
         }
     else:
         return [
@@ -86,10 +119,27 @@ async def search_metadata(
 
 
 @mod.get("/metadata/{guid:path}")
-async def get_metadata(guid):
+async def get_metadata(
+    guid,
+    internal_id: bool = Query(
+        False,
+        description="Switch to including the internal accession-style ID with data (true), or not (false). Only works when returning metadata",
+    ),
+):
     """Get the metadata of the GUID."""
-    metadata = await Metadata.get(guid)
+    if internal_id:
+        metadata = (
+            await Metadata.outerjoin(MetadataInternal)
+            .select()
+            .where(Metadata.guid == guid)
+            .gino.first()
+        )
+    else:
+        metadata = await Metadata.get(guid)
+
     if metadata:
+        if internal_id:
+            return {**metadata.data, config.DB_GEN3_INTERNAL_ID_ALIAS: metadata.id}
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
