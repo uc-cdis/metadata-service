@@ -44,7 +44,9 @@ async def batch_create_metadata(
                     created.append(data["guid"])
                     if add_internal_id:
                         await conn.prepare(
-                            insert(MetadataInternal).values(guid=bindparam("guid"))
+                            insert(MetadataInternal).values(
+                                metadata_guid=bindparam("guid")
+                            )
                         )
                 else:
                     updated.append(data["guid"])
@@ -61,7 +63,9 @@ async def batch_create_metadata(
                     created.append(data["guid"])
                     if add_internal_id:
                         await conn.prepare(
-                            insert(MetadataInternal).values(guid=bindparam("guid"))
+                            insert(MetadataInternal).values(
+                                metadata_guid=bindparam("guid")
+                            )
                         )
     return dict(created=created, updated=updated, conflict=conflict)
 
@@ -96,7 +100,7 @@ async def create_metadata(
         if add_internal_id:
             rv = (
                 await MetadataInternal.insert()
-                .values(guid=guid)
+                .values(metadata_guid=guid)
                 .returning(*MetadataInternal)
                 .gino.first()
             )

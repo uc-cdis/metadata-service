@@ -27,5 +27,5 @@ class MetadataInternal(db.Model):
     __tablename__ = "metadata_internal"
 
     id_sec = Sequence(__tablename__ + "_id_seq")
-    guid = db.Column(db.ForeignKey("metadata.guid", ondelete="CASCADE"))
+    metadata_guid = db.Column(db.ForeignKey("metadata.guid", ondelete="CASCADE"))
     id = db.Column(BigInteger, id_sec, server_default=id_sec.next_value())
