@@ -135,7 +135,6 @@ async def delete_metadata(guid):
         .gino.first()
     )
     if metadata:
-        MetadataInternal.delete.where(MetadataInternal.guid == guid)
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
