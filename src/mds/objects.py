@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from enum import Enum
+import json
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
@@ -391,9 +392,10 @@ async def delete_object(
     guid: str, request: Request, token: HTTPAuthorizationCredentials = Security(bearer)
 ) -> JSONResponse:
     """
-    Delete the metadata for the specified object. Remove the object from
-    existing bucket location(s) by proxying to fence DELETE /data/file_id.
-    Uses the response status code from fence to determine whether user has
+    Delete the metadata for the specified object and also delete the record from indexd.
+    [Optional] Remove the object from existing bucket location(s) by proxying to
+    fence DELETE /data/file_id by using an additional query parameter `delete_file_locations`.
+    Uses the response status code from fence/indexd to determine whether user has
     permission to delete metadata.
 
     Args:
@@ -401,32 +403,59 @@ async def delete_object(
         request (Request): starlette request (which contains reference to FastAPI app)
     Returns:
         204: if record and metadata are deleted
-        403: if fence returns a 403 unauthorized response
-        500: if fence does not return 204 or 403 or there is an error deleting metadata
+        403: if fence/indexd returns a 403 unauthorized response
+        500: if fence/indexd does not return 204 or 403 or there is an error deleting metadata
     """
+    # Attempt to get the row, then attempt delete the row from Metadata table
+    metadata_obj = await (
+        Metadata.delete.where(Metadata.guid == guid).returning(*Metadata).gino.first()
+    )
+
+    delete_file_locations = False
+    if "delete_file_locations" in request.query_params:
+        if request.query_params["delete_file_locations"]:
+            raise HTTPException(
+                HTTP_400_BAD_REQUEST,
+                f"Query param `delete_file_locations` should not contain any value",
+            )
+        delete_file_locations = True
+    svc_name = "fence" if "delete_file_locations" in request.query_params else "indexd"
     try:
-        fence_endpoint = urljoin(config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}")
         auth_header = str(request.headers.get("Authorization", ""))
         headers = {"Authorization": auth_header}
-        fence_response = await request.app.async_client.delete(
-            fence_endpoint, headers=headers
-        )
-        fence_response.raise_for_status()
-        await (
-            Metadata.delete.where(Metadata.guid == guid)
-            .returning(*Metadata)
-            .gino.first()
-        )
-        return JSONResponse({}, HTTP_204_NO_CONTENT)
+        if delete_file_locations:
+            fence_endpoint = urljoin(
+                config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}"
+            )
+            response = await request.app.async_client.delete(
+                fence_endpoint, headers=headers
+            )
+        else:
+            rev = await get_indexd_revision(guid, request)
+            indexd_endpoint = urljoin(config.INDEXING_SERVICE_ENDPOINT, f"index/{guid}")
+            response = await request.app.async_client.delete(
+                indexd_endpoint, params={"rev": rev}, headers=headers
+            )
+        response.raise_for_status()
     except httpx.HTTPError as err:
         logger.debug(err)
-        if err.response:
-            raise HTTPException(
-                err.response.status_code, {"fence_response": err.response.text}
-            )
-        raise HTTPException(
-            HTTP_500_INTERNAL_SERVER_ERROR, "Error during request to fence"
+        # Recreate data in metadata table in case of any exception
+        if metadata_obj:
+            await Metadata.create(guid=metadata_obj.guid, data=metadata_obj.data)
+        status_code = (
+            err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
         )
+        raise HTTPException(status_code, f"Error during request to {svc_name}")
+
+    return JSONResponse({}, HTTP_204_NO_CONTENT)
+
+
+async def get_indexd_revision(guid, request):
+    endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+    response = await request.app.async_client.get(endpoint)
+    response.raise_for_status()
+    indexd_record = response.json()
+    return indexd_record.get("rev")
 
 
 async def _get_metadata(mds_key: str) -> dict:
