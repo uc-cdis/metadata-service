@@ -1,4 +1,5 @@
-from fastapi import HTTPException, Query, APIRouter
+from typing import Optional
+from fastapi import HTTPException, Query, APIRouter, Path
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -121,10 +122,7 @@ async def search_metadata(
 @mod.get("/metadata/{guid:path}")
 async def get_metadata(
     guid,
-    internal_id: bool = Query(
-        False,
-        description="Switch to including the internal accession-style ID with data (true), or not (false). Only works when returning metadata",
-    ),
+    internal_id: Optional[bool] = None,
 ):
     """Get the metadata of the GUID."""
     if internal_id:
