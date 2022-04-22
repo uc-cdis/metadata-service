@@ -342,9 +342,7 @@ async def get_object_latest(guid: str, request: Request) -> JSONResponse:
 
 
 @mod.get("/objects/{guid:path}")
-async def get_object(
-    guid: str, request: Request, internal_id: Optional[bool] = None
-) -> JSONResponse:
+async def get_object(guid: str, request: Request) -> JSONResponse:
     """
     Get the metadata associated with the provided key. If the key is an
     indexd GUID or alias, also returns the indexd record.
@@ -377,7 +375,7 @@ async def get_object(
             msg = f"Unable to query indexd for GUID or alias '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
-    mds_metadata = await _get_metadata(mds_key, internal_id)
+    mds_metadata = await _get_metadata(mds_key)
 
     if not indexd_record and not mds_metadata:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
@@ -461,7 +459,7 @@ async def get_indexd_revision(guid, request):
     return indexd_record.get("rev")
 
 
-async def _get_metadata(mds_key: str, internal_id: bool = False) -> dict:
+async def _get_metadata(mds_key: str) -> dict:
     """
     Query the metadata database for mds_key.
 
@@ -474,7 +472,7 @@ async def _get_metadata(mds_key: str, internal_id: bool = False) -> dict:
     mds_metadata = {}
     try:
         logger.debug(f"Querying the metadata database directly for key '{mds_key}'")
-        mds_metadata = await get_metadata(guid=mds_key, internal_id=internal_id)
+        mds_metadata = await get_metadata(guid=mds_key)
     except HTTPException as err:
         logger.debug(err)
         if err.status_code == 404:
