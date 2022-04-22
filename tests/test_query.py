@@ -1,6 +1,9 @@
 import gino
 import pytest
 
+from alembic.config import main
+from mds import config
+
 
 @pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
 def test_get(client, key):
@@ -8,6 +11,28 @@ def test_get(client, key):
     client.post("/metadata/" + key, json=data).raise_for_status()
     try:
         assert client.get("/metadata/" + key).json() == data
+
+        resp = client.get("/metadata/{}_not_exist".format(key))
+        assert resp.status_code == 404
+    finally:
+        client.delete("/metadata/" + key)
+
+
+@pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
+def test_get_with_internal_id(client, key):
+    # reset internal IDs in MDS DB for testing
+    main(["--raiseerr", "downgrade", "base"])
+    main(["--raiseerr", "upgrade", "head"])
+
+    data = dict(a=1, b=2)
+    return_data = {**data, config.DB_GEN3_INTERNAL_ID_ALIAS: 1}
+    client.post(
+        "/metadata/" + key + "?add_internal_id=True", json=data
+    ).raise_for_status()
+    try:
+        assert (
+            client.get("/metadata/" + key + "?internal_id=True").json() == return_data
+        )
 
         resp = client.get("/metadata/{}_not_exist".format(key))
         assert resp.status_code == 404
@@ -24,6 +49,31 @@ def test_query_data(client):
         assert client.get("/metadata?data=true").json() == {
             "tqd_1": data,
             "tqd_2": data,
+        }
+    finally:
+        client.delete("/metadata/tqd_1")
+        client.delete("/metadata/tqd_2")
+
+
+def test_query_data_with_internal_id(client):
+    # reset internal IDs in MDS DB for testing
+    main(["--raiseerr", "downgrade", "base"])
+    main(["--raiseerr", "upgrade", "head"])
+
+    data = dict(a=1, b=2)
+    return_data1 = {**data, config.DB_GEN3_INTERNAL_ID_ALIAS: 1}
+    return_data2 = {**data, config.DB_GEN3_INTERNAL_ID_ALIAS: 2}
+    try:
+        client.post(
+            "/metadata/tqd_1?add_internal_id=True", json=data
+        ).raise_for_status()
+        client.post(
+            "/metadata/tqd_2?add_internal_id=True", json=data
+        ).raise_for_status()
+        assert client.get("/metadata").json() == ["tqd_1", "tqd_2"]
+        assert client.get("/metadata?data=true&internal_id=True").json() == {
+            "tqd_1": return_data1,
+            "tqd_2": return_data2,
         }
     finally:
         client.delete("/metadata/tqd_1")
