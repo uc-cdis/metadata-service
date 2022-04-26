@@ -681,7 +681,7 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
     try:
         rv = (
             await Metadata.insert()
-            .values(guid=blank_guid, data=metadata)
+            .values(guid=blank_guid, data=metadata, authz=authz)
             .returning(*Metadata)
             .gino.first()
         )

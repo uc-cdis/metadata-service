@@ -94,6 +94,7 @@ def test_authz_version_not_supported(client, valid_upload_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert not valid_upload_file_patcher["data_upload_mock"].called
     assert not valid_upload_file_patcher["create_aliases_mock"].called
@@ -203,6 +204,7 @@ def test_create_no_access_to_upload(client, no_authz_upload_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert no_authz_upload_file_patcher["data_upload_mock"].called
     assert not no_authz_upload_file_patcher["create_aliases_mock"].called
@@ -248,6 +250,7 @@ def test_create_no_access_to_create_aliases(
         assert not resp.json().get("upload_url")
         assert not resp.json().get("aliases")
         assert not resp.json().get("metadata")
+        assert not resp.json().get("authz")
 
         assert no_authz_create_aliases_patcher["data_upload_mock"].called
         assert no_authz_create_aliases_patcher["create_aliases_mock"].called
@@ -306,6 +309,7 @@ def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert create_aliases_duplicate_patcher["data_upload_mock"].called
 
@@ -343,6 +347,7 @@ def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert upload_failure_file_patcher["data_upload_mock"].called
     assert not upload_failure_file_patcher["create_aliases_mock"].called
@@ -381,6 +386,7 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert create_aliases_failure_patcher["data_upload_mock"].called
     assert create_aliases_failure_patcher["create_aliases_mock"].called
@@ -415,6 +421,7 @@ def test_create_guid_unallowed_alias(client, valid_upload_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
 
 @respx.mock

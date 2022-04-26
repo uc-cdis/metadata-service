@@ -10,6 +10,8 @@ from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_409_CONF
 
 from .admin_login import admin_required
 from .models import db, Metadata
+from . import config
+import json
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 
@@ -25,12 +27,13 @@ async def batch_create_metadata(
     created = []
     updated = []
     conflict = []
+    authz = json.loads(config.DEFAULT_AUTHZ_STR)
     async with db.acquire() as conn:
         if overwrite:
             data = bindparam("data")
             stmt = await conn.prepare(
                 insert(Metadata)
-                .values(guid=bindparam("guid"), data=data)
+                .values(guid=bindparam("guid"), data=data, authz=authz)
                 .on_conflict_do_update(
                     index_elements=[Metadata.guid], set_=dict(data=data)
                 )
@@ -43,7 +46,9 @@ async def batch_create_metadata(
                     updated.append(data["guid"])
         else:
             stmt = await conn.prepare(
-                insert(Metadata).values(guid=bindparam("guid"), data=bindparam("data"))
+                insert(Metadata).values(
+                    guid=bindparam("guid"), data=bindparam("data"), authz=authz
+                )
             )
             for data in data_list:
                 try:
@@ -59,10 +64,11 @@ async def batch_create_metadata(
 async def create_metadata(guid, data: dict, overwrite: bool = False):
     """Create metadata for the GUID."""
     created = True
+    authz = json.loads(config.DEFAULT_AUTHZ_STR)
     if overwrite:
         rv = await db.first(
             insert(Metadata)
-            .values(guid=guid, data=data)
+            .values(guid=guid, data=data, authz=authz)
             .on_conflict_do_update(index_elements=[Metadata.guid], set_=dict(data=data))
             .returning(Metadata.data, db.text("xmax"))
         )
@@ -72,7 +78,7 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
         try:
             rv = (
                 await Metadata.insert()
-                .values(guid=guid, data=data)
+                .values(guid=guid, data=data, authz=authz)
                 .returning(*Metadata)
                 .gino.first()
             )
