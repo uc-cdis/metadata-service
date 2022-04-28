@@ -20,4 +20,4 @@ class Metadata(db.Model):
 
     guid = db.Column(db.Unicode(), primary_key=True)
     data = db.Column(JSONB())
-    authz = db.Column(JSONB())
+    authz = db.Column(JSONB(), nullable=False)
