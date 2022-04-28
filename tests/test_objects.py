@@ -558,6 +558,181 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
         },
     ],
 )
+def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher, data):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: 404 if indexd returns 404 for creating
+    new version.
+    If the key is an indexd alias, the metadata returned should be
+    associated with the indexd GUID (did), not the alias itself.
+    """
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock the request to indexd: GUID or alias found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=200, content=indexd_data, alias="indexd_get"
+    )
+    # mock: creating a new version of "indexd_did" returns 404
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=404,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+    resp = client.post(
+        f"/objects/{guid_or_alias}",
+        json=data,
+        headers={"Authorization": f"bearer {fake_jwt}"},
+    )
+
+    # check response contents
+    assert resp.status_code == 404
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
+    assert indexd_get_mocked_request.called
+    assert indexd_blank_version_mocked_request.called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "data",
+    [
+        # all valid fields
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+            "metadata": {"foo": "bar"},
+        },
+        # all valid fields (multiple aliases and metadata keys)
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg", "123456"],
+            "metadata": {"foo": "bar", "fizz": "buzz"},
+        },
+        # no aliases
+        {
+            "file_name": "test.txt",
+            "metadata": {"foo": "bar"},
+        },
+        # no metadata
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+        },
+        # no aliases or metadata
+        {
+            "file_name": "test.txt",
+        },
+    ],
+)
+def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher, data):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: raise exception with 409 status
+    if indexd returns 409 when creating new version.
+    """
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock the request to indexd: GUID or alias found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=200, content=indexd_data, alias="indexd_get"
+    )
+    # mock: creating a new version of "indexd_did" returns 409 (not 401,403,404)
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=409,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+    with pytest.raises(Exception):
+        resp = client.post(
+            f"/objects/{guid_or_alias}",
+            json=data,
+            headers={"Authorization": f"bearer {fake_jwt}"},
+        )
+
+        # check response contents
+        assert resp.status_code == 409
+        assert resp.json().get("detail")
+        assert not resp.json().get("guid")
+        assert not resp.json().get("upload_url")
+        assert not resp.json().get("aliases")
+        assert not resp.json().get("metadata")
+        assert indexd_get_mocked_request.called
+        assert indexd_blank_version_mocked_request.called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "data",
+    [
+        # all valid fields
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+            "metadata": {"foo": "bar"},
+        },
+        # all valid fields (multiple aliases and metadata keys)
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg", "123456"],
+            "metadata": {"foo": "bar", "fizz": "buzz"},
+        },
+        # no aliases
+        {
+            "file_name": "test.txt",
+            "metadata": {"foo": "bar"},
+        },
+        # no metadata
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+        },
+        # no aliases or metadata
+        {
+            "file_name": "test.txt",
+        },
+    ],
+)
 def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
@@ -610,6 +785,93 @@ def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
     assert indexd_get_mocked_request.called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "data",
+    [
+        # all valid fields
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+            "metadata": {"foo": "bar"},
+        },
+        # all valid fields (multiple aliases and metadata keys)
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg", "123456"],
+            "metadata": {"foo": "bar", "fizz": "buzz"},
+        },
+        # no aliases
+        {
+            "file_name": "test.txt",
+            "metadata": {"foo": "bar"},
+        },
+        # no metadata
+        {
+            "file_name": "test.txt",
+            "aliases": ["abcdefg"],
+        },
+        # no aliases or metadata
+        {
+            "file_name": "test.txt",
+        },
+    ],
+)
+def test_create_for_guid_not_found_409(client, valid_upload_file_patcher, data):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: exception with 409 and no metadata
+    if indexd returns 409 when checking for GUID.
+    """
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock: creating a new version of "indexd_did" returns "new_version_data"
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=200,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+
+    # mock the request to indexd: GUID or alias NOT found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=409, content=indexd_data, alias="indexd_get"
+    )
+    with pytest.raises(Exception):
+        resp = client.post(
+            f"/objects/{guid_or_alias}",
+            json=data,
+            headers={"Authorization": f"bearer {fake_jwt}"},
+        )
+
+        # check response contents
+        assert resp.status_code == 409
+        assert resp.json().get("detail")
+        assert not resp.json().get("guid")
+        assert not resp.json().get("upload_url")
+        assert not resp.json().get("aliases")
+        assert not resp.json().get("metadata")
+        assert indexd_get_mocked_request.called
 
 
 @respx.mock
