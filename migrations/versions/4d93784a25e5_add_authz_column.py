@@ -7,6 +7,7 @@ Create Date: 2022-04-19 10:30:03.967205
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 import json
 
 
@@ -21,7 +22,9 @@ DEFAULT_RESOURCE_PATH = "/open"
 
 def upgrade():
     # add the new `authz` column (nullable for now)
-    op.add_column("metadata", sa.Column("authz", sa.JSON()))
+    op.add_column(
+        "metadata", sa.Column("authz", postgresql.JSONB(astext_type=sa.Text()))
+    )
 
     # extract existing PK (guid) and authz data (resource_path) from the metadata column
     connection = op.get_bind()
