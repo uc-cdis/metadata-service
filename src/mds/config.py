@@ -60,6 +60,7 @@ DB_RETRY_LIMIT = config("DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES)
 DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 
 # Authz string
+
 DEFAULT_AUTHZ_STR = config(
     "DEFAULT_AUTHZ_STR",
     cast=str,
