@@ -449,7 +449,9 @@ async def delete_object(
         logger.debug(err)
         # Recreate data in metadata table in case of any exception
         if metadata_obj:
-            await Metadata.create(guid=metadata_obj.guid, data=metadata_obj.data)
+            await Metadata.create(
+                guid=metadata_obj.guid, data=metadata_obj.data, authz=metadata_obj.authz
+            )
         status_code = (
             err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
         )

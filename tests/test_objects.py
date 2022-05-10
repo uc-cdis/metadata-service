@@ -1419,7 +1419,7 @@ def test_delete_object_when_indexd_returns_204(client, valid_upload_file_patcher
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     mock_rev = "abc123"
@@ -1456,7 +1456,7 @@ def test_delete_object_when_indexd_returns_403(client, valid_upload_file_patcher
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     mock_rev = "abc123"
@@ -1493,7 +1493,7 @@ def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     mock_rev = "abc123"
