@@ -77,7 +77,7 @@ async def search_metadata(
                 field = path.pop()
                 query = query.where(Metadata.data[path].has_key(field))
             else:
-                values = [v.replace("\*", "*") for v in values]
+                values = ["*" if v == "\*" else v for v in values]
                 query = query.where(
                     db.or_(
                         Metadata.data[list(path.split("."))].astext == v for v in values
