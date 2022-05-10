@@ -72,6 +72,10 @@ async def search_metadata(
     def add_filter(query):
         for path, values in queries.items():
             if "*" in values:
+                # Query all records with a value for this path (value != "").
+                # Because we are filtering JSON, we need to use `astext`
+                # => empty strings and missing values both get cast to "".
+                # The 2nd `where` explicitly adds values matching "".
                 query = query.where(
                     db.or_(
                         Metadata.data[list(path.split("."))].astext != "",

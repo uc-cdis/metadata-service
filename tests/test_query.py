@@ -104,6 +104,8 @@ def test_query_filter_all_values(client):
             ("tq_7", dict(b=3)),
         ]:
             client.post(f"/metadata/{guid}", json=data).raise_for_status()
+
+        # query all records with a value for field "a"
         assert list(sorted(client.get("/metadata?a=*").json())) == [
             "tq_1",
             "tq_2",
@@ -111,7 +113,11 @@ def test_query_filter_all_values(client):
             "tq_4",
             "tq_5",
         ]
+
+        # query all records with a value for field "a.b"
         assert list(sorted(client.get("/metadata?a.b=*").json())) == ["tq_5"]
+
+        # query all records with a == "*"
         assert list(sorted(client.get("/metadata?a=\*").json())) == ["tq_4"]
     finally:
         for i in range(1, 8):
