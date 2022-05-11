@@ -1,9 +1,7 @@
 import pytest
 
-import httpx
 import respx
 from fastapi import HTTPException
-from starlette.config import environ
 from starlette.status import (
     HTTP_201_CREATED,
     HTTP_409_CONFLICT,
@@ -393,24 +391,19 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "data",
-    [
-        # 'upload' is not an allowed value for alias
-        {
-            "file_name": "test.txt",
-            "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
-            "aliases": ["upload", "alias2", "alias3"],
-            "metadata": {"foo": "bar"},
-        },
-    ],
-)
-def test_create_guid_unallowed_alias(client, valid_upload_file_patcher, data):
+def test_create_guid_unallowed_alias(client, valid_upload_file_patcher):
     """
     Test create /objects/upload response for an unallowed alias value.
     The MDS endpoint should return 400.
     """
     fake_jwt = "1.2.3"
+    data = {
+        # 'upload' is not an allowed value for alias
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["upload", "alias2", "alias3"],
+        "metadata": {"foo": "bar"},
+    }
     resp = client.post(
         "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
@@ -527,45 +520,18 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "data",
-    [
-        # all valid fields
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-            "metadata": {"foo": "bar"},
-        },
-        # all valid fields (multiple aliases and metadata keys)
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg", "123456"],
-            "metadata": {"foo": "bar", "fizz": "buzz"},
-        },
-        # no aliases
-        {
-            "file_name": "test.txt",
-            "metadata": {"foo": "bar"},
-        },
-        # no metadata
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-        },
-        # no aliases or metadata
-        {
-            "file_name": "test.txt",
-        },
-    ],
-)
-def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher, data):
+def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
     and valid input, ensure correct response: 404 if indexd returns 404 for creating
     new version.
-    If the key is an indexd alias, the metadata returned should be
-    associated with the indexd GUID (did), not the alias itself.
     """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
     fake_jwt = "1.2.3"
     guid_or_alias = "test_guid_alias"
     indexd_did = "dg.hello/test_guid"
@@ -615,43 +581,18 @@ def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher, d
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "data",
-    [
-        # all valid fields
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-            "metadata": {"foo": "bar"},
-        },
-        # all valid fields (multiple aliases and metadata keys)
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg", "123456"],
-            "metadata": {"foo": "bar", "fizz": "buzz"},
-        },
-        # no aliases
-        {
-            "file_name": "test.txt",
-            "metadata": {"foo": "bar"},
-        },
-        # no metadata
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-        },
-        # no aliases or metadata
-        {
-            "file_name": "test.txt",
-        },
-    ],
-)
-def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher, data):
+def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
     and valid input, ensure correct response: raise exception with 409 status
     if indexd returns 409 when creating new version.
     """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
     fake_jwt = "1.2.3"
     guid_or_alias = "test_guid_alias"
     indexd_did = "dg.hello/test_guid"
@@ -702,43 +643,18 @@ def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher, d
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "data",
-    [
-        # all valid fields
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-            "metadata": {"foo": "bar"},
-        },
-        # all valid fields (multiple aliases and metadata keys)
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg", "123456"],
-            "metadata": {"foo": "bar", "fizz": "buzz"},
-        },
-        # no aliases
-        {
-            "file_name": "test.txt",
-            "metadata": {"foo": "bar"},
-        },
-        # no metadata
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-        },
-        # no aliases or metadata
-        {
-            "file_name": "test.txt",
-        },
-    ],
-)
-def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
+def test_create_for_guid_not_found(client, valid_upload_file_patcher):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
     and valid input, ensure correct response: 404 and no metadata if the GUID
     or alias does not exist in indexd.
     """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
     fake_jwt = "1.2.3"
     guid_or_alias = "test_guid_alias"
     indexd_did = "dg.hello/test_guid"
@@ -788,43 +704,18 @@ def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "data",
-    [
-        # all valid fields
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-            "metadata": {"foo": "bar"},
-        },
-        # all valid fields (multiple aliases and metadata keys)
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg", "123456"],
-            "metadata": {"foo": "bar", "fizz": "buzz"},
-        },
-        # no aliases
-        {
-            "file_name": "test.txt",
-            "metadata": {"foo": "bar"},
-        },
-        # no metadata
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-        },
-        # no aliases or metadata
-        {
-            "file_name": "test.txt",
-        },
-    ],
-)
-def test_create_for_guid_not_found_409(client, valid_upload_file_patcher, data):
+def test_create_for_guid_not_found_409(client, valid_upload_file_patcher):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
     and valid input, ensure correct response: exception with 409 and no metadata
     if indexd returns 409 when checking for GUID.
     """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
     fake_jwt = "1.2.3"
     guid_or_alias = "test_guid_alias"
     indexd_did = "dg.hello/test_guid"
