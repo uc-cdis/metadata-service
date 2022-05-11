@@ -61,7 +61,10 @@ async def search_metadata(
 
         GET /metadata?a=* or GET /metadata?a.b=*
 
-    To query rows with a value of "*" exactly, escape it. For example: "?a=\*".
+    Note that only a single asterisk is supported, not true wildcarding. For
+    example: `?a=1.*` will only match the exact string `"1.*"`.
+
+    To query rows with a value of `"*"` exactly, escape the asterisk. For example: `?a=\*`.
     """
     limit = min(limit, 2000)
     queries = {}
