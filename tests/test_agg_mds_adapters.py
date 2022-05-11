@@ -3123,6 +3123,456 @@ def test_gen3_adapter():
         assert isinstance(exc, RetryError) == True
 
 
+@respx.mock
+def test_get_metadata_harvard_dataverse():
+    dataset_json_response = r"""{
+        "status": "OK",
+        "data": {
+            "q": "*",
+            "total_count": 1,
+            "start": 0,
+            "spelling_alternatives": {},
+            "items": [
+                {
+                    "name": "CMS DE-SynPUF",
+                    "type": "dataset",
+                    "url": "https://doi.org/10.70122/FK2/SZUUXJ",
+                    "global_id": "doi:10.70122/FK2/SZUUXJ",
+                    "description": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
+                    "published_at": "2022-04-28T18:13:12Z",
+                    "publisher": "CMS DE-SynPUF",
+                    "citationHtml": "Keller, Jason, 2022, \"CMS DE-SynPUF\", <a href=\"https://doi.org/10.70122/FK2/SZUUXJ\" target=\"_blank\">https://doi.org/10.70122/FK2/SZUUXJ</a>, Demo Dataverse, V1",
+                    "identifier_of_dataverse": "cms-de-synpuf",
+                    "name_of_dataverse": "CMS DE-SynPUF",
+                    "citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1",
+                    "storageIdentifier": "s3://10.70122/FK2/SZUUXJ",
+                    "subjects": [
+                        "Medicine, Health and Life Sciences"
+                    ],
+                    "fileCount": 8,
+                    "versionId": 212954,
+                    "versionState": "RELEASED",
+                    "majorVersion": 1,
+                    "minorVersion": 0,
+                    "createdAt": "2022-04-28T17:57:50Z",
+                    "updatedAt": "2022-04-28T18:13:12Z",
+                    "contacts": [
+                        {
+                            "name": "Keller, Jason",
+                            "affiliation": ""
+                        }
+                    ],
+                    "authors": [
+                        "Keller, Jason"
+                    ]
+                }
+            ],
+            "count_in_response": 1
+        }
+    }"""
+
+    files_json_response = r"""{
+      "status": "OK",
+      "data": {
+          "q": "*",
+          "total_count": 8,
+          "start": 0,
+          "spelling_alternatives": {},
+          "items": [
+              {
+                  "name": "DE1_0_2008_Beneficiary_Summary_File_Sample_1.csv",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962435",
+                  "file_id": "1962435",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Comma Separated Values",
+                  "file_content_type": "text/csv",
+                  "size_in_bytes": 14588413,
+                  "md5": "4f5f9b7e644b76e683e064e5118a9dae",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "4f5f9b7e644b76e683e064e5118a9dae"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/KBU9G7",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.csv",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962437",
+                  "file_id": "1962437",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Comma Separated Values",
+                  "file_content_type": "text/csv",
+                  "size_in_bytes": 1236512878,
+                  "md5": "abd0bddf9b497a72ea222a7fdbca230a",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "abd0bddf9b497a72ea222a7fdbca230a"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/ZXXFPT",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.csv",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962438",
+                  "file_id": "1962438",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Comma Separated Values",
+                  "file_content_type": "text/csv",
+                  "size_in_bytes": 1236509358,
+                  "md5": "3a4a9970e1be009ec059c292bb8e93b1",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "3a4a9970e1be009ec059c292bb8e93b1"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/JXEIJ0",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "DE1_0_2008_to_2010_Inpatient_Claims_Sample_1.csv",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962436",
+                  "file_id": "1962436",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Comma Separated Values",
+                  "file_content_type": "text/csv",
+                  "size_in_bytes": 16689488,
+                  "md5": "d125761f316daecc69b8c417b749e0f8",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "d125761f316daecc69b8c417b749e0f8"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/VJOAY7",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "DE1_0_2008_to_2010_Outpatient_Claims_Sample_1.csv",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962433",
+                  "file_id": "1962433",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Comma Separated Values",
+                  "file_content_type": "text/csv",
+                  "size_in_bytes": 161812812,
+                  "md5": "8d334ab6450852bb72c8c838a512aa96",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "8d334ab6450852bb72c8c838a512aa96"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/AJFPXC",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "DE1_0_2010_Beneficiary_Summary_File_Sample_1.csv",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962432",
+                  "file_id": "1962432",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Comma Separated Values",
+                  "file_content_type": "text/csv",
+                  "size_in_bytes": 14083582,
+                  "md5": "a0277d0f3afd0573e325a0582efb2f2f",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "a0277d0f3afd0573e325a0582efb2f2f"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/TXMRJD",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "DE 1.0 Codebook.pdf",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962434",
+                  "file_id": "1962434",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Adobe PDF",
+                  "file_content_type": "application/pdf",
+                  "size_in_bytes": 820871,
+                  "md5": "7616fcb574ee20c3d4be72827ba49a93",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "7616fcb574ee20c3d4be72827ba49a93"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/WTXU7L",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              },
+              {
+                  "name": "SynPUF_DUG.pdf",
+                  "type": "file",
+                  "url": "https://demo.dataverse.org/api/access/datafile/1962439",
+                  "file_id": "1962439",
+                  "published_at": "2022-04-28T18:13:12Z",
+                  "file_type": "Adobe PDF",
+                  "file_content_type": "application/pdf",
+                  "size_in_bytes": 1012165,
+                  "md5": "a13b3c5f66c6f54053acbe3c32778a8b",
+                  "checksum": {
+                      "type": "MD5",
+                      "value": "a13b3c5f66c6f54053acbe3c32778a8b"
+                  },
+                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/MMKCDI",
+                  "dataset_name": "CMS DE-SynPUF",
+                  "dataset_id": "1962431",
+                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
+                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
+              }
+          ],
+          "count_in_response": 8
+        }
+    }"""
+
+    field_mappings = {
+          "tags": [],
+          "authz": "",
+          "sites": "",
+          "summary": {
+              "path": "description",
+              "filters": ["strip_html"]
+          },
+          "study_description_summary": {
+              "path": "description",
+              "filters": ["strip_html"]
+          },
+          "study_url" : "path:url",
+          "location": "",
+          "subjects": "path:subjects",
+          "__manifest": [],
+          "study_name": "path:name",
+          "study_name_title": "path:name",
+          "study_type": "",
+          "institutions": "",
+          "year_awarded": "",
+          "investigators": "path:authors",
+          "investigators_name": "path:authors",
+          "project_title": "path:name_of_dataverse",
+          "protocol_name": "",
+          "study_summary": "",
+          "_file_manifest": "",
+          "dataset_1_type": "",
+          "dataset_2_type": "",
+          "dataset_3_type": "",
+          "dataset_4_type": "",
+          "dataset_5_type": "",
+          "project_number": "",
+          "dataset_1_title": "",
+          "dataset_2_title": "",
+          "dataset_3_title": "",
+          "dataset_4_title": "",
+          "dataset_5_title": "",
+          "administering_ic": "",
+          "advSearchFilters": [],
+          "dataset_category": "",
+          "research_program": "",
+          "research_question": "",
+          "study_description": "",
+          "clinical_trial_link": "",
+          "dataset_description": "",
+          "research_focus_area": "",
+          "dataset_1_description": "",
+          "dataset_2_description": "",
+          "dataset_3_description": "",
+          "dataset_4_description": "",
+          "dataset_5_description": "",
+          "data_availability": "pending"
+      }
+
+    expected_response = {'doi:10.70122/FK2/SZUUXJ': {'_guid_type': 'discovery_metadata',
+    'gen3_discovery': {'tags': [],
+    'authz': '',
+    'sites': '',
+    'summary': 'The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.',
+    'study_description_summary': 'The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.',
+    'study_url': 'https://doi.org/10.70122/FK2/SZUUXJ',
+    'location': '',
+    'subjects': 'Medicine, Health and Life Sciences',
+    '__manifest': [{'md5sum': '4f5f9b7e644b76e683e064e5118a9dae',
+      'file_size': 14588413,
+      'file_name': 'DE1_0_2008_Beneficiary_Summary_File_Sample_1.csv'},
+      {'md5sum': 'abd0bddf9b497a72ea222a7fdbca230a',
+      'file_size': 1236512878,
+      'file_name': 'DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.csv'},
+      {'md5sum': '3a4a9970e1be009ec059c292bb8e93b1',
+      'file_size': 1236509358,
+      'file_name': 'DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.csv'},
+      {'md5sum': 'd125761f316daecc69b8c417b749e0f8',
+      'file_size': 16689488,
+      'file_name': 'DE1_0_2008_to_2010_Inpatient_Claims_Sample_1.csv'},
+      {'md5sum': '8d334ab6450852bb72c8c838a512aa96',
+      'file_size': 161812812,
+      'file_name': 'DE1_0_2008_to_2010_Outpatient_Claims_Sample_1.csv'},
+      {'md5sum': 'a0277d0f3afd0573e325a0582efb2f2f',
+      'file_size': 14083582,
+      'file_name': 'DE1_0_2010_Beneficiary_Summary_File_Sample_1.csv'},
+      {'md5sum': '7616fcb574ee20c3d4be72827ba49a93',
+      'file_size': 820871,
+      'file_name': 'DE 1.0 Codebook.pdf'},
+      {'md5sum': 'a13b3c5f66c6f54053acbe3c32778a8b',
+      'file_size': 1012165,
+      'file_name': 'SynPUF_DUG.pdf'}],
+    'study_name': 'CMS DE-SynPUF',
+    'study_name_title': 'CMS DE-SynPUF',
+    'study_type': '',
+    'institutions': '',
+    'year_awarded': '',
+    'investigators': 'Keller, Jason',
+    'investigators_name': 'Keller, Jason',
+    'project_title': 'CMS DE-SynPUF',
+    'protocol_name': '',
+    'study_summary': '',
+    '_file_manifest': '',
+    'dataset_1_type': '',
+    'dataset_2_type': '',
+    'dataset_3_type': '',
+    'dataset_4_type': '',
+    'dataset_5_type': '',
+    'project_number': '',
+    'dataset_1_title': '',
+    'dataset_2_title': '',
+    'dataset_3_title': '',
+    'dataset_4_title': '',
+    'dataset_5_title': '',
+    'administering_ic': '',
+    'advSearchFilters': [],
+    'dataset_category': '',
+    'research_program': '',
+    'research_question': '',
+    'study_description': '',
+    'clinical_trial_link': '',
+    'dataset_description': '',
+    'research_focus_area': '',
+    'dataset_1_description': '',
+    'dataset_2_description': '',
+    'dataset_3_description': '',
+    'dataset_4_description': '',
+    'dataset_5_description': '',
+    'data_availability': 'pending'}}}  
+    
+    # failed calls
+    respx.get(
+      "http://test/ok?q=*&type=dataset&subtree=cms-de-synpuf&per_page=25",
+      status_code=200,
+      content=json.loads(dataset_json_response),
+      content_type="text/plain;charset=UTF-8"
+    )
+
+    respx.get(
+      "http://test/ok?q=*&type=file&fq=parentId:1962431&subtree=cms-de-synpuf&per_page=25",
+      status_code=200,
+      content=json.loads(files_json_response),
+      content_type="text/plain;charset=UTF-8"
+    )
+
+    assert get_metadata("havard_dataverse", "http://test/ok", filters=None) == {}
+
+    assert (
+        get_metadata(
+          "harvard_dataverse", 
+          None, 
+          filters={
+              "q_term": "*", 
+              "subtrees": ["cms-de-synpuf"], 
+              "per_page": 25
+        })
+        == {}
+    )
+
+    assert (
+        get_metadata(
+          "harvard_dataverse", 
+          None, 
+          filters={
+              "subtrees": ["cms-de-synpuf"], 
+              "per_page": 25
+        })
+        == {}
+    )
+
+    assert (
+        get_metadata(
+          "harvard_dataverse", 
+          None, 
+          filters={
+              "q_term": "*", 
+              "per_page": 25
+        })
+        == {}
+    )
+
+    assert get_metadata(
+        "harvard_dataverse",
+        "http://test/ok",
+        filters={
+            "q_term": "*", 
+            "subtrees": ["cms-de-synpuf"], 
+            "per_page": 25
+        },
+        mappings=field_mappings,
+    ) == expected_response
+
+    respx.get(
+      "http://test/err404?q=*&type=dataset&subtree=cms-de-synpuf&per_page=25",
+      status_code=404,
+      content={},
+      content_type="text/plain:charset=UTF-8"
+    )
+
+    assert get_metadata(
+      "harvard_dataverse",
+      "http://test/err404",
+      filters={
+          "q_term": "*", 
+          "subtrees": ["cms-de-synpuf"], 
+          "per_page": 25
+      },
+      mappings=field_mappings
+    ) == {}
+
+    try:
+        from mds.agg_mds.adapters import HarvardDataverse
+        HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
+
+        respx.get(
+            "http://test/timeouterror?q=*&type=dataset&subtree=cms-de-synpuf&per_page=25",
+            content=httpx.TimeoutException,
+        )
+
+        get_metadata(
+          "harvard_dataverse",
+          "http://test/timeouterror",
+          filters={
+            "q_term": "*", 
+            "subtrees": ["cms-de-synpuf"], 
+            "per_page": 25
+          },
+          mappings=field_mappings,
+        )
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True    
+
+
 def test_missing_adapter():
     try:
         get_metadata("notAKnownAdapter", "http://test/ok/", None, None)

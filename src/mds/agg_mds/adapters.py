@@ -543,6 +543,159 @@ class PDAPS(RemoteMetadataAdapter):
         return results
 
 
+class HarvardDataverse(RemoteMetadataAdapter):
+    """
+    Adapter class for Harvard Dataverse
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url")
+        if mds_url is None:
+            return results
+
+        if "filters" not in kwargs or kwargs.get("filters") is None:
+            return results
+        
+        q_term = kwargs["filters"].get("q_term", None)
+        if q_term is None:
+            return results
+        q = f"q={q_term}"
+
+        fq_term = kwargs["filters"].get("fq_term", '')
+        fq = f"fq={fq_term}" if fq_term else ""
+
+        subtrees = kwargs["filters"].get("subtrees", [])
+        if not subtrees:
+            return results
+        subtree_param = '&'.join([f"subtree={subtree}" for subtree in subtrees])
+
+        params = [q, fq, subtree_param]
+        query_param = "&".join([param for param in params if param])
+        
+        per_page = kwargs["filters"].get("per_page", 100)
+        dataset_start = 0
+        dataset_total = None
+        dataset_condition = True
+
+        while dataset_condition:
+            try:
+                dataset_url = f"{mds_url}?{query_param}&start={dataset_start}&type=dataset&show_entity_ids=true&per_page={per_page}"
+                response = httpx.get(dataset_url)
+                response.raise_for_status()
+
+                data = response.json()
+                if "data" not in data:
+                    raise ValueError("unknown response")
+
+                dataset_total = data["data"]['total_count']
+
+                dataset_results = data["data"]["items"]
+
+                for dataset in dataset_results:
+                    dataset_id = dataset["entity_id"]
+                    files_start = 0
+                    files_total = None
+                    files_condition = True
+                    while files_condition:
+                        files_url = f"{mds_url}?{query_param}&fq=parentId:{dataset_id}&start={files_start}&type=file&show_entity_ids=true&per_page={per_page}"
+                        response = httpx.get(files_url)
+                        response.raise_for_status()
+
+                        data = response.json()
+                        if "data" not in data:
+                            raise ValueError("unknown response")
+                        
+                        files_total = data["data"]["total_count"]
+
+                        dataset["files"] = data["data"]["items"]
+
+                        files_start = files_start + per_page
+                        files_condition = files_total is not None and files_start < files_total
+
+                results["results"].extend(dataset_results)
+
+                dataset_start = dataset_start + per_page
+                dataset_condition = dataset_total is not None and dataset_start < dataset_total
+
+            except httpx.TimeoutException as exc:
+                logger.error(f"An timeout error occurred while requesting {mds_url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                )
+                break  # need to break here as cannot be assured of leaving while loop
+            except ValueError as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                )
+                break
+            except Exception as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                )
+                break
+
+        return results
+    
+    @staticmethod
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+        results = item
+        files = results.pop("files", [])
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+        
+        results["__manifest"] = []
+        for i, file in enumerate(files):
+            results["__manifest"].append({
+                "md5sum": file["md5"],
+                "file_size": file["size_in_bytes"],
+                "file_name": file["name"]
+            })
+        
+        for field in ["subjects", "investigators", "investigators_name"]:
+            if isinstance(results[field], list):
+                results[field] = ", ".join(results[field])
+        
+        
+        return results
+    
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = self.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields, globalFieldFilters
+            )
+            # TODO: Confirm the appropriate ID to use for each item
+            results[item["global_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+        
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            self.setPerItemValues(results, perItemValues)
+
+        return results
+
+
 class Gen3Adapter(RemoteMetadataAdapter):
     """
     Simple adapter for Gen3 Metadata Service
@@ -695,6 +848,7 @@ adapters = {
     "clinicaltrials": ClinicalTrials,
     "pdaps": PDAPS,
     "gen3": Gen3Adapter,
+    "harvardDataverse": HarvardDataverse
 }
 
 
