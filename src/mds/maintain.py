@@ -1,3 +1,4 @@
+import json
 import re
 
 from asyncpg import UniqueViolationError
@@ -11,7 +12,6 @@ from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_409_CONF
 from .admin_login import admin_required
 from .models import db, Metadata
 from . import config
-import json
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 
