@@ -39,7 +39,11 @@ class FieldAggregation:
 FieldDefinition = TypeVar("FieldDefinition")
 
 
-def string_to_array(s: str) -> List[str]:
+def string_to_array(s: str) -> Optional[List[str]]:
+    if s is None:
+        return None
+    if s == "":
+        return []
     return [s]
 
 
@@ -90,11 +94,11 @@ class FieldDefinition:
     }
 
     FIELD_NORMALIZATION = {
-        "string_to_array": string_to_array,
         "string_to_number": string_to_number,
         "string_to_integer": string_to_integer,
         "string_to_object": string_to_dict,
         "dict_to_array": dict_to_array,
+        "string_to_array": string_to_array,
     }
 
     MAP_TYPE_TO_JSON_SCHEMA_TYPES = {
@@ -114,13 +118,13 @@ class FieldDefinition:
             }
 
     def get_es_type(self):
-        type = FieldDefinition.ES_TYPE_MAPPING.get(self.type, self.type)
+        field_type = FieldDefinition.ES_TYPE_MAPPING.get(self.type, self.type)
         if self.type == "array" and self.items and self.items["type"] == "string":
-            type = "keyword"
+            field_type = "keyword"
 
-        if type == "keyword":
+        if field_type == "keyword":
             return {
-                "type": type,
+                "type": field_type,
                 "fields": {
                     "analyzed": {
                         "type": "text",
@@ -131,11 +135,11 @@ class FieldDefinition:
                 },
             }
 
-        return {"type": type}
+        return {"type": field_type}
 
     def to_schema(self, es_types: bool = False, all_fields: bool = False):
         """
-        Maps the FieldDefinition to either a JSON schema or a Elastic Search mapping
+        Maps the FieldDefinition to either a JSON schema or an Elasticsearch mapping
         """
         res = self.get_es_type() if es_types else {"type": self.type}
         if self.properties is not None:
@@ -162,7 +166,9 @@ class FieldDefinition:
         conversion = f"{value_type}_to_{self.type}"
         converter = FieldDefinition.FIELD_NORMALIZATION.get(conversion, None)
         if converter is None:
-            logger.debug(f"error normalizing {value}")
+            logger.warning(
+                f"warning normalizing {value} via converter {conversion} not applied."
+            )
             return value
         return converter(value)
 

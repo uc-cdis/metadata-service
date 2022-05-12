@@ -39,6 +39,9 @@ async def metadata(
         20, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    flatten: bool = Query(
+        False, description="Return the results without grouping items by commons."
+    ),
 ):
     # TODO WFH How to properly return this? We think grouping by MDS is probably
     #  not ideal in reality. We already have commons_name in the results.
@@ -54,7 +57,7 @@ async def metadata(
       ...
     }
     """
-    return await datastore.get_all_metadata(limit, offset)
+    return await datastore.get_all_metadata(limit, offset, flatten)
 
 
 @mod.get("/aggregate/metadata/{name}")

@@ -13,8 +13,12 @@ async def init(hostname, port):
     await client.init(hostname, port)
 
 
-async def drop_all(commons_mapping):
-    await client.drop_all(commons_mapping)
+async def drop_all():
+    await client.drop_all()
+
+
+async def create_indexes(commons_mapping):
+    await client.create_indexes(commons_mapping)
 
 
 async def close():

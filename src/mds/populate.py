@@ -173,7 +173,8 @@ async def main(commons_config: Commons) -> None:
         }
     }
 
-    await datastore.drop_all(commons_mapping=field_mapping)
+    await datastore.drop_all()  # TODO: rename indexes to old
+    await datastore.create_indexes(commons_mapping=field_mapping)
 
     for name, common in commons_config.gen3_commons.items():
         logger.info(f"Populating {name} using Gen3 MDS connector")

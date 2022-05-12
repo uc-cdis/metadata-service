@@ -1,6 +1,7 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
 from typing import Any, List, Dict
 import json
+from math import ceil
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
 
@@ -37,8 +38,8 @@ SEARCH_CONFIG = {
                 "tokenizer": {
                     "ngram_tokenizer": {
                         "type": "ngram",
-                        "min_gram": 2,
-                        "max_gram": 20,
+                        "min_gram": 3,
+                        "max_gram": 3,
                         "token_chars": ["letter", "digit"],
                     }
                 },
@@ -74,11 +75,13 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
     )
 
 
-async def drop_all(common_mapping: dict):
+async def drop_all():
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
         logger.debug(f"deleted index: {index}: {res}")
 
+
+async def create_indexes(common_mapping: dict):
     try:
         mapping = {**SEARCH_CONFIG, **common_mapping}
         res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=mapping)
@@ -124,7 +127,9 @@ def normalize_field(doc, key, normalize_type):
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
     except:
-        logger.debug(f"error normalizing {key} for a document")
+        logger.warning(
+            f"warning: normalizing {key} ({normalize_type}) for a document, elastic search will auto type"
+        )
         doc[key] = None
 
 
@@ -218,16 +223,33 @@ async def get_all_metadata(limit, offset, flatten=False):
                         }
                     }
                 )
+            return {
+                "results": flat,
+                "pagination": {
+                    "hits": res["hits"]["total"],
+                    "offset": offset,
+                    "pageSize": limit,
+                    "pages": ceil(int(res["hits"]["total"]) / limit),
+                },
+            }
         else:
-            byCommons = {}
+            byCommons = {
+                "results": {},
+                "pagination": {
+                    "hits": res["hits"]["total"],
+                    "offset": offset,
+                    "pageSize": limit,
+                    "pages": ceil(int(res["hits"]["total"]) / limit),
+                },
+            }
             for record in res["hits"]["hits"]:
                 id = record["_id"]
                 normalized = record["_source"]
                 commons_name = normalized["commons_name"]
 
                 if commons_name not in byCommons:
-                    byCommons[commons_name] = []
-                byCommons[commons_name].append(
+                    byCommons["results"][commons_name] = []
+                byCommons["results"][commons_name].append(
                     {
                         id: {
                             "gen3_discovery": normalized,
@@ -341,7 +363,7 @@ async def get_number_aggregation_for_field(field: str):
             "size": 0,
             "aggs": {
                 field: {"sum": {"field": field}},
-                "missing": {"missing": {"field": field}},
+                "missing": {"missing_bucket": {"field": field}},
                 "types_count": {"value_count": {"field": field}},
             },
         }
@@ -360,7 +382,7 @@ async def get_number_aggregation_for_field(field: str):
             field: {
                 "total_items": res["hits"]["total"],
                 "sum": agg_results[field]["value"],
-                "missing": agg_results["missing"]["doc_count"],
+                "missing": agg_results["missing_bucket"]["doc_count"],
             }
         }
 

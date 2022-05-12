@@ -3151,7 +3151,7 @@ def test_json_path_expression():
     )
 
     # test non existent path
-    assert get_json_path_value("study2.study_description_summary", sample1) == ""
+    assert get_json_path_value("study2.study_description_summary", sample1) is None
 
     # test bad path
     assert get_json_path_value(".contributors", sample1) is None
