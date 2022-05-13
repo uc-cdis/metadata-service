@@ -114,12 +114,11 @@ async def create_object(
             f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
         )
 
-    logger.debug(f"checking for allowable aliases")
-    for alias in aliases:
-        if not _is_allowable_guid_or_alias(alias):
-            raise HTTPException(
-                HTTP_400_BAD_REQUEST, f"alias has an unallowed value: {alias}"
-            )
+    # alias should not be 'upload'. This will help avoid conflicts between
+    # POST /api/v1/objects/{{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable aliases")
+    if any(alias == "upload" for alias in aliases):
+        raise HTTPException(HTTP_400_BAD_REQUEST, f"alias cannot have value: 'upload'")
 
     metadata = metadata or {}
 
@@ -695,12 +694,6 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
 
 def _is_authz_version_supported(authz):
     return str(authz.get("version", "")) == "0"
-
-
-def _is_allowable_guid_or_alias(guid: str):
-    # guid or alias should not be 'upload'
-    allowed = guid != "upload"
-    return allowed
 
 
 def init_app(app):
