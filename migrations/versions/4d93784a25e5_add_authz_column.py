@@ -26,7 +26,8 @@ def escape(str):
 
 
 def upgrade():
-    # migrate the authz data from the `data` column and remove some metadata fields
+    """ Migrate the authz data from the `data` column and remove some metadata fields. """
+
     authz_key = "_resource_paths"
     remove_metadata_keys = ["_uploader_id", "_filename", "_bucket", "_file_extension"]
 
@@ -59,7 +60,16 @@ def upgrade():
 
 
 def downgrade():
-    # migrate the non-default authz data back into the `data` column
+    """
+    Migrate the non-default authz data back into the `data` column.
+
+    This will remove any default _resource_paths (["/open"]) on the downgrade
+    based on the assumption that empty authz data were replaced with defaults
+    on the upgrade.
+
+    Any _resource_paths=["/open"] existing before the migration will be
+    removed on the downgrade.
+    """
 
     # get the default resource path from config
     authz_key = "_resource_paths"
@@ -74,7 +84,7 @@ def downgrade():
         authz_data = r[1]
         data = r[2]
 
-        # keep only the values that were stored pre-upgrade (ie, keep non-default resource paths)
+        # keep only non-default resource paths
         if authz_data.get(authz_key) != default_paths:
             if data is None:
                 data = {authz_key: authz_data.pop(authz_key)}

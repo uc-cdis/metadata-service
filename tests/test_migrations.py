@@ -48,8 +48,20 @@ def escape(str):
                 ],
             },
         ),
-        # default authz resource_paths do not get migrated into `data` column
+        # default authz _resource_paths (["/open"]) do not get migrated into `data` column
         ({"foo": "bar"}, {"foo": "bar"}, {"version": 0, "_resource_paths": ["/open"]}),
+        # "/open" as part of a list (not a default list) would get retained
+        (
+            {
+                "foo": "bar",
+                "_resource_paths": ["/open", "/programs/DEV", "/programs/DEVB"],
+            },
+            {"foo": "bar"},
+            {
+                "version": 0,
+                "_resource_paths": ["/open", "/programs/DEV", "/programs/DEVB"],
+            },
+        ),
         # handle rows with null `data` columns and populated `authz` columns
         (
             {"_resource_paths": ["/programs/DEV"]},
