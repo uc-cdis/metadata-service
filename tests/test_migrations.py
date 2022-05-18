@@ -48,6 +48,19 @@ def escape(str):
                 ],
             },
         ),
+        # handle single quotes and 2 single quotes in data
+        (
+            {
+                "foo": "single'quote",
+                "bar": "2single''quotes",
+                "_resource_paths": ["/programs/DEV"],
+            },
+            {"foo": "single'quote", "bar": "2single''quotes"},
+            {
+                "version": 0,
+                "_resource_paths": ["/programs/DEV"],
+            },
+        ),
         # default authz _resource_paths (["/open"]) do not get migrated into `data` column
         ({"foo": "bar"}, {"foo": "bar"}, {"version": 0, "_resource_paths": ["/open"]}),
         # "/open" as part of a list (not a default list) would get retained

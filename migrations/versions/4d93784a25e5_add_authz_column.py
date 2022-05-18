@@ -50,7 +50,10 @@ def upgrade():
             for metadata_key in remove_metadata_keys:
                 if metadata_key in data.keys():
                     data.pop(metadata_key)
-            sql_statement = f"UPDATE metadata SET authz='{escape(json.dumps(authz_data))}', data='{json.dumps(data)}' WHERE guid='{guid}'"
+            sql_statement = f"""UPDATE metadata
+                                SET authz='{escape(json.dumps(authz_data))}',
+                                data='{escape(json.dumps(data))}'
+                                WHERE guid='{guid}'"""
         else:
             sql_statement = f"UPDATE metadata SET authz='{json.dumps(authz_data)}' WHERE guid='{guid}'"
         connection.execute(sql_statement)
