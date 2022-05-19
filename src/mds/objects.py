@@ -115,7 +115,7 @@ async def create_object(
         )
 
     # alias should not be 'upload'. This will help avoid conflicts between
-    # POST /api/v1/objects/{{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     logger.debug("checking for allowable aliases")
     if any(alias == "upload" for alias in aliases):
         raise HTTPException(HTTP_400_BAD_REQUEST, f"alias cannot have value: 'upload'")
@@ -129,6 +129,14 @@ async def create_object(
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
         file_name, authz, auth_header, request
     )
+    # GUID should not be 'alias' or 'upload'. This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable GUIDs")
+    unallowed_guids = ["alias", "upload"]
+    if any(blank_guid == unallowed_guid for unallowed_guid in unallowed_guids):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: '{unallowed_guids}'"
+        )
 
     if aliases:
         await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
@@ -174,6 +182,12 @@ async def create_object_for_id(
             HTTP_401_UNAUTHORIZED,
             "Could not verify, parse, and/or validate scope from provided access token.",
         )
+
+    # GUID should not be 'alias'. This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable GUIDs")
+    if guid == "alias":
+        raise HTTPException(HTTP_400_BAD_REQUEST, f"GUID cannot have value: 'alias'")
 
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
     try:

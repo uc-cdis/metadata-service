@@ -419,6 +419,38 @@ def test_create_guid_unallowed_alias(client, valid_upload_file_patcher):
 
 @respx.mock
 @pytest.mark.parametrize(
+    "unallowed_guid",
+    ["upload", "alias"],
+)
+def test_create_guid_unallowed_guid(client, valid_upload_file_patcher, unallowed_guid):
+    """
+    Test create /objects/upload response for an unallowed guid value ("alias" or "upload")
+    coming from fence. The MDS endpoint should return 400.
+    """
+    fake_jwt = "1.2.3"
+    data = {
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["alias1", "alias2"],
+        "metadata": {"foo": "bar"},
+    }
+
+    valid_upload_file_patcher["data_upload_mocked_reponse"]["guid"] = unallowed_guid
+    resp = client.post(
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+    )
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
+
+
+@respx.mock
+@pytest.mark.parametrize(
     "data",
     [
         # all valid fields
@@ -517,6 +549,35 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
     assert indexd_get_mocked_request.called
     assert indexd_blank_version_mocked_request.called
     assert valid_upload_file_patcher["data_upload_guid_mock"].called
+
+
+@respx.mock
+def test_create_for_guid_unallowed_guid(client, valid_upload_file_patcher):
+    """
+    Test create /objects/<GUID or alias> response for an unallowed guid value ("alias").
+    The MDS endpoint should return 400.
+    """
+    fake_jwt = "1.2.3"
+    data = {
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["alias1", "alias2"],
+        "metadata": {"foo": "bar"},
+    }
+
+    unallowed_guid = "alias"
+    resp = client.post(
+        f"/objects/{unallowed_guid}",
+        json=data,
+        headers={"Authorization": f"bearer {fake_jwt}"},
+    )
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
 
 
 @respx.mock
