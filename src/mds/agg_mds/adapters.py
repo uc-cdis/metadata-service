@@ -562,23 +562,23 @@ class HarvardDataverse(RemoteMetadataAdapter):
 
         if "filters" not in kwargs or kwargs.get("filters") is None:
             return results
-        
+
         q_term = kwargs["filters"].get("q_term", None)
         if q_term is None:
             return results
         q = f"q={q_term}"
 
-        fq_term = kwargs["filters"].get("fq_term", '')
+        fq_term = kwargs["filters"].get("fq_term", "")
         fq = f"fq={fq_term}" if fq_term else ""
 
         subtrees = kwargs["filters"].get("subtrees", [])
         if not subtrees:
             return results
-        subtree_param = '&'.join([f"subtree={subtree}" for subtree in subtrees])
+        subtree_param = "&".join([f"subtree={subtree}" for subtree in subtrees])
 
         params = [q, fq, subtree_param]
         query_param = "&".join([param for param in params if param])
-        
+
         per_page = kwargs["filters"].get("per_page", 100)
         dataset_start = 0
         dataset_total = None
@@ -594,7 +594,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 if "data" not in data:
                     raise ValueError("unknown response")
 
-                dataset_total = data["data"]['total_count']
+                dataset_total = data["data"]["total_count"]
 
                 dataset_results = data["data"]["items"]
 
@@ -611,18 +611,22 @@ class HarvardDataverse(RemoteMetadataAdapter):
                         data = response.json()
                         if "data" not in data:
                             raise ValueError("unknown response")
-                        
+
                         files_total = data["data"]["total_count"]
 
                         dataset["files"] = data["data"]["items"]
 
                         files_start = files_start + per_page
-                        files_condition = files_total is not None and files_start < files_total
+                        files_condition = (
+                            files_total is not None and files_start < files_total
+                        )
 
                 results["results"].extend(dataset_results)
 
                 dataset_start = dataset_start + per_page
-                dataset_condition = dataset_total is not None and dataset_start < dataset_total
+                dataset_condition = (
+                    dataset_total is not None and dataset_start < dataset_total
+                )
 
             except httpx.TimeoutException as exc:
                 logger.error(f"An timeout error occurred while requesting {mds_url}.")
@@ -644,7 +648,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 break
 
         return results
-    
+
     @staticmethod
     def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
         results = item
@@ -657,22 +661,23 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 results.update(mapped_fields)
             else:
                 results = mapped_fields
-        
+
         results["__manifest"] = []
         for i, file in enumerate(files):
-            results["__manifest"].append({
-                "md5sum": file["md5"],
-                "file_size": file["size_in_bytes"],
-                "file_name": file["name"]
-            })
-        
+            results["__manifest"].append(
+                {
+                    "md5sum": file["md5"],
+                    "file_size": file["size_in_bytes"],
+                    "file_name": file["name"],
+                }
+            )
+
         for field in ["subjects", "investigators", "investigators_name"]:
             if isinstance(results[field], list):
                 results[field] = ", ".join(results[field])
-        
-        
+
         return results
-    
+
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
@@ -688,7 +693,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
-        
+
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
             self.setPerItemValues(results, perItemValues)
@@ -848,7 +853,7 @@ adapters = {
     "clinicaltrials": ClinicalTrials,
     "pdaps": PDAPS,
     "gen3": Gen3Adapter,
-    "harvardDataverse": HarvardDataverse
+    "harvard_dataverse": HarvardDataverse,
 }
 
 

@@ -3145,6 +3145,53 @@ def test_get_metadata_harvard_dataverse():
                     "identifier_of_dataverse": "cms-de-synpuf",
                     "name_of_dataverse": "CMS DE-SynPUF",
                     "citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1",
+                    "entity_id": 1962431,
+                    "storageIdentifier": "s3://10.70122/FK2/SZUUXJ",
+                    "subjects": [
+                        "Medicine, Health and Life Sciences"
+                    ],
+                    "fileCount": 8,
+                    "versionId": 212954,
+                    "versionState": "RELEASED",
+                    "majorVersion": 1,
+                    "minorVersion": 0,
+                    "createdAt": "2022-04-28T17:57:50Z",
+                    "updatedAt": "2022-04-28T18:13:12Z",
+                    "contacts": [
+                        {
+                            "name": "Keller, Jason",
+                            "affiliation": ""
+                        }
+                    ],
+                    "authors": [
+                        "Keller, Jason"
+                    ]
+                }
+            ],
+            "count_in_response": 1
+        }
+    }"""
+
+    dataset_missing_id_json_response = r"""{
+        "status": "OK",
+        "data": {
+            "q": "*",
+            "total_count": 1,
+            "start": 0,
+            "spelling_alternatives": {},
+            "items": [
+                {
+                    "name": "CMS DE-SynPUF",
+                    "type": "dataset",
+                    "url": "https://doi.org/10.70122/FK2/SZUUXJ",
+                    "global_id": "doi:10.70122/FK2/SZUUXJ",
+                    "description": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
+                    "published_at": "2022-04-28T18:13:12Z",
+                    "publisher": "CMS DE-SynPUF",
+                    "citationHtml": "Keller, Jason, 2022, \"CMS DE-SynPUF\", <a href=\"https://doi.org/10.70122/FK2/SZUUXJ\" target=\"_blank\">https://doi.org/10.70122/FK2/SZUUXJ</a>, Demo Dataverse, V1",
+                    "identifier_of_dataverse": "cms-de-synpuf",
+                    "name_of_dataverse": "CMS DE-SynPUF",
+                    "citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1",
                     "storageIdentifier": "s3://10.70122/FK2/SZUUXJ",
                     "subjects": [
                         "Medicine, Health and Life Sciences"
@@ -3345,232 +3392,307 @@ def test_get_metadata_harvard_dataverse():
     }"""
 
     field_mappings = {
-          "tags": [],
-          "authz": "",
-          "sites": "",
-          "summary": {
-              "path": "description",
-              "filters": ["strip_html"]
-          },
-          "study_description_summary": {
-              "path": "description",
-              "filters": ["strip_html"]
-          },
-          "study_url" : "path:url",
-          "location": "",
-          "subjects": "path:subjects",
-          "__manifest": [],
-          "study_name": "path:name",
-          "study_name_title": "path:name",
-          "study_type": "",
-          "institutions": "",
-          "year_awarded": "",
-          "investigators": "path:authors",
-          "investigators_name": "path:authors",
-          "project_title": "path:name_of_dataverse",
-          "protocol_name": "",
-          "study_summary": "",
-          "_file_manifest": "",
-          "dataset_1_type": "",
-          "dataset_2_type": "",
-          "dataset_3_type": "",
-          "dataset_4_type": "",
-          "dataset_5_type": "",
-          "project_number": "",
-          "dataset_1_title": "",
-          "dataset_2_title": "",
-          "dataset_3_title": "",
-          "dataset_4_title": "",
-          "dataset_5_title": "",
-          "administering_ic": "",
-          "advSearchFilters": [],
-          "dataset_category": "",
-          "research_program": "",
-          "research_question": "",
-          "study_description": "",
-          "clinical_trial_link": "",
-          "dataset_description": "",
-          "research_focus_area": "",
-          "dataset_1_description": "",
-          "dataset_2_description": "",
-          "dataset_3_description": "",
-          "dataset_4_description": "",
-          "dataset_5_description": "",
-          "data_availability": "pending"
-      }
+        "tags": [],
+        "authz": "",
+        "sites": "",
+        "summary": {"path": "description", "filters": ["strip_html"]},
+        "study_description_summary": {"path": "description", "filters": ["strip_html"]},
+        "study_url": "path:url",
+        "location": "",
+        "subjects": "path:subjects",
+        "__manifest": [],
+        "study_name": "path:name",
+        "study_name_title": "path:name",
+        "study_type": "",
+        "institutions": "",
+        "year_awarded": "",
+        "investigators": "path:authors",
+        "investigators_name": "path:authors",
+        "project_title": "path:name_of_dataverse",
+        "protocol_name": "",
+        "study_summary": "",
+        "_file_manifest": "",
+        "dataset_1_type": "",
+        "dataset_2_type": "",
+        "dataset_3_type": "",
+        "dataset_4_type": "",
+        "dataset_5_type": "",
+        "project_number": "",
+        "dataset_1_title": "",
+        "dataset_2_title": "",
+        "dataset_3_title": "",
+        "dataset_4_title": "",
+        "dataset_5_title": "",
+        "administering_ic": "",
+        "advSearchFilters": [],
+        "dataset_category": "",
+        "research_program": "",
+        "research_question": "",
+        "study_description": "",
+        "clinical_trial_link": "",
+        "dataset_description": "",
+        "research_focus_area": "",
+        "dataset_1_description": "",
+        "dataset_2_description": "",
+        "dataset_3_description": "",
+        "dataset_4_description": "",
+        "dataset_5_description": "",
+        "data_availability": "pending",
+    }
 
-    expected_response = {'doi:10.70122/FK2/SZUUXJ': {'_guid_type': 'discovery_metadata',
-    'gen3_discovery': {'tags': [],
-    'authz': '',
-    'sites': '',
-    'summary': 'The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.',
-    'study_description_summary': 'The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.',
-    'study_url': 'https://doi.org/10.70122/FK2/SZUUXJ',
-    'location': '',
-    'subjects': 'Medicine, Health and Life Sciences',
-    '__manifest': [{'md5sum': '4f5f9b7e644b76e683e064e5118a9dae',
-      'file_size': 14588413,
-      'file_name': 'DE1_0_2008_Beneficiary_Summary_File_Sample_1.csv'},
-      {'md5sum': 'abd0bddf9b497a72ea222a7fdbca230a',
-      'file_size': 1236512878,
-      'file_name': 'DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.csv'},
-      {'md5sum': '3a4a9970e1be009ec059c292bb8e93b1',
-      'file_size': 1236509358,
-      'file_name': 'DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.csv'},
-      {'md5sum': 'd125761f316daecc69b8c417b749e0f8',
-      'file_size': 16689488,
-      'file_name': 'DE1_0_2008_to_2010_Inpatient_Claims_Sample_1.csv'},
-      {'md5sum': '8d334ab6450852bb72c8c838a512aa96',
-      'file_size': 161812812,
-      'file_name': 'DE1_0_2008_to_2010_Outpatient_Claims_Sample_1.csv'},
-      {'md5sum': 'a0277d0f3afd0573e325a0582efb2f2f',
-      'file_size': 14083582,
-      'file_name': 'DE1_0_2010_Beneficiary_Summary_File_Sample_1.csv'},
-      {'md5sum': '7616fcb574ee20c3d4be72827ba49a93',
-      'file_size': 820871,
-      'file_name': 'DE 1.0 Codebook.pdf'},
-      {'md5sum': 'a13b3c5f66c6f54053acbe3c32778a8b',
-      'file_size': 1012165,
-      'file_name': 'SynPUF_DUG.pdf'}],
-    'study_name': 'CMS DE-SynPUF',
-    'study_name_title': 'CMS DE-SynPUF',
-    'study_type': '',
-    'institutions': '',
-    'year_awarded': '',
-    'investigators': 'Keller, Jason',
-    'investigators_name': 'Keller, Jason',
-    'project_title': 'CMS DE-SynPUF',
-    'protocol_name': '',
-    'study_summary': '',
-    '_file_manifest': '',
-    'dataset_1_type': '',
-    'dataset_2_type': '',
-    'dataset_3_type': '',
-    'dataset_4_type': '',
-    'dataset_5_type': '',
-    'project_number': '',
-    'dataset_1_title': '',
-    'dataset_2_title': '',
-    'dataset_3_title': '',
-    'dataset_4_title': '',
-    'dataset_5_title': '',
-    'administering_ic': '',
-    'advSearchFilters': [],
-    'dataset_category': '',
-    'research_program': '',
-    'research_question': '',
-    'study_description': '',
-    'clinical_trial_link': '',
-    'dataset_description': '',
-    'research_focus_area': '',
-    'dataset_1_description': '',
-    'dataset_2_description': '',
-    'dataset_3_description': '',
-    'dataset_4_description': '',
-    'dataset_5_description': '',
-    'data_availability': 'pending'}}}  
-    
+    expected_response = {
+        "doi:10.70122/FK2/SZUUXJ": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "summary": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
+                "study_description_summary": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
+                "study_url": "https://doi.org/10.70122/FK2/SZUUXJ",
+                "location": "",
+                "subjects": "Medicine, Health and Life Sciences",
+                "__manifest": [
+                    {
+                        "md5sum": "4f5f9b7e644b76e683e064e5118a9dae",
+                        "file_size": 14588413,
+                        "file_name": "DE1_0_2008_Beneficiary_Summary_File_Sample_1.csv",
+                    },
+                    {
+                        "md5sum": "abd0bddf9b497a72ea222a7fdbca230a",
+                        "file_size": 1236512878,
+                        "file_name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.csv",
+                    },
+                    {
+                        "md5sum": "3a4a9970e1be009ec059c292bb8e93b1",
+                        "file_size": 1236509358,
+                        "file_name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.csv",
+                    },
+                    {
+                        "md5sum": "d125761f316daecc69b8c417b749e0f8",
+                        "file_size": 16689488,
+                        "file_name": "DE1_0_2008_to_2010_Inpatient_Claims_Sample_1.csv",
+                    },
+                    {
+                        "md5sum": "8d334ab6450852bb72c8c838a512aa96",
+                        "file_size": 161812812,
+                        "file_name": "DE1_0_2008_to_2010_Outpatient_Claims_Sample_1.csv",
+                    },
+                    {
+                        "md5sum": "a0277d0f3afd0573e325a0582efb2f2f",
+                        "file_size": 14083582,
+                        "file_name": "DE1_0_2010_Beneficiary_Summary_File_Sample_1.csv",
+                    },
+                    {
+                        "md5sum": "7616fcb574ee20c3d4be72827ba49a93",
+                        "file_size": 820871,
+                        "file_name": "DE 1.0 Codebook.pdf",
+                    },
+                    {
+                        "md5sum": "a13b3c5f66c6f54053acbe3c32778a8b",
+                        "file_size": 1012165,
+                        "file_name": "SynPUF_DUG.pdf",
+                    },
+                ],
+                "study_name": "CMS DE-SynPUF",
+                "study_name_title": "CMS DE-SynPUF",
+                "study_type": "",
+                "institutions": "",
+                "year_awarded": "",
+                "investigators": "Keller, Jason",
+                "investigators_name": "Keller, Jason",
+                "project_title": "CMS DE-SynPUF",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "pending",
+            },
+        }
+    }
+
     # failed calls
     respx.get(
-      "http://test/ok?q=*&type=dataset&subtree=cms-de-synpuf&per_page=25",
-      status_code=200,
-      content=json.loads(dataset_json_response),
-      content_type="text/plain;charset=UTF-8"
+        "http://test/ok?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        status_code=200,
+        content=json.loads(dataset_json_response),
+        content_type="text/plain;charset=UTF-8",
     )
 
     respx.get(
-      "http://test/ok?q=*&type=file&fq=parentId:1962431&subtree=cms-de-synpuf&per_page=25",
-      status_code=200,
-      content=json.loads(files_json_response),
-      content_type="text/plain;charset=UTF-8"
+        "http://test/ok?q=*&subtree=cms-de-synpuf&fq=parentId:1962431&start=0&type=file&show_entity_ids=true&per_page=25",
+        status_code=200,
+        content=json.loads(files_json_response),
+        content_type="text/plain;charset=UTF-8",
     )
 
     assert get_metadata("havard_dataverse", "http://test/ok", filters=None) == {}
 
     assert (
         get_metadata(
-          "harvard_dataverse", 
-          None, 
-          filters={
-              "q_term": "*", 
-              "subtrees": ["cms-de-synpuf"], 
-              "per_page": 25
-        })
+            "harvard_dataverse",
+            None,
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+        )
         == {}
     )
 
     assert (
         get_metadata(
-          "harvard_dataverse", 
-          None, 
-          filters={
-              "subtrees": ["cms-de-synpuf"], 
-              "per_page": 25
-        })
+            "harvard_dataverse",
+            "http://test/ok",
+            filters=None,
+        )
         == {}
     )
 
     assert (
         get_metadata(
-          "harvard_dataverse", 
-          None, 
-          filters={
-              "q_term": "*", 
-              "per_page": 25
-        })
+            "harvard_dataverse",
+            "http://test/ok",
+            filters={"subtrees": ["cms-de-synpuf"], "per_page": 25},
+        )
         == {}
     )
 
-    assert get_metadata(
-        "harvard_dataverse",
-        "http://test/ok",
-        filters={
-            "q_term": "*", 
-            "subtrees": ["cms-de-synpuf"], 
-            "per_page": 25
-        },
-        mappings=field_mappings,
-    ) == expected_response
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/ok",
+            filters={"q_term": "*", "per_page": 25},
+        )
+        == {}
+    )
+
+    # valid call
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/ok",
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            mappings=field_mappings,
+        )
+        == expected_response
+    )
+
+    # invalid responses
+    respx.get(
+        "http://test/invalid_dataset_response?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        status_code=200,
+        content={"status": "ok"},
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/invalid_dataset_response",
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            mappings=field_mappings,
+        )
+        == {}
+    )
 
     respx.get(
-      "http://test/err404?q=*&type=dataset&subtree=cms-de-synpuf&per_page=25",
-      status_code=404,
-      content={},
-      content_type="text/plain:charset=UTF-8"
+        "http://test/invalid_file_response?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        status_code=200,
+        content=json.loads(dataset_json_response),
+        content_type="text/plain;charset=UTF-8",
     )
 
-    assert get_metadata(
-      "harvard_dataverse",
-      "http://test/err404",
-      filters={
-          "q_term": "*", 
-          "subtrees": ["cms-de-synpuf"], 
-          "per_page": 25
-      },
-      mappings=field_mappings
-    ) == {}
+    respx.get(
+        "http://test/invalid_file_response?q=*&subtree=cms-de-synpuf&fq=parentId:1962431&start=0&type=file&show_entity_ids=true&per_page=25",
+        status_code=200,
+        content={"status": "ok"},
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/invalid_file_response",
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            mappings=field_mappings,
+        )
+        == {}
+    )
+
+    respx.get(
+        "http://test/missing_dataset_id?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        status_code=200,
+        content=json.loads(dataset_missing_id_json_response),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/missing_dataset_id",
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            mappings=field_mappings,
+        )
+        == {}
+    )
+
+    respx.get(
+        "http://test/err404?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        status_code=404,
+        content={},
+        content_type="text/plain:charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/err404",
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            mappings=field_mappings,
+        )
+        == {}
+    )
 
     try:
         from mds.agg_mds.adapters import HarvardDataverse
+
         HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror?q=*&type=dataset&subtree=cms-de-synpuf&per_page=25",
+            "http://test/timeouterror?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
             content=httpx.TimeoutException,
         )
 
         get_metadata(
-          "harvard_dataverse",
-          "http://test/timeouterror",
-          filters={
-            "q_term": "*", 
-            "subtrees": ["cms-de-synpuf"], 
-            "per_page": 25
-          },
-          mappings=field_mappings,
+            "harvard_dataverse",
+            "http://test/timeouterror",
+            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            mappings=field_mappings,
         )
     except Exception as exc:
-        assert isinstance(exc, RetryError) == True    
+        assert isinstance(exc, RetryError) == True
 
 
 def test_missing_adapter():
