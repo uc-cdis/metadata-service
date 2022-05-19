@@ -7,7 +7,12 @@ from sqlalchemy import bindparam
 from sqlalchemy.dialects.postgresql import insert
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
+from starlette.status import (
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_404_NOT_FOUND,
+    HTTP_409_CONFLICT,
+)
 
 from .admin_login import admin_required
 from .models import db, Metadata
@@ -65,6 +70,16 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
     """Create metadata for the GUID."""
     created = True
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
+
+    # GUID should not be 'alias' or 'upload'. This will help avoid conflicts between
+    # POST /api/v1/metadata/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    # logger.debug("checking for allowable GUIDs")
+    unallowed_guids = ["alias", "upload"]
+    if any(guid == unallowed_guid for unallowed_guid in unallowed_guids):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: '{unallowed_guids}'"
+        )
+
     if overwrite:
         rv = await db.first(
             insert(Metadata)

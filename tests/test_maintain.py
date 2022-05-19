@@ -23,6 +23,19 @@ def test_create(client, key):
         client.delete("/metadata/" + key)
 
 
+@pytest.mark.parametrize("key", ["upload", "alias"])
+def test_create_unallowed_guid(client, key):
+    data = dict(a=1, b=2)
+    resp = client.post(f"/metadata/{key}", json=data)
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+
+    resp = client.get(f"/metadata/{key}")
+    print(f"Response = {resp}")
+    assert resp.json().get("detail")
+
+
 def test_batch_create(client):
     data = dict(a=1, b=2)
     try:
