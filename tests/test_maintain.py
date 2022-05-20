@@ -23,16 +23,15 @@ def test_create(client, key):
         client.delete("/metadata/" + key)
 
 
-@pytest.mark.parametrize("key", ["upload", "alias"])
-def test_create_unallowed_guid(client, key):
+def test_create_unallowed_guid(client):
+    bad_key = "upload"
     data = dict(a=1, b=2)
-    resp = client.post(f"/metadata/{key}", json=data)
+    resp = client.post(f"/metadata/{bad_key}", json=data)
 
     assert resp.status_code == 400
     assert resp.json().get("detail")
 
-    resp = client.get(f"/metadata/{key}")
-    print(f"Response = {resp}")
+    resp = client.get(f"/metadata/{bad_key}")
     assert resp.json().get("detail")
 
 

@@ -183,12 +183,6 @@ async def create_object_for_id(
             "Could not verify, parse, and/or validate scope from provided access token.",
         )
 
-    # GUID should not be 'alias'. This will help avoid conflicts between
-    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-    logger.debug("checking for allowable GUIDs")
-    if guid == "alias":
-        raise HTTPException(HTTP_400_BAD_REQUEST, f"GUID cannot have value: 'alias'")
-
     # hit indexd's GUID/alias resolution endpoint to get the indexd did
     try:
         endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"

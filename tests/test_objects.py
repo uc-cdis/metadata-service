@@ -552,35 +552,6 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
 
 
 @respx.mock
-def test_create_for_guid_unallowed_guid(client, valid_upload_file_patcher):
-    """
-    Test create /objects/<GUID or alias> response for an unallowed guid value ("alias").
-    The MDS endpoint should return 400.
-    """
-    fake_jwt = "1.2.3"
-    data = {
-        "file_name": "test.txt",
-        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
-        "aliases": ["alias1", "alias2"],
-        "metadata": {"foo": "bar"},
-    }
-
-    unallowed_guid = "alias"
-    resp = client.post(
-        f"/objects/{unallowed_guid}",
-        json=data,
-        headers={"Authorization": f"bearer {fake_jwt}"},
-    )
-
-    assert resp.status_code == 400
-    assert resp.json().get("detail")
-    assert not resp.json().get("guid")
-    assert not resp.json().get("upload_url")
-    assert not resp.json().get("aliases")
-    assert not resp.json().get("metadata")
-
-
-@respx.mock
 def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization

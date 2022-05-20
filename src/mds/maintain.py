@@ -71,14 +71,11 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
     created = True
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
 
-    # GUID should not be 'alias' or 'upload'. This will help avoid conflicts between
-    # POST /api/v1/metadata/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    # GUID should not be 'upload'. This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     # logger.debug("checking for allowable GUIDs")
-    unallowed_guids = ["alias", "upload"]
-    if any(guid == unallowed_guid for unallowed_guid in unallowed_guids):
-        raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"GUID cannot have value: '{unallowed_guids}'"
-        )
+    if guid == "upload":
+        raise HTTPException(HTTP_400_BAD_REQUEST, "GUID cannot have value: 'upload'")
 
     if overwrite:
         rv = await db.first(
