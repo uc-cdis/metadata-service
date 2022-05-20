@@ -110,17 +110,17 @@ async def test_4d93784a25e5_downgrade(
             insert_stmt = f'INSERT INTO metadata("guid", "authz", "data") VALUES (\'{fake_guid}\', \'{sql_authz_data}\', null)'
         await db.scalar(db.text(insert_stmt))
 
-        # check that the request data was inserted correctly
-        data = await db.all(
-            db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
-        )
-        row = {k: v for k, v in data[0].items()}
-        assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
-
-        # downgrade to before "add_authz_column" migration
-        alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])
-
         try:
+            # check that the request data was inserted correctly
+            data = await db.all(
+                db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
+            )
+            row = {k: v for k, v in data[0].items()}
+            assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
+
+            # downgrade to before "add_authz_column" migration
+            alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])
+
             # check that the migration moved the `authz` data into the `data` column
             data = await db.all(
                 db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
@@ -212,17 +212,17 @@ async def test_4d93784a25e5_add_authz_column(
         insert_stmt = f"INSERT INTO metadata(\"guid\", \"data\") VALUES ('{fake_guid}', '{sql_old_metadata}')"
         await db.scalar(db.text(insert_stmt))
 
-        # check that the request data was inserted correctly
-        data = await db.all(
-            db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
-        )
-        row = {k: v for k, v in data[0].items()}
-        assert row == {"guid": fake_guid, "data": old_metadata}
-
-        # run "add_authz_column" migration
-        alembic_main(["--raiseerr", "upgrade", "4d93784a25e5"])
-
         try:
+            # check that the request data was inserted correctly
+            data = await db.all(
+                db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
+            )
+            row = {k: v for k, v in data[0].items()}
+            assert row == {"guid": fake_guid, "data": old_metadata}
+
+            # run "add_authz_column" migration
+            alembic_main(["--raiseerr", "upgrade", "4d93784a25e5"])
+
             # check that the migration created correct `authz` data from the `data` column
             data = await db.all(
                 db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
