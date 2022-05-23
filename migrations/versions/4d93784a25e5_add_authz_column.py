@@ -26,7 +26,7 @@ def escape(str):
 
 
 def upgrade():
-    """ Migrate the authz data from the `data` column and remove some metadata fields. """
+    """Migrate the authz data from the `data` column and remove some metadata fields."""
 
     authz_key = "_resource_paths"
     remove_metadata_keys = ["_uploader_id", "_filename", "_bucket", "_file_extension"]
