@@ -30,7 +30,7 @@ def test_status_aggregate_error(client):
         try:
             resp = client.get("/_status")
             resp.raise_for_status()
-        except:
+        except Exception:
             assert resp.status_code == 500
             assert resp.json() == {
                 "detail": {"message": "aggregate datastore offline", "code": 500}
