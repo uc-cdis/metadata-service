@@ -418,13 +418,9 @@ def test_create_guid_unallowed_alias(client, valid_upload_file_patcher):
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "unallowed_guid",
-    ["upload", "alias"],
-)
-def test_create_guid_unallowed_guid(client, valid_upload_file_patcher, unallowed_guid):
+def test_create_guid_unallowed_guid(client, valid_upload_file_patcher):
     """
-    Test create /objects/upload response for an unallowed guid value ("alias" or "upload")
+    Test create /objects/upload response for an unallowed guid value ("upload")
     coming from fence. The MDS endpoint should return 400.
     """
     fake_jwt = "1.2.3"
@@ -435,7 +431,7 @@ def test_create_guid_unallowed_guid(client, valid_upload_file_patcher, unallowed
         "metadata": {"foo": "bar"},
     }
 
-    valid_upload_file_patcher["data_upload_mocked_reponse"]["guid"] = unallowed_guid
+    valid_upload_file_patcher["data_upload_mocked_reponse"]["guid"] = "upload"
     resp = client.post(
         "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
