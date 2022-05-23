@@ -32,6 +32,7 @@ async def batch_create_metadata(
     created = []
     updated = []
     conflict = []
+    bad_input = []
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
     async with db.acquire() as conn:
         if overwrite:
@@ -45,7 +46,9 @@ async def batch_create_metadata(
                 .returning(db.text("xmax"))
             )
             for data in data_list:
-                if await stmt.scalar(data) == 0:
+                if data["guid"] == "upload":
+                    bad_input.append(data["guid"])
+                elif await stmt.scalar(data) == 0:
                     created.append(data["guid"])
                 else:
                     updated.append(data["guid"])
@@ -56,13 +59,18 @@ async def batch_create_metadata(
                 )
             )
             for data in data_list:
-                try:
-                    await stmt.status(data)
-                except UniqueViolationError:
-                    conflict.append(data["guid"])
+                if data["guid"] == "upload":
+                    bad_input.append(data["guid"])
                 else:
-                    created.append(data["guid"])
-    return dict(created=created, updated=updated, conflict=conflict)
+                    try:
+                        await stmt.status(data)
+                    except UniqueViolationError:
+                        conflict.append(data["guid"])
+                    else:
+                        created.append(data["guid"])
+    return dict(
+        created=created, updated=updated, conflict=conflict, bad_input=bad_input
+    )
 
 
 @mod.post("/metadata/{guid:path}")
@@ -73,7 +81,6 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
 
     # GUID should not be 'upload'. This will help avoid conflicts between
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-    # logger.debug("checking for allowable GUIDs")
     if guid == "upload":
         raise HTTPException(HTTP_400_BAD_REQUEST, "GUID cannot have value: 'upload'")
 

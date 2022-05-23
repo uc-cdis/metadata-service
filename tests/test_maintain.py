@@ -23,7 +23,7 @@ def test_create(client, key):
         client.delete("/metadata/" + key)
 
 
-def test_create_unallowed_guid(client):
+def test_create_bad_guid(client):
     bad_key = "upload"
     data = dict(a=1, b=2)
     resp = client.post(f"/metadata/{bad_key}", json=data)
@@ -45,6 +45,7 @@ def test_batch_create(client):
         assert len(resp.json()["created"]) == 64
         assert len(resp.json()["updated"]) == 0
         assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 0
 
         resp = client.post(
             "/metadata", json=[dict(guid=f"tbc_{i}", data=data) for i in range(32, 96)]
@@ -53,6 +54,7 @@ def test_batch_create(client):
         assert len(resp.json()["created"]) == 32
         assert len(resp.json()["updated"]) == 32
         assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 0
 
         resp = client.post(
             "/metadata?overwrite=false",
@@ -62,6 +64,46 @@ def test_batch_create(client):
         assert len(resp.json()["created"]) == 32
         assert len(resp.json()["updated"]) == 0
         assert len(resp.json()["conflict"]) == 32
+        assert len(resp.json()["bad_input"]) == 0
+
+    finally:
+        for i in range(128):
+            client.delete(f"/metadata/tbc_{i}")
+
+
+def test_batch_create_bad_guid(client):
+    bad_guid = "upload"
+    data = dict(a=1, b=2)
+    batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64)]
+    batch_data.append({"guid": bad_guid, "data": data})
+    try:
+        resp = client.post("/metadata", json=batch_data)
+        resp.raise_for_status()
+        assert len(resp.json()["created"]) == 64
+        assert len(resp.json()["updated"]) == 0
+        assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 1
+
+        batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(32, 96)]
+        batch_data.append({"guid": bad_guid, "data": data})
+        resp = client.post("/metadata", json=batch_data)
+        resp.raise_for_status()
+        assert len(resp.json()["created"]) == 32
+        assert len(resp.json()["updated"]) == 32
+        assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 1
+
+        batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64, 128)]
+        batch_data.append({"guid": bad_guid, "data": data})
+        resp = client.post(
+            "/metadata?overwrite=false",
+            json=batch_data,
+        )
+        resp.raise_for_status()
+        assert len(resp.json()["created"]) == 32
+        assert len(resp.json()["updated"]) == 0
+        assert len(resp.json()["conflict"]) == 32
+        assert len(resp.json()["bad_input"]) == 1
 
     finally:
         for i in range(128):
