@@ -189,7 +189,7 @@ async def test_4d93784a25e5_downgrade(
         ),
     ],
 )
-async def test_4d93784a25e5_add_authz_column(
+async def test_4d93784a25e5_upgrade(
     old_metadata: dict, new_metadata: dict, authz_data: dict
 ):
     """
