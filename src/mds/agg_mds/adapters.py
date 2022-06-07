@@ -586,7 +586,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
 
         while dataset_condition:
             try:
-                dataset_url = f"{mds_url}?{query_param}&start={dataset_start}&type=dataset&show_entity_ids=true&per_page={per_page}"
+                dataset_url = f"{mds_url}/search?{query_param}&start={dataset_start}&type=dataset&show_entity_ids=true&per_page={per_page}"
                 response = httpx.get(dataset_url)
                 response.raise_for_status()
 
@@ -600,11 +600,12 @@ class HarvardDataverse(RemoteMetadataAdapter):
 
                 for dataset in dataset_results:
                     dataset_id = dataset["entity_id"]
+                    dataset["files"] = []
                     files_start = 0
                     files_total = None
                     files_condition = True
                     while files_condition:
-                        files_url = f"{mds_url}?{query_param}&fq=parentId:{dataset_id}&start={files_start}&type=file&show_entity_ids=true&per_page={per_page}"
+                        files_url = f"{mds_url}/search?q=*&fq=parentId:{dataset_id}&start={files_start}&type=file&show_entity_ids=true&per_page={per_page}"
                         response = httpx.get(files_url)
                         response.raise_for_status()
 
@@ -614,7 +615,25 @@ class HarvardDataverse(RemoteMetadataAdapter):
 
                         files_total = data["data"]["total_count"]
 
-                        dataset["files"] = data["data"]["items"]
+                        for data_file in data["data"]["items"]:
+                            data_file["data_dictionary"] = []
+
+                            ddi_url = f"{mds_url}/access/datafile/{data_file['file_id']}/metadata/ddi"
+                            ddi_response = httpx.get(ddi_url)
+                            if ddi_response.status_code == 200:
+                                ddi_entry = xmltodict.parse(ddi_response.text)
+                                vars = ddi_entry.get("codeBook", {}).get("dataDscr", {}).get("var", [])
+                                if isinstance(vars, dict):
+                                    vars = [vars]
+                                for var_iter, var in enumerate(vars):
+                                    data_file["data_dictionary"].append({
+                                        "name": var.get("@name", f"var{var_iter+1}"),
+                                        "label": var.get("labl", {}).get("#text"),
+                                        "interval": var.get("@intrvl"),
+                                        "type": var.get("varFormat", {}).get("@type")
+                                    })
+
+                            dataset["files"].append(data_file)
 
                         files_start = files_start + per_page
                         files_condition = (
@@ -662,15 +681,9 @@ class HarvardDataverse(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        results["__manifest"] = []
+        results["data_dictionary"] = {}
         for i, file in enumerate(files):
-            results["__manifest"].append(
-                {
-                    "md5sum": file["md5"],
-                    "file_size": file["size_in_bytes"],
-                    "file_name": file["name"],
-                }
-            )
+            results["data_dictionary"][file["name"]] = file["data_dictionary"]
 
         for field in ["subjects", "investigators", "investigators_name"]:
             if isinstance(results[field], list):

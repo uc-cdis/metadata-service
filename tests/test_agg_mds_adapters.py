@@ -3134,37 +3134,48 @@ def test_get_metadata_harvard_dataverse():
             "spelling_alternatives": {},
             "items": [
                 {
-                    "name": "CMS DE-SynPUF",
+                    "name": "US Metropolitan Daily Cases with Basemap",
                     "type": "dataset",
-                    "url": "https://doi.org/10.70122/FK2/SZUUXJ",
-                    "global_id": "doi:10.70122/FK2/SZUUXJ",
-                    "description": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
-                    "published_at": "2022-04-28T18:13:12Z",
-                    "publisher": "CMS DE-SynPUF",
-                    "citationHtml": "Keller, Jason, 2022, \"CMS DE-SynPUF\", <a href=\"https://doi.org/10.70122/FK2/SZUUXJ\" target=\"_blank\">https://doi.org/10.70122/FK2/SZUUXJ</a>, Demo Dataverse, V1",
-                    "identifier_of_dataverse": "cms-de-synpuf",
-                    "name_of_dataverse": "CMS DE-SynPUF",
-                    "citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1",
-                    "entity_id": 1962431,
-                    "storageIdentifier": "s3://10.70122/FK2/SZUUXJ",
+                    "url": "https://doi.org/10.7910/DVN/5B8YM8",
+                    "global_id": "doi:10.7910/DVN/5B8YM8",
+                    "description": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                    "published_at": "2022-05-17T19:14:19Z",
+                    "publisher": "Data",
+                    "citationHtml": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", <a href=\"https://doi.org/10.7910/DVN/5B8YM8\" target=\"_blank\">https://doi.org/10.7910/DVN/5B8YM8</a>, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
+                    "identifier_of_dataverse": "data_ncov",
+                    "name_of_dataverse": "Data",
+                    "citation": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
+                    "entity_id": 3820814,
+                    "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
                     "subjects": [
-                        "Medicine, Health and Life Sciences"
+                        "Earth and Environmental Sciences",
+                        "Social Sciences"
                     ],
-                    "fileCount": 8,
-                    "versionId": 212954,
+                    "fileCount": 1,
+                    "versionId": 300092,
                     "versionState": "RELEASED",
-                    "majorVersion": 1,
+                    "majorVersion": 24,
                     "minorVersion": 0,
-                    "createdAt": "2022-04-28T17:57:50Z",
-                    "updatedAt": "2022-04-28T18:13:12Z",
+                    "createdAt": "2020-04-29T04:49:19Z",
+                    "updatedAt": "2022-05-17T19:14:19Z",
                     "contacts": [
                         {
-                            "name": "Keller, Jason",
-                            "affiliation": ""
+                            "name": "Hanchen Yu",
+                            "affiliation": "China Data Lab"
+                        }
+                    ],
+                    "publications": [
+                        {
+                            "citation": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... &amp; Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
+                        }
+                    ],
+                    "geographicCoverage": [
+                        {
+                            "country": ""
                         }
                     ],
                     "authors": [
-                        "Keller, Jason"
+                        "China Data Lab"
                     ]
                 }
             ],
@@ -3181,36 +3192,47 @@ def test_get_metadata_harvard_dataverse():
             "spelling_alternatives": {},
             "items": [
                 {
-                    "name": "CMS DE-SynPUF",
+                    "name": "US Metropolitan Daily Cases with Basemap",
                     "type": "dataset",
-                    "url": "https://doi.org/10.70122/FK2/SZUUXJ",
-                    "global_id": "doi:10.70122/FK2/SZUUXJ",
-                    "description": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
-                    "published_at": "2022-04-28T18:13:12Z",
-                    "publisher": "CMS DE-SynPUF",
-                    "citationHtml": "Keller, Jason, 2022, \"CMS DE-SynPUF\", <a href=\"https://doi.org/10.70122/FK2/SZUUXJ\" target=\"_blank\">https://doi.org/10.70122/FK2/SZUUXJ</a>, Demo Dataverse, V1",
-                    "identifier_of_dataverse": "cms-de-synpuf",
-                    "name_of_dataverse": "CMS DE-SynPUF",
-                    "citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1",
-                    "storageIdentifier": "s3://10.70122/FK2/SZUUXJ",
+                    "url": "https://doi.org/10.7910/DVN/5B8YM8",
+                    "global_id": "doi:10.7910/DVN/5B8YM8",
+                    "description": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                    "published_at": "2022-05-17T19:14:19Z",
+                    "publisher": "Data",
+                    "citationHtml": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", <a href=\"https://doi.org/10.7910/DVN/5B8YM8\" target=\"_blank\">https://doi.org/10.7910/DVN/5B8YM8</a>, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
+                    "identifier_of_dataverse": "data_ncov",
+                    "name_of_dataverse": "Data",
+                    "citation": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
+                    "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
                     "subjects": [
-                        "Medicine, Health and Life Sciences"
+                        "Earth and Environmental Sciences",
+                        "Social Sciences"
                     ],
-                    "fileCount": 8,
-                    "versionId": 212954,
+                    "fileCount": 1,
+                    "versionId": 300092,
                     "versionState": "RELEASED",
-                    "majorVersion": 1,
+                    "majorVersion": 24,
                     "minorVersion": 0,
-                    "createdAt": "2022-04-28T17:57:50Z",
-                    "updatedAt": "2022-04-28T18:13:12Z",
+                    "createdAt": "2020-04-29T04:49:19Z",
+                    "updatedAt": "2022-05-17T19:14:19Z",
                     "contacts": [
                         {
-                            "name": "Keller, Jason",
-                            "affiliation": ""
+                            "name": "Hanchen Yu",
+                            "affiliation": "China Data Lab"
+                        }
+                    ],
+                    "publications": [
+                        {
+                            "citation": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... &amp; Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
+                        }
+                    ],
+                    "geographicCoverage": [
+                        {
+                            "country": ""
                         }
                     ],
                     "authors": [
-                        "Keller, Jason"
+                        "China Data Lab"
                     ]
                 }
             ],
@@ -3219,177 +3241,185 @@ def test_get_metadata_harvard_dataverse():
     }"""
 
     files_json_response = r"""{
-      "status": "OK",
-      "data": {
-          "q": "*",
-          "total_count": 8,
-          "start": 0,
-          "spelling_alternatives": {},
-          "items": [
-              {
-                  "name": "DE1_0_2008_Beneficiary_Summary_File_Sample_1.csv",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962435",
-                  "file_id": "1962435",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Comma Separated Values",
-                  "file_content_type": "text/csv",
-                  "size_in_bytes": 14588413,
-                  "md5": "4f5f9b7e644b76e683e064e5118a9dae",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "4f5f9b7e644b76e683e064e5118a9dae"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/KBU9G7",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.csv",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962437",
-                  "file_id": "1962437",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Comma Separated Values",
-                  "file_content_type": "text/csv",
-                  "size_in_bytes": 1236512878,
-                  "md5": "abd0bddf9b497a72ea222a7fdbca230a",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "abd0bddf9b497a72ea222a7fdbca230a"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/ZXXFPT",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.csv",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962438",
-                  "file_id": "1962438",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Comma Separated Values",
-                  "file_content_type": "text/csv",
-                  "size_in_bytes": 1236509358,
-                  "md5": "3a4a9970e1be009ec059c292bb8e93b1",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "3a4a9970e1be009ec059c292bb8e93b1"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/JXEIJ0",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "DE1_0_2008_to_2010_Inpatient_Claims_Sample_1.csv",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962436",
-                  "file_id": "1962436",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Comma Separated Values",
-                  "file_content_type": "text/csv",
-                  "size_in_bytes": 16689488,
-                  "md5": "d125761f316daecc69b8c417b749e0f8",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "d125761f316daecc69b8c417b749e0f8"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/VJOAY7",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "DE1_0_2008_to_2010_Outpatient_Claims_Sample_1.csv",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962433",
-                  "file_id": "1962433",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Comma Separated Values",
-                  "file_content_type": "text/csv",
-                  "size_in_bytes": 161812812,
-                  "md5": "8d334ab6450852bb72c8c838a512aa96",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "8d334ab6450852bb72c8c838a512aa96"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/AJFPXC",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "DE1_0_2010_Beneficiary_Summary_File_Sample_1.csv",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962432",
-                  "file_id": "1962432",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Comma Separated Values",
-                  "file_content_type": "text/csv",
-                  "size_in_bytes": 14083582,
-                  "md5": "a0277d0f3afd0573e325a0582efb2f2f",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "a0277d0f3afd0573e325a0582efb2f2f"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/TXMRJD",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "DE 1.0 Codebook.pdf",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962434",
-                  "file_id": "1962434",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Adobe PDF",
-                  "file_content_type": "application/pdf",
-                  "size_in_bytes": 820871,
-                  "md5": "7616fcb574ee20c3d4be72827ba49a93",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "7616fcb574ee20c3d4be72827ba49a93"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/WTXU7L",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              },
-              {
-                  "name": "SynPUF_DUG.pdf",
-                  "type": "file",
-                  "url": "https://demo.dataverse.org/api/access/datafile/1962439",
-                  "file_id": "1962439",
-                  "published_at": "2022-04-28T18:13:12Z",
-                  "file_type": "Adobe PDF",
-                  "file_content_type": "application/pdf",
-                  "size_in_bytes": 1012165,
-                  "md5": "a13b3c5f66c6f54053acbe3c32778a8b",
-                  "checksum": {
-                      "type": "MD5",
-                      "value": "a13b3c5f66c6f54053acbe3c32778a8b"
-                  },
-                  "file_persistent_id": "doi:10.70122/FK2/SZUUXJ/MMKCDI",
-                  "dataset_name": "CMS DE-SynPUF",
-                  "dataset_id": "1962431",
-                  "dataset_persistent_id": "doi:10.70122/FK2/SZUUXJ",
-                  "dataset_citation": "Keller, Jason, 2022, \"CMS DE-SynPUF\", https://doi.org/10.70122/FK2/SZUUXJ, Demo Dataverse, V1"
-              }
-          ],
-          "count_in_response": 8
+        "status": "OK",
+        "data": {
+            "q": "*",
+            "total_count": 1,
+            "start": 0,
+            "spelling_alternatives": {},
+            "items": [
+                {
+                    "name": "us_metro_confirmed_cases_cdl.tab",
+                    "type": "file",
+                    "url": "https://dataverse.harvard.edu/api/access/datafile/6297263",
+                    "file_id": "6297263",
+                    "published_at": "2022-05-17T19:14:19Z",
+                    "file_type": "Tab-Delimited",
+                    "file_content_type": "text/tab-separated-values",
+                    "size_in_bytes": 3953412,
+                    "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                    "checksum": {
+                        "type": "MD5",
+                        "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                    },
+                    "unf": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
+                    "dataset_name": "US Metropolitan Daily Cases with Basemap",
+                    "dataset_id": "3820814",
+                    "dataset_persistent_id": "doi:10.7910/DVN/5B8YM8",
+                    "dataset_citation": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
+                    "entity_id": 6297263
+                }
+            ],
+            "count_in_response": 1
         }
     }"""
+
+    file_ddi_response = """<?xml version='1.0' encoding='UTF-8'?>
+    <codeBook xmlns="http://www.icpsr.umich.edu/DDI" version="2.0">
+        <stdyDscr>
+            <citation>
+                <titlStmt>
+                    <titl>US Metropolitan Daily Cases with Basemap</titl>
+                    <IDNo agency="doi">10.7910/DVN/5B8YM8</IDNo>
+                </titlStmt>
+                <rspStmt>
+                    <AuthEnty>China Data Lab</AuthEnty>
+                </rspStmt>
+                <biblCit>China Data Lab, 2020, "US Metropolitan Daily Cases with Basemap", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]</biblCit>
+            </citation>
+        </stdyDscr>
+        <fileDscr ID="f6297263">
+            <fileTxt>
+                <fileName>us_metro_confirmed_cases_cdl.tab</fileName>
+                <dimensns>
+                    <caseQnty>942</caseQnty>
+                    <varQnty>852</varQnty>
+                </dimensns>
+                <fileType>text/tab-separated-values</fileType>
+            </fileTxt>
+            <notes level="file" type="VDC:UNF" subject="Universal Numeric Fingerprint">UNF:6:w715RbMgdXAjmDiwdGNv+g==</notes>
+        </fileDscr>
+        <dataDscr>
+            <var ID="v28336577" name="POP90" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP90</labl>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="min">10089.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="max">1.6835336E7</sumStat>
+                <sumStat type="stdev">863685.1810810249</sumStat>
+                <sumStat type="mean">245006.8174097664</sumStat>
+                <sumStat type="medn">62229.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:rrZvx0sccW3/T39TpNZkww==</notes>
+            </var>
+            <var ID="v28336083" name="POP80" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP80</labl>
+                <sumStat type="medn">58890.0</sumStat>
+                <sumStat type="stdev">793757.747968027</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="mean">219736.50849256906</sumStat>
+                <sumStat type="min">1486.0</sumStat>
+                <sumStat type="max">1.6313732E7</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:/gE+Jgr2RolrwkeE+O0log==</notes>
+            </var>
+            <var ID="v28336475" name="POP70" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP70</labl>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="max">1.7009092E7</sumStat>
+                <sumStat type="mean">196906.501061571</sumStat>
+                <sumStat type="min">0.0</sumStat>
+                <sumStat type="medn">50533.5</sumStat>
+                <sumStat type="stdev">777648.8670546024</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:fhyMqy/xsabC5iK9w885Hw==</notes>
+            </var>
+            <var ID="v28336321" name="POP10" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP10</labl>
+                <sumStat type="mean">307071.45966029697</sumStat>
+                <sumStat type="stdev">1034155.0228777333</sumStat>
+                <sumStat type="min">12093.0</sumStat>
+                <sumStat type="max">1.8897109E7</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="medn">74765.5</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:4uEu5qWUDCdmXqi8flG1MQ==</notes>
+            </var>
+            <var ID="v28336509" name="POP00" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP00</labl>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="mean">278420.1868365179</sumStat>
+                <sumStat type="stdev">964415.2918384229</sumStat>
+                <sumStat type="max">1.832299E7</sumStat>
+                <sumStat type="min">13004.0</sumStat>
+                <sumStat type="medn">69472.5</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:tyCEHtT+8GdCOTpJpYvAJg==</notes>
+            </var>
+            <var ID="v28336299" name="Metropolitan" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">Metropolitan</labl>
+                <varFormat type="character"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:mphqnaLCTtmU+tpSoBgFHw==</notes>
+            </var>
+            <var ID="v28336477" name="Metro_ID" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">Metro_ID</labl>
+                <sumStat type="max">49780.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="stdev">11370.289276051668</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="min">10020.0</sumStat>
+                <sumStat type="medn">29800.0</sumStat>
+                <sumStat type="mean">29761.56050955417</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:m28+WicbC3+/UcbML38hgQ==</notes>
+            </var>
+            <var ID="v28336208" name="2022-04-11" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">2022-04-11</labl>
+                <sumStat type="stdev">270083.02026017866</sumStat>
+                <sumStat type="min">1757.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="mean">77844.43312101916</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="max">5205145.0</sumStat>
+                <sumStat type="medn">19037.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:FmvYl83snrKvDdkjUsZegg==</notes>
+            </var>
+            <var ID="v28336064" name="2022-04-10" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">2022-04-10</labl>
+                <sumStat type="mean">77797.73460721863</sumStat>
+                <sumStat type="stdev">269746.2378437367</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="min">1757.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="medn">19006.5</sumStat>
+                <sumStat type="max">5191684.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:6d+rPXgszAck4Ad3bLkVlQ==</notes>
+            </var>
+        </dataDscr>
+    </codeBook>"""
 
     field_mappings = {
         "tags": [],
@@ -3441,112 +3471,126 @@ def test_get_metadata_harvard_dataverse():
     }
 
     expected_response = {
-        "doi:10.70122/FK2/SZUUXJ": {
-            "_guid_type": "discovery_metadata",
-            "gen3_discovery": {
-                "tags": [],
-                "authz": "",
-                "sites": "",
-                "summary": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
-                "study_description_summary": "The DE-SynPUF was created with the goal of providing a realistic set of claims data in the public domain while providing the very highest degree of protection to the Medicare beneficiaries’ protected health information. The purposes of the DE-SynPUF are to: allow data entrepreneurs to develop and create software and applications that may eventually be applied to actual CMS claims data; train researchers on the use and complexity of conducting analyses with CMS claims data prior to initiating the process to obtain access to actual CMS data; and, support safe data mining innovations that may reveal unanticipated knowledge gains while preserving beneficiary privacy. The files have been designed so that programs and procedures created on the DE-SynPUF will function on CMS Limited Data Sets. The data structure of the Medicare DE-SynPUF is very similar to the CMS Limited Data Sets, but with a smaller number of variables. The DE-SynPUF also provides a robust set of metadata on the CMS claims data that have not been previously available in the public domain. Although the DE-SynPUF has very limited inferential research value to draw conclusions about Medicare beneficiaries due to the synthetic processes used to create the file, the Medicare DE-SynPUF does increase access to a realistic Medicare claims data file in a timely and less expensive manner to spur the innovation necessary to achieve the goals of better care for beneficiaries and improve the health of the population. The DE-SynPUF contains five types of data – Beneficiary Summary, Inpatient Claims, Outpatient Claims, Carrier Claims, and Prescription Drug Events.",
-                "study_url": "https://doi.org/10.70122/FK2/SZUUXJ",
-                "location": "",
-                "subjects": "Medicine, Health and Life Sciences",
-                "__manifest": [
-                    {
-                        "md5sum": "4f5f9b7e644b76e683e064e5118a9dae",
-                        "file_size": 14588413,
-                        "file_name": "DE1_0_2008_Beneficiary_Summary_File_Sample_1.csv",
-                    },
-                    {
-                        "md5sum": "abd0bddf9b497a72ea222a7fdbca230a",
-                        "file_size": 1236512878,
-                        "file_name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1A.csv",
-                    },
-                    {
-                        "md5sum": "3a4a9970e1be009ec059c292bb8e93b1",
-                        "file_size": 1236509358,
-                        "file_name": "DE1_0_2008_to_2010_Carrier_Claims_Sample_1B.csv",
-                    },
-                    {
-                        "md5sum": "d125761f316daecc69b8c417b749e0f8",
-                        "file_size": 16689488,
-                        "file_name": "DE1_0_2008_to_2010_Inpatient_Claims_Sample_1.csv",
-                    },
-                    {
-                        "md5sum": "8d334ab6450852bb72c8c838a512aa96",
-                        "file_size": 161812812,
-                        "file_name": "DE1_0_2008_to_2010_Outpatient_Claims_Sample_1.csv",
-                    },
-                    {
-                        "md5sum": "a0277d0f3afd0573e325a0582efb2f2f",
-                        "file_size": 14083582,
-                        "file_name": "DE1_0_2010_Beneficiary_Summary_File_Sample_1.csv",
-                    },
-                    {
-                        "md5sum": "7616fcb574ee20c3d4be72827ba49a93",
-                        "file_size": 820871,
-                        "file_name": "DE 1.0 Codebook.pdf",
-                    },
-                    {
-                        "md5sum": "a13b3c5f66c6f54053acbe3c32778a8b",
-                        "file_size": 1012165,
-                        "file_name": "SynPUF_DUG.pdf",
-                    },
-                ],
-                "study_name": "CMS DE-SynPUF",
-                "study_name_title": "CMS DE-SynPUF",
-                "study_type": "",
-                "institutions": "",
-                "year_awarded": "",
-                "investigators": "Keller, Jason",
-                "investigators_name": "Keller, Jason",
-                "project_title": "CMS DE-SynPUF",
-                "protocol_name": "",
-                "study_summary": "",
-                "_file_manifest": "",
-                "dataset_1_type": "",
-                "dataset_2_type": "",
-                "dataset_3_type": "",
-                "dataset_4_type": "",
-                "dataset_5_type": "",
-                "project_number": "",
-                "dataset_1_title": "",
-                "dataset_2_title": "",
-                "dataset_3_title": "",
-                "dataset_4_title": "",
-                "dataset_5_title": "",
-                "administering_ic": "",
-                "advSearchFilters": [],
-                "dataset_category": "",
-                "research_program": "",
-                "research_question": "",
-                "study_description": "",
-                "clinical_trial_link": "",
-                "dataset_description": "",
-                "research_focus_area": "",
-                "dataset_1_description": "",
-                "dataset_2_description": "",
-                "dataset_3_description": "",
-                "dataset_4_description": "",
-                "dataset_5_description": "",
-                "data_availability": "pending",
-            },
+    "doi:10.7910/DVN/5B8YM8": {
+        "_guid_type": "discovery_metadata",
+        "gen3_discovery": {
+            "tags": [],
+            "authz": "",
+            "sites": "",
+            "summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+            "study_description_summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+            "study_url": "https://doi.org/10.7910/DVN/5B8YM8",
+            "location": "",
+            "subjects": "Earth and Environmental Sciences, Social Sciences",
+            "__manifest": [],
+            "study_name": "US Metropolitan Daily Cases with Basemap",
+            "study_name_title": "US Metropolitan Daily Cases with Basemap",
+            "study_type": "",
+            "institutions": "",
+            "year_awarded": "",
+            "investigators": "China Data Lab",
+            "investigators_name": "China Data Lab",
+            "project_title": "Data",
+            "protocol_name": "",
+            "study_summary": "",
+            "_file_manifest": "",
+            "dataset_1_type": "",
+            "dataset_2_type": "",
+            "dataset_3_type": "",
+            "dataset_4_type": "",
+            "dataset_5_type": "",
+            "project_number": "",
+            "dataset_1_title": "",
+            "dataset_2_title": "",
+            "dataset_3_title": "",
+            "dataset_4_title": "",
+            "dataset_5_title": "",
+            "administering_ic": "",
+            "advSearchFilters": [],
+            "dataset_category": "",
+            "research_program": "",
+            "research_question": "",
+            "study_description": "",
+            "clinical_trial_link": "",
+            "dataset_description": "",
+            "research_focus_area": "",
+            "dataset_1_description": "",
+            "dataset_2_description": "",
+            "dataset_3_description": "",
+            "dataset_4_description": "",
+            "dataset_5_description": "",
+            "data_availability": "pending",
+            "data_dictionary": {
+                "us_metro_confirmed_cases_cdl.tab": [{
+                    "name": "POP90",
+                    "label": "POP90",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "POP80",
+                    "label": "POP80",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "POP70",
+                    "label": "POP70",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "POP10",
+                    "label": "POP10",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "POP00",
+                    "label": "POP00",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "Metropolitan",
+                    "label": "Metropolitan",
+                    "interval": "discrete",
+                    "type": "character"
+                }, {
+                    "name": "Metro_ID",
+                    "label": "Metro_ID",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "2022-04-11",
+                    "label": "2022-04-11",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }, {
+                    "name": "2022-04-10",
+                    "label": "2022-04-10",
+                    "interval": "discrete",
+                    "type": "numeric"
+                }]
+            }
         }
     }
+}
 
     # failed calls
     respx.get(
-        "http://test/ok?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/ok/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
         status_code=200,
         content=json.loads(dataset_json_response),
         content_type="text/plain;charset=UTF-8",
     )
 
     respx.get(
-        "http://test/ok?q=*&subtree=cms-de-synpuf&fq=parentId:1962431&start=0&type=file&show_entity_ids=true&per_page=25",
+        "http://test/ok/search?q=*&fq=parentId:3820814&start=0&type=file&show_entity_ids=true&per_page=25",
         status_code=200,
         content=json.loads(files_json_response),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    respx.get(
+        "http://test/ok/access/datafile/6297263/metadata/ddi",
+        status_code=200,
+        content=file_ddi_response,
         content_type="text/plain;charset=UTF-8",
     )
 
@@ -3556,7 +3600,7 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             None,
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
         )
         == {}
     )
@@ -3574,7 +3618,7 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/ok",
-            filters={"subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"subtrees": ["covid19"], "per_page": 25},
         )
         == {}
     )
@@ -3593,7 +3637,7 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/ok",
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
             mappings=field_mappings,
         )
         == expected_response
@@ -3601,7 +3645,7 @@ def test_get_metadata_harvard_dataverse():
 
     # invalid responses
     respx.get(
-        "http://test/invalid_dataset_response?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/invalid_dataset_response/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
         status_code=200,
         content={"status": "ok"},
         content_type="text/plain;charset=UTF-8",
@@ -3611,21 +3655,21 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/invalid_dataset_response",
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
             mappings=field_mappings,
         )
         == {}
     )
 
     respx.get(
-        "http://test/invalid_file_response?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/invalid_file_response/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
         status_code=200,
         content=json.loads(dataset_json_response),
         content_type="text/plain;charset=UTF-8",
     )
 
     respx.get(
-        "http://test/invalid_file_response?q=*&subtree=cms-de-synpuf&fq=parentId:1962431&start=0&type=file&show_entity_ids=true&per_page=25",
+        "http://test/invalid_file_response/search?q=*&subtree=covid19&fq=parentId:3820814&start=0&type=file&show_entity_ids=true&per_page=25",
         status_code=200,
         content={"status": "ok"},
         content_type="text/plain;charset=UTF-8",
@@ -3635,14 +3679,14 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/invalid_file_response",
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
             mappings=field_mappings,
         )
         == {}
     )
 
     respx.get(
-        "http://test/missing_dataset_id?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/missing_dataset_id/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
         status_code=200,
         content=json.loads(dataset_missing_id_json_response),
         content_type="text/plain;charset=UTF-8",
@@ -3652,14 +3696,14 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/missing_dataset_id",
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
             mappings=field_mappings,
         )
         == {}
     )
 
     respx.get(
-        "http://test/err404?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/err404/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
         status_code=404,
         content={},
         content_type="text/plain:charset=UTF-8",
@@ -3669,7 +3713,7 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/err404",
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
             mappings=field_mappings,
         )
         == {}
@@ -3681,14 +3725,14 @@ def test_get_metadata_harvard_dataverse():
         HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror?q=*&subtree=cms-de-synpuf&start=0&type=dataset&show_entity_ids=true&per_page=25",
+            "http://test/timeouterror/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
             content=httpx.TimeoutException,
         )
 
         get_metadata(
             "harvard_dataverse",
             "http://test/timeouterror",
-            filters={"q_term": "*", "subtrees": ["cms-de-synpuf"], "per_page": 25},
+            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
             mappings=field_mappings,
         )
     except Exception as exc:
