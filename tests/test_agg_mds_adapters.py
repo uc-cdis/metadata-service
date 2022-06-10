@@ -3128,149 +3128,500 @@ def test_get_metadata_harvard_dataverse():
     dataset_json_response = r"""{
         "status": "OK",
         "data": {
-            "q": "*",
-            "total_count": 1,
-            "start": 0,
-            "spelling_alternatives": {},
-            "items": [
-                {
-                    "name": "US Metropolitan Daily Cases with Basemap",
-                    "type": "dataset",
-                    "url": "https://doi.org/10.7910/DVN/5B8YM8",
-                    "global_id": "doi:10.7910/DVN/5B8YM8",
-                    "description": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
-                    "published_at": "2022-05-17T19:14:19Z",
-                    "publisher": "Data",
-                    "citationHtml": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", <a href=\"https://doi.org/10.7910/DVN/5B8YM8\" target=\"_blank\">https://doi.org/10.7910/DVN/5B8YM8</a>, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
-                    "identifier_of_dataverse": "data_ncov",
-                    "name_of_dataverse": "Data",
-                    "citation": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
-                    "entity_id": 3820814,
-                    "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
-                    "subjects": [
-                        "Earth and Environmental Sciences",
-                        "Social Sciences"
-                    ],
-                    "fileCount": 1,
-                    "versionId": 300092,
-                    "versionState": "RELEASED",
-                    "majorVersion": 24,
-                    "minorVersion": 0,
-                    "createdAt": "2020-04-29T04:49:19Z",
-                    "updatedAt": "2022-05-17T19:14:19Z",
-                    "contacts": [
-                        {
-                            "name": "Hanchen Yu",
-                            "affiliation": "China Data Lab"
-                        }
-                    ],
-                    "publications": [
-                        {
-                            "citation": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... &amp; Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
-                        }
-                    ],
-                    "geographicCoverage": [
-                        {
-                            "country": ""
-                        }
-                    ],
-                    "authors": [
-                        "China Data Lab"
-                    ]
-                }
-            ],
-            "count_in_response": 1
-        }
-    }"""
-
-    dataset_missing_id_json_response = r"""{
-        "status": "OK",
-        "data": {
-            "q": "*",
-            "total_count": 1,
-            "start": 0,
-            "spelling_alternatives": {},
-            "items": [
-                {
-                    "name": "US Metropolitan Daily Cases with Basemap",
-                    "type": "dataset",
-                    "url": "https://doi.org/10.7910/DVN/5B8YM8",
-                    "global_id": "doi:10.7910/DVN/5B8YM8",
-                    "description": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
-                    "published_at": "2022-05-17T19:14:19Z",
-                    "publisher": "Data",
-                    "citationHtml": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", <a href=\"https://doi.org/10.7910/DVN/5B8YM8\" target=\"_blank\">https://doi.org/10.7910/DVN/5B8YM8</a>, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
-                    "identifier_of_dataverse": "data_ncov",
-                    "name_of_dataverse": "Data",
-                    "citation": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
-                    "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
-                    "subjects": [
-                        "Earth and Environmental Sciences",
-                        "Social Sciences"
-                    ],
-                    "fileCount": 1,
-                    "versionId": 300092,
-                    "versionState": "RELEASED",
-                    "majorVersion": 24,
-                    "minorVersion": 0,
-                    "createdAt": "2020-04-29T04:49:19Z",
-                    "updatedAt": "2022-05-17T19:14:19Z",
-                    "contacts": [
-                        {
-                            "name": "Hanchen Yu",
-                            "affiliation": "China Data Lab"
-                        }
-                    ],
-                    "publications": [
-                        {
-                            "citation": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... &amp; Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
-                        }
-                    ],
-                    "geographicCoverage": [
-                        {
-                            "country": ""
-                        }
-                    ],
-                    "authors": [
-                        "China Data Lab"
-                    ]
-                }
-            ],
-            "count_in_response": 1
-        }
-    }"""
-
-    files_json_response = r"""{
-        "status": "OK",
-        "data": {
-            "q": "*",
-            "total_count": 1,
-            "start": 0,
-            "spelling_alternatives": {},
-            "items": [
-                {
-                    "name": "us_metro_confirmed_cases_cdl.tab",
-                    "type": "file",
-                    "url": "https://dataverse.harvard.edu/api/access/datafile/6297263",
-                    "file_id": "6297263",
-                    "published_at": "2022-05-17T19:14:19Z",
-                    "file_type": "Tab-Delimited",
-                    "file_content_type": "text/tab-separated-values",
-                    "size_in_bytes": 3953412,
-                    "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
-                    "checksum": {
-                        "type": "MD5",
-                        "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+            "id": 3820814,
+            "identifier": "DVN/5B8YM8",
+            "persistentUrl": "https://doi.org/10.7910/DVN/5B8YM8",
+            "protocol": "doi",
+            "authority": "10.7910",
+            "publisher": "Harvard Dataverse",
+            "publicationDate": "2020-04-29",
+            "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+            "metadataLanguage": "undefined",
+            "latestVersion": {
+                "id": 300092,
+                "datasetId": 3820814,
+                "datasetPersistentId": "doi:10.7910/DVN/5B8YM8",
+                "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+                "versionNumber": 24,
+                "versionMinorNumber": 0,
+                "versionState": "RELEASED",
+                "UNF": "UNF:6:9Ygehodl5cg7JYtrkTA6bw==",
+                "lastUpdateTime": "2022-05-17T19:14:19Z",
+                "releaseTime": "2022-05-17T19:14:19Z",
+                "createTime": "2022-01-03T23:24:51Z",
+                "license": {
+                    "name": "CC0 1.0",
+                    "uri": "http://creativecommons.org/publicdomain/zero/1.0"
+                },
+                "fileAccessRequest": false,
+                "metadataBlocks": {
+                    "citation": {
+                        "displayName": "Citation Metadata",
+                        "name": "citation",
+                        "fields": [
+                            {
+                                "typeName": "title",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "US Metropolitan Daily Cases with Basemap"
+                            },
+                            {
+                                "typeName": "author",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "authorName": {
+                                            "typeName": "authorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "authorAffiliation": {
+                                            "typeName": "authorAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "datasetContact",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "datasetContactName": {
+                                            "typeName": "datasetContactName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hanchen Yu"
+                                        },
+                                        "datasetContactAffiliation": {
+                                            "typeName": "datasetContactAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "datasetContactEmail": {
+                                            "typeName": "datasetContactEmail",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "hanchenyu@fas.harvard.edu"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "dsDescription",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "dsDescriptionValue": {
+                                            "typeName": "dsDescriptionValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico."
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "subject",
+                                "multiple": true,
+                                "typeClass": "controlledVocabulary",
+                                "value": [
+                                    "Earth and Environmental Sciences",
+                                    "Social Sciences"
+                                ]
+                            },
+                            {
+                                "typeName": "publication",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "publicationCitation": {
+                                            "typeName": "publicationCitation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... & Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "contributor",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Manager"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    },
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Collector"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "grantNumber",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "2027540"
+                                        }
+                                    },
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "1841403"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "depositor",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "China, Data Lab"
+                            },
+                            {
+                                "typeName": "dateOfDeposit",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "2020-04-29"
+                            }
+                        ]
                     },
-                    "unf": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
-                    "dataset_name": "US Metropolitan Daily Cases with Basemap",
-                    "dataset_id": "3820814",
-                    "dataset_persistent_id": "doi:10.7910/DVN/5B8YM8",
-                    "dataset_citation": "China Data Lab, 2020, \"US Metropolitan Daily Cases with Basemap\", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]",
-                    "entity_id": 6297263
-                }
-            ],
-            "count_in_response": 1
+                    "geospatial": {
+                        "displayName": "Geospatial Metadata",
+                        "name": "geospatial",
+                        "fields": []
+                    }
+                },
+                "files": [
+                    {
+                        "label": "us_metro_confirmed_cases_cdl.tab",
+                        "restricted": false,
+                        "version": 3,
+                        "datasetVersionId": 300092,
+                        "dataFile": {
+                            "id": 6297263,
+                            "persistentId": "",
+                            "pidURL": "",
+                            "filename": "us_metro_confirmed_cases_cdl.tab",
+                            "contentType": "text/tab-separated-values",
+                            "filesize": 3953412,
+                            "storageIdentifier": "s3://dvn-cloud:180d366a3da-80ca5c2acd1b",
+                            "originalFileFormat": "text/csv",
+                            "originalFormatLabel": "Comma Separated Values",
+                            "originalFileSize": 3961820,
+                            "originalFileName": "us_metro_confirmed_cases_cdl.csv",
+                            "UNF": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
+                            "rootDataFileId": -1,
+                            "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                            "checksum": {
+                                "type": "MD5",
+                                "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                            },
+                            "creationDate": "2022-05-17"
+                        }
+                    }
+                ]
+            }
+        }
+    }"""
+
+    dataset_json_different_keys_response = r"""{
+        "status": "OK",
+        "data": {
+            "id": 3820814,
+            "identifier": "DVN/5B8YM8",
+            "persistentUrl": "https://doi.org/10.7910/DVN/5B8YM8",
+            "protocol": "doi",
+            "authority": "10.7910",
+            "publisher": "Harvard Dataverse",
+            "publicationDate": "2020-04-29",
+            "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+            "metadataLanguage": "undefined",
+            "latest_version": {
+                "id": 300092,
+                "datasetId": 3820814,
+                "datasetPersistentId": "doi:10.7910/DVN/5B8YM8",
+                "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+                "versionNumber": 24,
+                "versionMinorNumber": 0,
+                "versionState": "RELEASED",
+                "UNF": "UNF:6:9Ygehodl5cg7JYtrkTA6bw==",
+                "lastUpdateTime": "2022-05-17T19:14:19Z",
+                "releaseTime": "2022-05-17T19:14:19Z",
+                "createTime": "2022-01-03T23:24:51Z",
+                "license": {
+                    "name": "CC0 1.0",
+                    "uri": "http://creativecommons.org/publicdomain/zero/1.0"
+                },
+                "fileAccessRequest": false,
+                "metadata_blocks": {
+                    "citation": {
+                        "displayName": "Citation Metadata",
+                        "name": "citation",
+                        "fields": [
+                            {
+                                "typeName": "title",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "US Metropolitan Daily Cases with Basemap"
+                            },
+                            {
+                                "typeName": "author",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "authorName": {
+                                            "typeName": "authorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "authorAffiliation": {
+                                            "typeName": "authorAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "datasetContact",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "datasetContactName": {
+                                            "typeName": "datasetContactName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hanchen Yu"
+                                        },
+                                        "datasetContactAffiliation": {
+                                            "typeName": "datasetContactAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "datasetContactEmail": {
+                                            "typeName": "datasetContactEmail",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "hanchenyu@fas.harvard.edu"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "dsDescription",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "dsDescriptionValue": {
+                                            "typeName": "dsDescriptionValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico."
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "subject",
+                                "multiple": true,
+                                "typeClass": "controlledVocabulary",
+                                "value": [
+                                    "Earth and Environmental Sciences",
+                                    "Social Sciences"
+                                ]
+                            },
+                            {
+                                "typeName": "publication",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "publicationCitation": {
+                                            "typeName": "publicationCitation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... & Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "contributor",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Manager"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    },
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Collector"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "grantNumber",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "2027540"
+                                        }
+                                    },
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "1841403"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "depositor",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "China, Data Lab"
+                            },
+                            {
+                                "typeName": "dateOfDeposit",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "2020-04-29"
+                            }
+                        ]
+                    },
+                    "geospatial": {
+                        "displayName": "Geospatial Metadata",
+                        "name": "geospatial",
+                        "fields": []
+                    }
+                },
+                "files": [
+                    {
+                        "label": "us_metro_confirmed_cases_cdl.tab",
+                        "restricted": false,
+                        "version": 3,
+                        "datasetVersionId": 300092,
+                        "dataFile": {
+                            "id": 6297263,
+                            "persistentId": "",
+                            "pidURL": "",
+                            "filename": "us_metro_confirmed_cases_cdl.tab",
+                            "contentType": "text/tab-separated-values",
+                            "filesize": 3953412,
+                            "storageIdentifier": "s3://dvn-cloud:180d366a3da-80ca5c2acd1b",
+                            "originalFileFormat": "text/csv",
+                            "originalFormatLabel": "Comma Separated Values",
+                            "originalFileSize": 3961820,
+                            "originalFileName": "us_metro_confirmed_cases_cdl.csv",
+                            "UNF": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
+                            "rootDataFileId": -1,
+                            "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                            "checksum": {
+                                "type": "MD5",
+                                "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                            },
+                            "creationDate": "2022-05-17"
+                        }
+                    }
+                ]
+            }
         }
     }"""
 
@@ -3421,24 +3772,67 @@ def test_get_metadata_harvard_dataverse():
         </dataDscr>
     </codeBook>"""
 
+    file_single_variable_ddi_response = """<?xml version='1.0' encoding='UTF-8'?>
+    <codeBook xmlns="http://www.icpsr.umich.edu/DDI" version="2.0">
+        <stdyDscr>
+            <citation>
+                <titlStmt>
+                    <titl>US Metropolitan Daily Cases with Basemap</titl>
+                    <IDNo agency="doi">10.7910/DVN/5B8YM8</IDNo>
+                </titlStmt>
+                <rspStmt>
+                    <AuthEnty>China Data Lab</AuthEnty>
+                </rspStmt>
+                <biblCit>China Data Lab, 2020, "US Metropolitan Daily Cases with Basemap", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]</biblCit>
+            </citation>
+        </stdyDscr>
+        <fileDscr ID="f6297263">
+            <fileTxt>
+                <fileName>us_metro_confirmed_cases_cdl.tab</fileName>
+                <dimensns>
+                    <caseQnty>942</caseQnty>
+                    <varQnty>852</varQnty>
+                </dimensns>
+                <fileType>text/tab-separated-values</fileType>
+            </fileTxt>
+            <notes level="file" type="VDC:UNF" subject="Universal Numeric Fingerprint">UNF:6:w715RbMgdXAjmDiwdGNv+g==</notes>
+        </fileDscr>
+        <dataDscr>
+            <var ID="v28336577" name="POP90" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP90</labl>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="min">10089.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="max">1.6835336E7</sumStat>
+                <sumStat type="stdev">863685.1810810249</sumStat>
+                <sumStat type="mean">245006.8174097664</sumStat>
+                <sumStat type="medn">62229.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:rrZvx0sccW3/T39TpNZkww==</notes>
+            </var>
+        </dataDscr>
+    </codeBook>"""
+
     field_mappings = {
         "tags": [],
         "authz": "",
         "sites": "",
-        "summary": {"path": "description", "filters": ["strip_html"]},
-        "study_description_summary": {"path": "description", "filters": ["strip_html"]},
+        "summary": "path:dsDescriptionValue",
+        "study_description_summary": "path:dsDescriptionValue",
         "study_url": "path:url",
         "location": "",
-        "subjects": "path:subjects",
+        "subjects": "path:subject",
         "__manifest": [],
-        "study_name": "path:name",
-        "study_name_title": "path:name",
+        "study_name": "path:title",
+        "study_name_title": "path:title",
         "study_type": "",
-        "institutions": "",
+        "institutions": "path:datasetContactAffiliation",
         "year_awarded": "",
-        "investigators": "path:authors",
-        "investigators_name": "path:authors",
-        "project_title": "path:name_of_dataverse",
+        "investigators": "path:datasetContactName",
+        "investigators_name": "path:datasetContactName",
+        "project_title": "",
         "protocol_name": "",
         "study_summary": "",
         "_file_manifest": "",
@@ -3467,123 +3861,178 @@ def test_get_metadata_harvard_dataverse():
         "dataset_3_description": "",
         "dataset_4_description": "",
         "dataset_5_description": "",
-        "data_availability": "pending",
+        "data_availability": "path:data_availability",
     }
 
     expected_response = {
-    "doi:10.7910/DVN/5B8YM8": {
-        "_guid_type": "discovery_metadata",
-        "gen3_discovery": {
-            "tags": [],
-            "authz": "",
-            "sites": "",
-            "summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
-            "study_description_summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
-            "study_url": "https://doi.org/10.7910/DVN/5B8YM8",
-            "location": "",
-            "subjects": "Earth and Environmental Sciences, Social Sciences",
-            "__manifest": [],
-            "study_name": "US Metropolitan Daily Cases with Basemap",
-            "study_name_title": "US Metropolitan Daily Cases with Basemap",
-            "study_type": "",
-            "institutions": "",
-            "year_awarded": "",
-            "investigators": "China Data Lab",
-            "investigators_name": "China Data Lab",
-            "project_title": "Data",
-            "protocol_name": "",
-            "study_summary": "",
-            "_file_manifest": "",
-            "dataset_1_type": "",
-            "dataset_2_type": "",
-            "dataset_3_type": "",
-            "dataset_4_type": "",
-            "dataset_5_type": "",
-            "project_number": "",
-            "dataset_1_title": "",
-            "dataset_2_title": "",
-            "dataset_3_title": "",
-            "dataset_4_title": "",
-            "dataset_5_title": "",
-            "administering_ic": "",
-            "advSearchFilters": [],
-            "dataset_category": "",
-            "research_program": "",
-            "research_question": "",
-            "study_description": "",
-            "clinical_trial_link": "",
-            "dataset_description": "",
-            "research_focus_area": "",
-            "dataset_1_description": "",
-            "dataset_2_description": "",
-            "dataset_3_description": "",
-            "dataset_4_description": "",
-            "dataset_5_description": "",
-            "data_availability": "pending",
-            "data_dictionary": {
-                "us_metro_confirmed_cases_cdl.tab": [{
-                    "name": "POP90",
-                    "label": "POP90",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "POP80",
-                    "label": "POP80",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "POP70",
-                    "label": "POP70",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "POP10",
-                    "label": "POP10",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "POP00",
-                    "label": "POP00",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "Metropolitan",
-                    "label": "Metropolitan",
-                    "interval": "discrete",
-                    "type": "character"
-                }, {
-                    "name": "Metro_ID",
-                    "label": "Metro_ID",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "2022-04-11",
-                    "label": "2022-04-11",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }, {
-                    "name": "2022-04-10",
-                    "label": "2022-04-10",
-                    "interval": "discrete",
-                    "type": "numeric"
-                }]
+        "doi:10.7910/DVN/5B8YM8": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_description_summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_url": "https://doi.org/10.7910/DVN/5B8YM8",
+                "location": "",
+                "subjects": "Earth and Environmental Sciences, Social Sciences",
+                "__manifest": [],
+                "study_name": "US Metropolitan Daily Cases with Basemap",
+                "study_name_title": "US Metropolitan Daily Cases with Basemap",
+                "study_type": "",
+                "institutions": "China Data Lab",
+                "year_awarded": "",
+                "investigators": "Hanchen Yu",
+                "investigators_name": "Hanchen Yu",
+                "project_title": "",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "available",
+                "data_dictionary": {
+                    "us_metro_confirmed_cases_cdl.tab": [{
+                        "name": "POP90",
+                        "label": "POP90",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "POP80",
+                        "label": "POP80",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "POP70",
+                        "label": "POP70",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "POP10",
+                        "label": "POP10",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "POP00",
+                        "label": "POP00",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "Metropolitan",
+                        "label": "Metropolitan",
+                        "interval": "discrete",
+                        "type": "character"
+                    }, {
+                        "name": "Metro_ID",
+                        "label": "Metro_ID",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "2022-04-11",
+                        "label": "2022-04-11",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }, {
+                        "name": "2022-04-10",
+                        "label": "2022-04-10",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }]
+                }
             }
         }
     }
-}
+
+    expected_single_variable_response = {
+        "doi:10.7910/DVN/5B8YM8": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_description_summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_url": "https://doi.org/10.7910/DVN/5B8YM8",
+                "location": "",
+                "subjects": "Earth and Environmental Sciences, Social Sciences",
+                "__manifest": [],
+                "study_name": "US Metropolitan Daily Cases with Basemap",
+                "study_name_title": "US Metropolitan Daily Cases with Basemap",
+                "study_type": "",
+                "institutions": "China Data Lab",
+                "year_awarded": "",
+                "investigators": "Hanchen Yu",
+                "investigators_name": "Hanchen Yu",
+                "project_title": "",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "available",
+                "data_dictionary": {
+                    "us_metro_confirmed_cases_cdl.tab": [{
+                        "name": "POP90",
+                        "label": "POP90",
+                        "interval": "discrete",
+                        "type": "numeric"
+                    }]
+                }
+            }
+        }
+    }
 
     # failed calls
     respx.get(
-        "http://test/ok/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
         status_code=200,
         content=json.loads(dataset_json_response),
-        content_type="text/plain;charset=UTF-8",
-    )
-
-    respx.get(
-        "http://test/ok/search?q=*&fq=parentId:3820814&start=0&type=file&show_entity_ids=true&per_page=25",
-        status_code=200,
-        content=json.loads(files_json_response),
         content_type="text/plain;charset=UTF-8",
     )
 
@@ -3600,7 +4049,7 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             None,
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
         )
         == {}
     )
@@ -3614,38 +4063,45 @@ def test_get_metadata_harvard_dataverse():
         == {}
     )
 
-    assert (
-        get_metadata(
-            "harvard_dataverse",
-            "http://test/ok",
-            filters={"subtrees": ["covid19"], "per_page": 25},
-        )
-        == {}
-    )
-
-    assert (
-        get_metadata(
-            "harvard_dataverse",
-            "http://test/ok",
-            filters={"q_term": "*", "per_page": 25},
-        )
-        == {}
-    )
-
     # valid call
     assert (
         get_metadata(
             "harvard_dataverse",
             "http://test/ok",
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
             mappings=field_mappings,
         )
         == expected_response
     )
 
+    # valid single variable call
+    respx.get(
+        "http://test/single_variable/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
+        status_code=200,
+        content=json.loads(dataset_json_response),
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    respx.get(
+        "http://test/single_variable/access/datafile/6297263/metadata/ddi",
+        status_code=200,
+        content=file_single_variable_ddi_response,
+        content_type="text/plain;charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/single_variable",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == expected_single_variable_response
+    )
+
     # invalid responses
     respx.get(
-        "http://test/invalid_dataset_response/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/invalid_dataset_response/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
         status_code=200,
         content={"status": "ok"},
         content_type="text/plain;charset=UTF-8",
@@ -3655,55 +4111,14 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/invalid_dataset_response",
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
             mappings=field_mappings,
         )
         == {}
     )
 
     respx.get(
-        "http://test/invalid_file_response/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
-        status_code=200,
-        content=json.loads(dataset_json_response),
-        content_type="text/plain;charset=UTF-8",
-    )
-
-    respx.get(
-        "http://test/invalid_file_response/search?q=*&subtree=covid19&fq=parentId:3820814&start=0&type=file&show_entity_ids=true&per_page=25",
-        status_code=200,
-        content={"status": "ok"},
-        content_type="text/plain;charset=UTF-8",
-    )
-
-    assert (
-        get_metadata(
-            "harvard_dataverse",
-            "http://test/invalid_file_response",
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
-            mappings=field_mappings,
-        )
-        == {}
-    )
-
-    respx.get(
-        "http://test/missing_dataset_id/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
-        status_code=200,
-        content=json.loads(dataset_missing_id_json_response),
-        content_type="text/plain;charset=UTF-8",
-    )
-
-    assert (
-        get_metadata(
-            "harvard_dataverse",
-            "http://test/missing_dataset_id",
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
-            mappings=field_mappings,
-        )
-        == {}
-    )
-
-    respx.get(
-        "http://test/err404/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
+        "http://test/err404/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
         status_code=404,
         content={},
         content_type="text/plain:charset=UTF-8",
@@ -3713,7 +4128,25 @@ def test_get_metadata_harvard_dataverse():
         get_metadata(
             "harvard_dataverse",
             "http://test/err404",
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == {}
+    )
+
+    # Incorrect keys expected in adapter class
+    respx.get(
+        "http://test/different_keys/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
+        status_code=200,
+        content=json.loads(dataset_json_different_keys_response),
+        content_type="text/plain:charset=UTF-8",
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/different_keys",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
             mappings=field_mappings,
         )
         == {}
@@ -3725,14 +4158,14 @@ def test_get_metadata_harvard_dataverse():
         HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/search?q=*&subtree=covid19&start=0&type=dataset&show_entity_ids=true&per_page=25",
+            "http://test/timeouterror/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
             content=httpx.TimeoutException,
         )
 
         get_metadata(
             "harvard_dataverse",
             "http://test/timeouterror",
-            filters={"q_term": "*", "subtrees": ["covid19"], "per_page": 25},
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
             mappings=field_mappings,
         )
     except Exception as exc:

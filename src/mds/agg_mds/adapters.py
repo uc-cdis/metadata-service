@@ -563,30 +563,11 @@ class HarvardDataverse(RemoteMetadataAdapter):
         if "filters" not in kwargs or kwargs.get("filters") is None:
             return results
 
-        q_term = kwargs["filters"].get("q_term", None)
-        if q_term is None:
-            return results
-        q = f"q={q_term}"
+        persistent_ids = kwargs["filters"].get("persistent_ids", [])
 
-        fq_term = kwargs["filters"].get("fq_term", "")
-        fq = f"fq={fq_term}" if fq_term else ""
-
-        subtrees = kwargs["filters"].get("subtrees", [])
-        if not subtrees:
-            return results
-        subtree_param = "&".join([f"subtree={subtree}" for subtree in subtrees])
-
-        params = [q, fq, subtree_param]
-        query_param = "&".join([param for param in params if param])
-
-        per_page = kwargs["filters"].get("per_page", 100)
-        dataset_start = 0
-        dataset_total = None
-        dataset_condition = True
-
-        while dataset_condition:
+        for persistent_id in persistent_ids:
             try:
-                dataset_url = f"{mds_url}/search?{query_param}&start={dataset_start}&type=dataset&show_entity_ids=true&per_page={per_page}"
+                dataset_url = f"{mds_url}/datasets/:persistentId/?persistentId={persistent_id}"
                 response = httpx.get(dataset_url)
                 response.raise_for_status()
 
@@ -594,58 +575,48 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 if "data" not in data:
                     raise ValueError("unknown response")
 
-                dataset_total = data["data"]["total_count"]
+                dataset_results = data["data"]["latestVersion"]
+                dataset_output = {
+                    "id": persistent_id,
+                    "url": data["data"]["persistentUrl"],
+                    "data_availability": "available" if dataset_results["versionState"] == "RELEASED" else "pending"
+                }
+                citation_fields = dataset_results.get("metadataBlocks", {}).get("citation", {}).get("fields", [])
+                for field in citation_fields:
+                    if field["typeClass"] != "compound":
+                        dataset_output[field["typeName"]] = field["value"]
+                    else:
+                        for entry in field["value"]:
+                            for subfield, subfield_info in entry.items():
+                                if subfield in dataset_output:
+                                    dataset_output[subfield].append(subfield_info["value"])
+                                else:
+                                    dataset_output[subfield] = [subfield_info["value"]]
 
-                dataset_results = data["data"]["items"]
+                dataset_output["files"] = []
+                dataset_files = dataset_results.get("files", [])
+                for file in dataset_files:
+                    data_file = file["dataFile"]
+                    data_file["data_dictionary"] = []
 
-                for dataset in dataset_results:
-                    dataset_id = dataset["entity_id"]
-                    dataset["files"] = []
-                    files_start = 0
-                    files_total = None
-                    files_condition = True
-                    while files_condition:
-                        files_url = f"{mds_url}/search?q=*&fq=parentId:{dataset_id}&start={files_start}&type=file&show_entity_ids=true&per_page={per_page}"
-                        response = httpx.get(files_url)
-                        response.raise_for_status()
+                    ddi_url = f"{mds_url}/access/datafile/{data_file['id']}/metadata/ddi"
+                    ddi_response = httpx.get(ddi_url)
+                    if ddi_response.status_code == 200:
+                        ddi_entry = xmltodict.parse(ddi_response.text)
+                        vars = ddi_entry.get("codeBook", {}).get("dataDscr", {}).get("var", [])
+                        if isinstance(vars, dict):
+                            vars = [vars]
+                        for var_iter, var in enumerate(vars):
+                            data_file["data_dictionary"].append({
+                                "name": var.get("@name", f"var{var_iter+1}"),
+                                "label": var.get("labl", {}).get("#text"),
+                                "interval": var.get("@intrvl"),
+                                "type": var.get("varFormat", {}).get("@type")
+                            })
 
-                        data = response.json()
-                        if "data" not in data:
-                            raise ValueError("unknown response")
+                    dataset_output["files"].append(data_file)
 
-                        files_total = data["data"]["total_count"]
-
-                        for data_file in data["data"]["items"]:
-                            data_file["data_dictionary"] = []
-
-                            ddi_url = f"{mds_url}/access/datafile/{data_file['file_id']}/metadata/ddi"
-                            ddi_response = httpx.get(ddi_url)
-                            if ddi_response.status_code == 200:
-                                ddi_entry = xmltodict.parse(ddi_response.text)
-                                vars = ddi_entry.get("codeBook", {}).get("dataDscr", {}).get("var", [])
-                                if isinstance(vars, dict):
-                                    vars = [vars]
-                                for var_iter, var in enumerate(vars):
-                                    data_file["data_dictionary"].append({
-                                        "name": var.get("@name", f"var{var_iter+1}"),
-                                        "label": var.get("labl", {}).get("#text"),
-                                        "interval": var.get("@intrvl"),
-                                        "type": var.get("varFormat", {}).get("@type")
-                                    })
-
-                            dataset["files"].append(data_file)
-
-                        files_start = files_start + per_page
-                        files_condition = (
-                            files_total is not None and files_start < files_total
-                        )
-
-                results["results"].extend(dataset_results)
-
-                dataset_start = dataset_start + per_page
-                dataset_condition = (
-                    dataset_total is not None and dataset_start < dataset_total
-                )
+                results["results"].append(dataset_output)
 
             except httpx.TimeoutException as exc:
                 logger.error(f"An timeout error occurred while requesting {mds_url}.")
@@ -683,9 +654,13 @@ class HarvardDataverse(RemoteMetadataAdapter):
 
         results["data_dictionary"] = {}
         for i, file in enumerate(files):
-            results["data_dictionary"][file["name"]] = file["data_dictionary"]
+            results["data_dictionary"][file["filename"]] = file["data_dictionary"]
+        
+        for field in ["summary", "study_description_summary"]:
+            if isinstance(results[field], list):
+                results[field] = ' '.join(results[field])
 
-        for field in ["subjects", "investigators", "investigators_name"]:
+        for field in ["subjects", "investigators", "investigators_name", "institutions"]:
             if isinstance(results[field], list):
                 results[field] = ", ".join(results[field])
 
@@ -702,7 +677,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 item, mappings, keepOriginalFields, globalFieldFilters
             )
             # TODO: Confirm the appropriate ID to use for each item
-            results[item["global_id"]] = {
+            results[item["id"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
