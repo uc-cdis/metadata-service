@@ -4,7 +4,7 @@ import json
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from fastapi import HTTPException, APIRouter, Security
+from fastapi import HTTPException, APIRouter, Security, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 from urllib.parse import urljoin
@@ -25,7 +25,7 @@ from starlette.status import (
 
 from . import config, logger
 from .models import Metadata
-from .query import get_metadata
+from .query import get_metadata, search_metadata_objects
 
 mod = APIRouter()
 
@@ -227,6 +227,168 @@ async def create_object_for_id(
     }
 
     return JSONResponse(response, HTTP_201_CREATED)
+
+
+@mod.get("/objects")
+async def get_objects(
+    request: Request,
+    data: bool = Query(
+        True,
+        description="Switch to return a list of GUIDs (false), "
+        "or metadata objects (true).",
+    ),
+    page: int = Query(
+        0,
+        description="The offset for what objects are returned "
+        "(zero-indexed). The exact offset will be equal to "
+        "page*limit (e.g. with page=1, limit=15, 15 objects "
+        "beginning at index 15 will be returned).",
+    ),
+    limit: int = Query(
+        10,
+        description="Maximum number of objects returned (max: 1024). "
+        "Also used with page to determine page size.",
+    ),
+    filter: str = Query(
+        "",
+        description="The filter(s) that will be applied to the result. "
+        "The format is filter=(field_name,operator,value), in which "
+        "the field_name is a json key without quotes, operator is one of :eq, :ne, "
+        ":gt, :gte, :lt, :lte, :like, :all, :any, and value is "
+        "a typed json value against which the operator is run "
+        "(examples in the endpoint description).",
+    ),
+) -> JSONResponse:
+    """
+    Returns a list of objects and their corresponding Indexd records.
+
+    Given the following metadata objects:
+
+        {
+            "0": {
+                "message": "hello",
+                "_uploader_id": "100",
+                "_resource_paths": [
+                    "/programs/a",
+                    "/programs/b"
+                ],
+                "pet": "dog",
+                "pet_age": 1
+            },
+            "1": {
+                "message": "greetings",
+                "_uploader_id": "101",
+                "_resource_paths": [
+                    "/open",
+                    "/programs/c/projects/a"
+                ],
+                "pet": "ferret",
+                "pet_age": 5,
+                "sport": "soccer"
+            },
+            "2": {
+                "message": "morning",
+                "_uploader_id": "102",
+                "_resource_paths": [
+                    "/programs/d",
+                    "/programs/e"
+                ],
+                "counts": [42, 42, 42],
+                "pet": "ferret",
+                "pet_age": 10,
+                "sport": "soccer"
+            },
+            "3": {
+                "message": "evening",
+                "_uploader_id": "103",
+                "_resource_paths": [
+                    "/programs/f/projects/a",
+                    "/admin"
+                ],
+                "counts": [1, 3, 5],
+                "pet": "ferret",
+                "pet_age": 15,
+                "sport": "basketball"
+            }
+        }
+
+    Example requests with filters:
+
+        GET /objects?filter=(message,:eq,"morning") returns "2" (i.e. the MDS object and Indexd record identified by "2")
+        GET /objects?filter=(counts.1,:eq,3) returns "3"
+        GET /objects?filter=(pet_age,:lte,5) returns "0" and "1"
+        GET /objects?filter=(pet_age,:gt,5) returns "2" and "3"
+
+    Compound expressions are supported:
+
+        GET /objects?filter=(_resource_paths,:any,(,:like,"/programs/%/projects/%")) returns "1" and "3"
+        GET /objects?filter=(counts,:all,(,:eq,42)) returns "2"
+
+    Boolean expressions are also supported:
+
+        GET /objects?filter=(or,(_uploader_id,:eq,"101"),(_uploader_id,:eq,"102")) returns "1" and "2"
+        GET /objects?filter=(or,(and,(pet,:eq,"ferret"),(sport,:eq,"soccer")),(message,:eq,"hello")) returns "0", "1", and "2"
+    """
+
+    # ADDITIONAL BACKGROUND
+    #
+    # The filtering functionality described above was primarily driven by the
+    # requirement that a user be able to get all objects having an authz
+    # resource matching a user-supplied pattern at any index in
+    # the "_resource_paths" array.
+    #
+    # So looking at the example objects from above, how do we design a
+    # filtering interface that allows the user to get all objects having an
+    # authz string matching the pattern "/programs/%/projects/%" at any index
+    # in the "_resource_paths" array?(% has been used as the wildcard so far
+    # because that's what Postgres uses as the wildcard for LIKE) In this
+    # case, the "1" and "3" objects should be returned.
+    #
+    # The filter syntax that was arrived at ended up following the syntax
+    # specified by a [Node JS implementation]
+    # (https://www.npmjs.com/package/json-api#filtering) of the
+    # [JSON:API specification](https://jsonapi.org/).
+
+    metadata_objects = await search_metadata_objects(
+        data=data, page=page, limit=limit, filter=filter
+    )
+
+    records = {}
+    if data and metadata_objects:
+        try:
+            endpoint_path = "/bulk/documents"
+            full_indexd_url = (
+                config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + endpoint_path
+            )
+            guids = list(guid for guid, _ in metadata_objects)
+
+            response = await request.app.async_client.post(full_indexd_url, json=guids)
+            response.raise_for_status()
+            records = {r["did"]: r for r in response.json()}
+        except httpx.HTTPError as err:
+            logger.debug(err, exc_info=True)
+            if err.response:
+                logger.error(
+                    "indexd `POST %s` endpoint returned a %s HTTP status code",
+                    full_indexd_url,
+                    err.response.status_code,
+                )
+            else:
+                logger.error(
+                    "Unable to get a response from indexd `POST %s` endpoint",
+                    full_indexd_url,
+                )
+
+    if data:
+        response = {
+            "items": [
+                {"record": records.get(guid, {}), "metadata": o}
+                for guid, o in metadata_objects
+            ]
+        }
+    else:
+        response = metadata_objects
+    return response
 
 
 @mod.get("/objects/{guid:path}/download")
