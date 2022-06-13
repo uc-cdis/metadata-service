@@ -34,7 +34,7 @@ def test_lost_client(client):
 def test_status(client):
     try:
         client.get("/_status").raise_for_status()
-    except:
+    except Exception:
         pass
 
 
