@@ -46,7 +46,10 @@ async def batch_create_metadata(
                 .returning(db.text("xmax"))
             )
             for data in data_list:
-                if data["guid"] == "upload":
+                if any(
+                    forbidden_id == data["guid"]
+                    for forbidden_id in config.FORBIDDEN_IDS
+                ):
                     bad_input.append(data["guid"])
                 elif await stmt.scalar(data) == 0:
                     created.append(data["guid"])
@@ -59,7 +62,10 @@ async def batch_create_metadata(
                 )
             )
             for data in data_list:
-                if data["guid"] == "upload":
+                if any(
+                    forbidden_id == data["guid"]
+                    for forbidden_id in config.FORBIDDEN_IDS
+                ):
                     bad_input.append(data["guid"])
                 else:
                     try:
@@ -79,10 +85,13 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
     created = True
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
 
-    # GUID should not be 'upload'. This will help avoid conflicts between
+    # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-    if guid == "upload":
-        raise HTTPException(HTTP_400_BAD_REQUEST, "GUID cannot have value: 'upload'")
+    if any(forbidden_id == guid for forbidden_id in config.FORBIDDEN_IDS):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, "GUID cannot have value: {config.FORBIDDEN_IDS}"
+        )
 
     if overwrite:
         rv = await db.first(

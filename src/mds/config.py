@@ -67,6 +67,10 @@ DEFAULT_AUTHZ_STR = config(
     default='{"version": 0, "_resource_paths": ["/open"]}',
 )
 
+# Forbidden IDs
+
+FORBIDDEN_IDS = ["upload"]
+
 # Security
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])

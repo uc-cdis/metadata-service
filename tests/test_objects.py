@@ -391,9 +391,14 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
 
 
 @respx.mock
-def test_create_guid_unallowed_alias(client, valid_upload_file_patcher):
+@pytest.mark.parametrize(
+    "forbidden_id",
+    config.FORBIDDEN_IDS,
+)
+def test_create_guid_forbidden_alias(client, valid_upload_file_patcher, forbidden_id):
     """
-    Test create /objects/upload response for an unallowed alias value.
+    Test create /objects/upload response for a forbidden alias value
+    (listed in config.FORBIDDEN_IDS, eg 'upload').
     The MDS endpoint should return 400.
     """
     fake_jwt = "1.2.3"
@@ -401,7 +406,7 @@ def test_create_guid_unallowed_alias(client, valid_upload_file_patcher):
         # 'upload' is not an allowed value for alias
         "file_name": "test.txt",
         "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
-        "aliases": ["upload", "alias2", "alias3"],
+        "aliases": [forbidden_id, "alias2", "alias3"],
         "metadata": {"foo": "bar"},
     }
     resp = client.post(
@@ -418,9 +423,14 @@ def test_create_guid_unallowed_alias(client, valid_upload_file_patcher):
 
 
 @respx.mock
-def test_create_guid_unallowed_guid(client, valid_upload_file_patcher):
+@pytest.mark.parametrize(
+    "forbidden_id",
+    config.FORBIDDEN_IDS,
+)
+def test_create_guid_forbidden_guid(client, valid_upload_file_patcher, forbidden_id):
     """
-    Test create /objects/upload response for an unallowed guid value ("upload")
+    Test create /objects/upload response for a forbidden guid value
+    (listed in config.FORBIDDEN_IDS, eg 'upload')
     coming from fence. The MDS endpoint should return 400.
     """
     fake_jwt = "1.2.3"
@@ -431,7 +441,7 @@ def test_create_guid_unallowed_guid(client, valid_upload_file_patcher):
         "metadata": {"foo": "bar"},
     }
 
-    valid_upload_file_patcher["data_upload_mocked_reponse"]["guid"] = "upload"
+    valid_upload_file_patcher["data_upload_mocked_reponse"]["guid"] = forbidden_id
     resp = client.post(
         "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )

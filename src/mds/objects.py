@@ -114,11 +114,18 @@ async def create_object(
             f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
         )
 
-    # alias should not be 'upload'. This will help avoid conflicts between
+    # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     logger.debug("checking for allowable aliases")
-    if any(alias == "upload" for alias in aliases):
-        raise HTTPException(HTTP_400_BAD_REQUEST, f"alias cannot have value: 'upload'")
+    if any(
+        alias == forbidden_id
+        for alias in aliases
+        for forbidden_id in config.FORBIDDEN_IDS
+    ):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"alias cannot have value: {config.FORBIDDEN_IDS}"
+        )
 
     metadata = metadata or {}
 
@@ -129,13 +136,13 @@ async def create_object(
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
         file_name, authz, auth_header, request
     )
-    # GUID should not be 'alias' or 'upload'. This will help avoid conflicts between
+    # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     logger.debug("checking for allowable GUIDs")
-    unallowed_guids = ["alias", "upload"]
-    if any(blank_guid == unallowed_guid for unallowed_guid in unallowed_guids):
+    if any(forbidden_id == blank_guid for forbidden_id in config.FORBIDDEN_IDS):
         raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"GUID cannot have value: '{unallowed_guids}'"
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {config.FORBIDDEN_IDS}"
         )
 
     if aliases:
