@@ -34,6 +34,9 @@ mod = APIRouter()
 # not recieve valid credentials
 bearer = HTTPBearer(auto_error=False)
 
+# Forbidden IDs
+FORBIDDEN_IDS = ["upload"]
+
 
 class FileUploadStatus(str, Enum):
     NOT_STARTED = "not_uploaded"
@@ -118,13 +121,9 @@ async def create_object(
     # This will help avoid conflicts between
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     logger.debug("checking for allowable aliases")
-    if any(
-        alias == forbidden_id
-        for alias in aliases
-        for forbidden_id in config.FORBIDDEN_IDS
-    ):
+    if any(alias in FORBIDDEN_IDS for alias in aliases):
         raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"alias cannot have value: {config.FORBIDDEN_IDS}"
+            HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
         )
 
     metadata = metadata or {}
@@ -140,9 +139,9 @@ async def create_object(
     # This will help avoid conflicts between
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     logger.debug("checking for allowable GUIDs")
-    if any(forbidden_id == blank_guid for forbidden_id in config.FORBIDDEN_IDS):
+    if blank_guid in FORBIDDEN_IDS:
         raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {config.FORBIDDEN_IDS}"
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
         )
 
     if aliases:

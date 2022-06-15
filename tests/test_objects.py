@@ -12,6 +12,7 @@ from starlette.status import (
 )
 
 from mds import config
+from mds.objects import FORBIDDEN_IDS
 
 
 def test_create_no_auth_header(client, valid_upload_file_patcher):
@@ -393,12 +394,12 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
 @respx.mock
 @pytest.mark.parametrize(
     "forbidden_id",
-    config.FORBIDDEN_IDS,
+    FORBIDDEN_IDS,
 )
 def test_create_guid_forbidden_alias(client, valid_upload_file_patcher, forbidden_id):
     """
     Test create /objects/upload response for a forbidden alias value
-    (listed in config.FORBIDDEN_IDS, eg 'upload').
+    (listed in FORBIDDEN_IDS, eg 'upload').
     The MDS endpoint should return 400.
     """
     fake_jwt = "1.2.3"
@@ -425,12 +426,12 @@ def test_create_guid_forbidden_alias(client, valid_upload_file_patcher, forbidde
 @respx.mock
 @pytest.mark.parametrize(
     "forbidden_id",
-    config.FORBIDDEN_IDS,
+    FORBIDDEN_IDS,
 )
 def test_create_guid_forbidden_guid(client, valid_upload_file_patcher, forbidden_id):
     """
     Test create /objects/upload response for a forbidden guid value
-    (listed in config.FORBIDDEN_IDS, eg 'upload')
+    (listed in FORBIDDEN_IDS, eg 'upload')
     coming from fence. The MDS endpoint should return 400.
     """
     fake_jwt = "1.2.3"

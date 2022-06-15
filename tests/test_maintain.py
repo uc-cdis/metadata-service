@@ -1,6 +1,7 @@
 import pytest
 
 from mds import config
+from mds.objects import FORBIDDEN_IDS
 
 
 @pytest.mark.parametrize("key", ["test_create", "dg.1234/test_create"])
@@ -27,7 +28,7 @@ def test_create(client, key):
 
 @pytest.mark.parametrize(
     "forbidden_id",
-    config.FORBIDDEN_IDS,
+    FORBIDDEN_IDS,
 )
 def test_create_forbidden_guid(client, forbidden_id):
     data = dict(a=1, b=2)
@@ -78,7 +79,7 @@ def test_batch_create(client):
 
 @pytest.mark.parametrize(
     "forbidden_id",
-    config.FORBIDDEN_IDS,
+    FORBIDDEN_IDS,
 )
 def test_batch_create_forbidden_guid(client, forbidden_id):
     data = dict(a=1, b=2)
