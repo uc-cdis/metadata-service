@@ -567,7 +567,9 @@ class HarvardDataverse(RemoteMetadataAdapter):
 
         for persistent_id in persistent_ids:
             try:
-                dataset_url = f"{mds_url}/datasets/:persistentId/?persistentId={persistent_id}"
+                dataset_url = (
+                    f"{mds_url}/datasets/:persistentId/?persistentId={persistent_id}"
+                )
                 response = httpx.get(dataset_url)
                 response.raise_for_status()
 
@@ -579,9 +581,15 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 dataset_output = {
                     "id": persistent_id,
                     "url": data["data"]["persistentUrl"],
-                    "data_availability": "available" if dataset_results["versionState"] == "RELEASED" else "pending"
+                    "data_availability": "available"
+                    if dataset_results["versionState"] == "RELEASED"
+                    else "pending",
                 }
-                citation_fields = dataset_results.get("metadataBlocks", {}).get("citation", {}).get("fields", [])
+                citation_fields = (
+                    dataset_results.get("metadataBlocks", {})
+                    .get("citation", {})
+                    .get("fields", [])
+                )
                 for field in citation_fields:
                     if field["typeClass"] != "compound":
                         dataset_output[field["typeName"]] = field["value"]
@@ -589,7 +597,9 @@ class HarvardDataverse(RemoteMetadataAdapter):
                         for entry in field["value"]:
                             for subfield, subfield_info in entry.items():
                                 if subfield in dataset_output:
-                                    dataset_output[subfield].append(subfield_info["value"])
+                                    dataset_output[subfield].append(
+                                        subfield_info["value"]
+                                    )
                                 else:
                                     dataset_output[subfield] = [subfield_info["value"]]
 
@@ -599,20 +609,28 @@ class HarvardDataverse(RemoteMetadataAdapter):
                     data_file = file["dataFile"]
                     data_file["data_dictionary"] = []
 
-                    ddi_url = f"{mds_url}/access/datafile/{data_file['id']}/metadata/ddi"
+                    ddi_url = (
+                        f"{mds_url}/access/datafile/{data_file['id']}/metadata/ddi"
+                    )
                     ddi_response = httpx.get(ddi_url)
                     if ddi_response.status_code == 200:
                         ddi_entry = xmltodict.parse(ddi_response.text)
-                        vars = ddi_entry.get("codeBook", {}).get("dataDscr", {}).get("var", [])
+                        vars = (
+                            ddi_entry.get("codeBook", {})
+                            .get("dataDscr", {})
+                            .get("var", [])
+                        )
                         if isinstance(vars, dict):
                             vars = [vars]
                         for var_iter, var in enumerate(vars):
-                            data_file["data_dictionary"].append({
-                                "name": var.get("@name", f"var{var_iter+1}"),
-                                "label": var.get("labl", {}).get("#text"),
-                                "interval": var.get("@intrvl"),
-                                "type": var.get("varFormat", {}).get("@type")
-                            })
+                            data_file["data_dictionary"].append(
+                                {
+                                    "name": var.get("@name", f"var{var_iter+1}"),
+                                    "label": var.get("labl", {}).get("#text"),
+                                    "interval": var.get("@intrvl"),
+                                    "type": var.get("varFormat", {}).get("@type"),
+                                }
+                            )
 
                     dataset_output["files"].append(data_file)
 
@@ -655,12 +673,17 @@ class HarvardDataverse(RemoteMetadataAdapter):
         results["data_dictionary"] = {}
         for i, file in enumerate(files):
             results["data_dictionary"][file["filename"]] = file["data_dictionary"]
-        
+
         for field in ["summary", "study_description_summary"]:
             if isinstance(results[field], list):
-                results[field] = ' '.join(results[field])
+                results[field] = " ".join(results[field])
 
-        for field in ["subjects", "investigators", "investigators_name", "institutions"]:
+        for field in [
+            "subjects",
+            "investigators",
+            "investigators_name",
+            "institutions",
+        ]:
             if isinstance(results[field], list):
                 results[field] = ", ".join(results[field])
 

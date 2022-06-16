@@ -3915,54 +3915,64 @@ def test_get_metadata_harvard_dataverse():
                 "dataset_5_description": "",
                 "data_availability": "available",
                 "data_dictionary": {
-                    "us_metro_confirmed_cases_cdl.tab": [{
-                        "name": "POP90",
-                        "label": "POP90",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "POP80",
-                        "label": "POP80",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "POP70",
-                        "label": "POP70",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "POP10",
-                        "label": "POP10",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "POP00",
-                        "label": "POP00",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "Metropolitan",
-                        "label": "Metropolitan",
-                        "interval": "discrete",
-                        "type": "character"
-                    }, {
-                        "name": "Metro_ID",
-                        "label": "Metro_ID",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "2022-04-11",
-                        "label": "2022-04-11",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }, {
-                        "name": "2022-04-10",
-                        "label": "2022-04-10",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }]
-                }
-            }
+                    "us_metro_confirmed_cases_cdl.tab": [
+                        {
+                            "name": "POP90",
+                            "label": "POP90",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP80",
+                            "label": "POP80",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP70",
+                            "label": "POP70",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP10",
+                            "label": "POP10",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP00",
+                            "label": "POP00",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "Metropolitan",
+                            "label": "Metropolitan",
+                            "interval": "discrete",
+                            "type": "character",
+                        },
+                        {
+                            "name": "Metro_ID",
+                            "label": "Metro_ID",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "2022-04-11",
+                            "label": "2022-04-11",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "2022-04-10",
+                            "label": "2022-04-10",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                    ]
+                },
+            },
         }
     }
 
@@ -4017,14 +4027,16 @@ def test_get_metadata_harvard_dataverse():
                 "dataset_5_description": "",
                 "data_availability": "available",
                 "data_dictionary": {
-                    "us_metro_confirmed_cases_cdl.tab": [{
-                        "name": "POP90",
-                        "label": "POP90",
-                        "interval": "discrete",
-                        "type": "numeric"
-                    }]
-                }
-            }
+                    "us_metro_confirmed_cases_cdl.tab": [
+                        {
+                            "name": "POP90",
+                            "label": "POP90",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        }
+                    ]
+                },
+            },
         }
     }
 
