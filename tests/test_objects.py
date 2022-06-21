@@ -1,9 +1,7 @@
 import pytest
 
-import httpx
 import respx
 from fastapi import HTTPException
-from starlette.config import environ
 from starlette.status import (
     HTTP_201_CREATED,
     HTTP_409_CONFLICT,
@@ -14,6 +12,7 @@ from starlette.status import (
 )
 
 from mds import config
+from mds.objects import FORBIDDEN_IDS
 
 
 def test_create_no_auth_header(client, valid_upload_file_patcher):
@@ -30,7 +29,7 @@ def test_create_no_auth_header(client, valid_upload_file_patcher):
         "metadata": {"foo": "bar"},
     }
 
-    resp = client.post("/objects", json=data)
+    resp = client.post("/objects/upload", json=data)
     assert str(resp.status_code) == "401"
 
     fake_guid = "dg.hello/test_guid"
@@ -54,7 +53,7 @@ def test_create_invalid_token(client, valid_upload_file_patcher):
     }
 
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
     assert str(resp.status_code) == "401"
 
@@ -80,12 +79,12 @@ def test_create_invalid_token(client, valid_upload_file_patcher):
 )
 def test_authz_version_not_supported(client, valid_upload_file_patcher, data):
     """
-    Test create /objects response when the authz provided is not supported.
+    Test create /objects/upload response when the authz provided is not supported.
     Assume valid input, ensure correct response.
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "400"
@@ -94,6 +93,7 @@ def test_authz_version_not_supported(client, valid_upload_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert not valid_upload_file_patcher["data_upload_mock"].called
     assert not valid_upload_file_patcher["create_aliases_mock"].called
@@ -141,12 +141,12 @@ def test_authz_version_not_supported(client, valid_upload_file_patcher, data):
 )
 def test_create(client, valid_upload_file_patcher, data):
     """
-    Test create /objects response for a valid user with authorization and
+    Test create /objects/upload response for a valid user with authorization and
     valid input, ensure correct response.
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
     resp.raise_for_status()
 
@@ -162,12 +162,11 @@ def test_create(client, valid_upload_file_patcher, data):
         "data_upload_mocked_reponse"
     ].get("url")
 
-    assert "_resource_paths" in resp.json().get("metadata")
-    assert "_uploader_id" in resp.json().get("metadata")
     assert "_upload_status" in resp.json().get("metadata")
     assert client.get(f"/metadata/{resp.json().get('guid')}").json() == resp.json().get(
         "metadata"
     )
+    assert resp.json().get("authz") == data.get("authz")
 
     assert valid_upload_file_patcher["data_upload_mock"].called
 
@@ -187,7 +186,7 @@ def test_create(client, valid_upload_file_patcher, data):
 )
 def test_create_no_access_to_upload(client, no_authz_upload_file_patcher, data):
     """
-    Test create /objects response for a user WITHOUT authorization to upload.
+    Test create /objects/upload response for a user WITHOUT authorization to upload.
     Assume valid input, ensure correct response.
 
     NOTE: the no_authz_upload_file_patcher fixture forces a 403 from external api call
@@ -195,7 +194,7 @@ def test_create_no_access_to_upload(client, no_authz_upload_file_patcher, data):
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "403"
@@ -204,6 +203,7 @@ def test_create_no_access_to_upload(client, no_authz_upload_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert no_authz_upload_file_patcher["data_upload_mock"].called
     assert not no_authz_upload_file_patcher["create_aliases_mock"].called
@@ -232,14 +232,14 @@ def test_create_no_access_to_create_aliases(
     client, no_authz_create_aliases_patcher, data
 ):
     """
-    Test create /objects response for a user WITHOUT authorization to create aliases.
+    Test create /objects/upload response for a user WITHOUT authorization to create aliases.
 
     NOTE: the no_authz_create_aliases_patcher fixture forces a 403 from external api call
           for uploading data
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     if data.get("aliases"):
@@ -249,6 +249,7 @@ def test_create_no_access_to_create_aliases(
         assert not resp.json().get("upload_url")
         assert not resp.json().get("aliases")
         assert not resp.json().get("metadata")
+        assert not resp.json().get("authz")
 
         assert no_authz_create_aliases_patcher["data_upload_mock"].called
         assert no_authz_create_aliases_patcher["create_aliases_mock"].called
@@ -288,7 +289,7 @@ def test_create_no_access_to_create_aliases(
 )
 def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data):
     """
-    Test create /objects response for a user with valid authorization and
+    Test create /objects/upload response for a user with valid authorization and
     valid input, but some aliases already exist. We get a 409 from
     indexd's alias creation endpoint. The MDS endpoint should return 409.
     """
@@ -298,7 +299,7 @@ def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data
     )
 
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert resp.status_code == 409
@@ -307,6 +308,7 @@ def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert create_aliases_duplicate_patcher["data_upload_mock"].called
 
@@ -327,7 +329,7 @@ def test_create_duplicate_aliases(client, create_aliases_duplicate_patcher, data
 )
 def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
     """
-    Test create /objects response when external api returns a failure.
+    Test create /objects/upload response when external api returns a failure.
     Assume valid input, ensure correct response.
 
     NOTE: the upload_failure_file_patcher fixture forces a 500 from external api call
@@ -335,7 +337,7 @@ def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "500"
@@ -344,6 +346,7 @@ def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert upload_failure_file_patcher["data_upload_mock"].called
     assert not upload_failure_file_patcher["create_aliases_mock"].called
@@ -365,7 +368,7 @@ def test_external_api_upload_failure(client, upload_failure_file_patcher, data):
 )
 def test_external_api_aliases_failure(client, create_aliases_failure_patcher, data):
     """
-    Test create /objects response when external api returns a failure.
+    Test create /objects/upload response when external api returns a failure.
     Assume valid input, ensure correct response.
 
     NOTE: the create_aliases_failure_patcher fixture forces a 500 from external api call
@@ -373,7 +376,7 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
     """
     fake_jwt = "1.2.3"
     resp = client.post(
-        "/objects", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
 
     assert str(resp.status_code) == "500"
@@ -382,9 +385,75 @@ def test_external_api_aliases_failure(client, create_aliases_failure_patcher, da
     assert not resp.json().get("upload_url")
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
     assert create_aliases_failure_patcher["data_upload_mock"].called
     assert create_aliases_failure_patcher["create_aliases_mock"].called
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "forbidden_id",
+    FORBIDDEN_IDS,
+)
+def test_create_guid_forbidden_alias(client, valid_upload_file_patcher, forbidden_id):
+    """
+    Test create /objects/upload response for a forbidden alias value
+    (listed in FORBIDDEN_IDS, eg 'upload').
+    The MDS endpoint should return 400.
+    """
+    fake_jwt = "1.2.3"
+    data = {
+        # 'upload' is not an allowed value for alias
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": [forbidden_id, "alias2", "alias3"],
+        "metadata": {"foo": "bar"},
+    }
+    resp = client.post(
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+    )
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "forbidden_id",
+    FORBIDDEN_IDS,
+)
+def test_create_guid_forbidden_guid(client, valid_upload_file_patcher, forbidden_id):
+    """
+    Test create /objects/upload response for a forbidden guid value
+    (listed in FORBIDDEN_IDS, eg 'upload')
+    coming from fence. The MDS endpoint should return 400.
+    """
+    fake_jwt = "1.2.3"
+    data = {
+        "file_name": "test.txt",
+        "authz": {"version": 0, "resource_paths": ["/programs/DEV"]},
+        "aliases": ["alias1", "alias2"],
+        "metadata": {"foo": "bar"},
+    }
+
+    valid_upload_file_patcher["data_upload_mocked_reponse"]["guid"] = forbidden_id
+    resp = client.post(
+        "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
+    )
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
+    assert not resp.json().get("authz")
 
 
 @respx.mock
@@ -479,8 +548,6 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
         "data_upload_mocked_reponse"
     ].get("url")
 
-    assert "_resource_paths" in resp.json().get("metadata")
-    assert "_uploader_id" in resp.json().get("metadata")
     assert "_upload_status" in resp.json().get("metadata")
     assert client.get(f"/metadata/{resp.json().get('guid')}").json() == resp.json().get(
         "metadata"
@@ -492,43 +559,141 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
 
 
 @respx.mock
-@pytest.mark.parametrize(
-    "data",
-    [
+def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: 404 if indexd returns 404 for creating
+    new version.
+    """
+    data = {
         # all valid fields
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-            "metadata": {"foo": "bar"},
-        },
-        # all valid fields (multiple aliases and metadata keys)
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg", "123456"],
-            "metadata": {"foo": "bar", "fizz": "buzz"},
-        },
-        # no aliases
-        {
-            "file_name": "test.txt",
-            "metadata": {"foo": "bar"},
-        },
-        # no metadata
-        {
-            "file_name": "test.txt",
-            "aliases": ["abcdefg"],
-        },
-        # no aliases or metadata
-        {
-            "file_name": "test.txt",
-        },
-    ],
-)
-def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock the request to indexd: GUID or alias found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=200, content=indexd_data, alias="indexd_get"
+    )
+    # mock: creating a new version of "indexd_did" returns 404
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=404,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+    resp = client.post(
+        f"/objects/{guid_or_alias}",
+        json=data,
+        headers={"Authorization": f"bearer {fake_jwt}"},
+    )
+
+    # check response contents
+    assert resp.status_code == 404
+    assert resp.json().get("detail")
+    assert not resp.json().get("guid")
+    assert not resp.json().get("upload_url")
+    assert not resp.json().get("aliases")
+    assert not resp.json().get("metadata")
+    assert indexd_get_mocked_request.called
+    assert indexd_blank_version_mocked_request.called
+
+
+@respx.mock
+def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: raise exception with 409 status
+    if indexd returns 409 when creating new version.
+    """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock the request to indexd: GUID or alias found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=200, content=indexd_data, alias="indexd_get"
+    )
+    # mock: creating a new version of "indexd_did" returns 409 (not 401,403,404)
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=409,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+    with pytest.raises(Exception):
+        resp = client.post(
+            f"/objects/{guid_or_alias}",
+            json=data,
+            headers={"Authorization": f"bearer {fake_jwt}"},
+        )
+
+        # check response contents
+        assert resp.status_code == 409
+        assert resp.json().get("detail")
+        assert not resp.json().get("guid")
+        assert not resp.json().get("upload_url")
+        assert not resp.json().get("aliases")
+        assert not resp.json().get("metadata")
+        assert indexd_get_mocked_request.called
+        assert indexd_blank_version_mocked_request.called
+
+
+@respx.mock
+def test_create_for_guid_not_found(client, valid_upload_file_patcher):
     """
     Test create /objects/<GUID or alias> for a valid user with authorization
     and valid input, ensure correct response: 404 and no metadata if the GUID
     or alias does not exist in indexd.
     """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
     fake_jwt = "1.2.3"
     guid_or_alias = "test_guid_alias"
     indexd_did = "dg.hello/test_guid"
@@ -575,6 +740,68 @@ def test_create_for_guid_not_found(client, valid_upload_file_patcher, data):
     assert not resp.json().get("aliases")
     assert not resp.json().get("metadata")
     assert indexd_get_mocked_request.called
+
+
+@respx.mock
+def test_create_for_guid_not_found_409(client, valid_upload_file_patcher):
+    """
+    Test create /objects/<GUID or alias> for a valid user with authorization
+    and valid input, ensure correct response: exception with 409 and no metadata
+    if indexd returns 409 when checking for GUID.
+    """
+    data = {
+        # all valid fields
+        "file_name": "test.txt",
+        "aliases": ["abcdefg"],
+        "metadata": {"foo": "bar"},
+    }
+    fake_jwt = "1.2.3"
+    guid_or_alias = "test_guid_alias"
+    indexd_did = "dg.hello/test_guid"
+    indexd_data = {
+        "did": indexd_did,
+        "rev": "123",
+        "file_name": "im_a_blank_record.pfb",
+        "acl": ["resource"],
+        "authz": ["/path/to/resource"],
+    }
+    new_version_guid = valid_upload_file_patcher["data_upload_mocked_reponse"].get(
+        "guid"
+    )
+    new_version_data = {
+        "did": new_version_guid,
+        "rev": "987",
+        "file_name": "im_another_blank_record.pfb",
+    }
+
+    # mock: creating a new version of "indexd_did" returns "new_version_data"
+    indexd_blank_version_mocked_request = respx.post(
+        f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
+        status_code=200,
+        content=new_version_data,
+        alias="indexd_post_blank",
+    )
+
+    # mock the request to indexd: GUID or alias NOT found in indexd
+    indexd_url = f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
+    indexd_get_mocked_request = respx.get(
+        indexd_url, status_code=409, content=indexd_data, alias="indexd_get"
+    )
+    with pytest.raises(Exception):
+        resp = client.post(
+            f"/objects/{guid_or_alias}",
+            json=data,
+            headers={"Authorization": f"bearer {fake_jwt}"},
+        )
+
+        # check response contents
+        assert resp.status_code == 409
+        assert resp.json().get("detail")
+        assert not resp.json().get("guid")
+        assert not resp.json().get("upload_url")
+        assert not resp.json().get("aliases")
+        assert not resp.json().get("metadata")
+        assert indexd_get_mocked_request.called
 
 
 @respx.mock
@@ -1035,7 +1262,7 @@ def test_delete_object_when_fence_returns_204(client, valid_upload_file_patcher)
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     fence_delete_mock = respx.delete(
@@ -1063,7 +1290,7 @@ def test_delete_object_when_fence_returns_403(client, valid_upload_file_patcher)
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     fence_delete_mock = respx.delete(
@@ -1092,7 +1319,7 @@ def test_delete_object_when_fence_returns_500(client, valid_upload_file_patcher)
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     fence_delete_mock = respx.delete(
@@ -1122,7 +1349,7 @@ def test_delete_object_when_indexd_returns_204(client, valid_upload_file_patcher
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     mock_rev = "abc123"
@@ -1159,7 +1386,7 @@ def test_delete_object_when_indexd_returns_403(client, valid_upload_file_patcher
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     mock_rev = "abc123"
@@ -1196,7 +1423,7 @@ def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher
         "metadata": {"foo": "bar"},
     }
     created_guid = client.post(
-        "/objects", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
+        "/objects/upload", json=file_data, headers={"Authorization": f"bearer fake_jwt"}
     ).json()["guid"]
 
     mock_rev = "abc123"
