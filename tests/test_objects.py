@@ -442,7 +442,6 @@ def test_create_guid_forbidden_guid(client, valid_upload_badid_file_patcher):
     resp = client.post(
         "/objects/upload", json=data, headers={"Authorization": f"bearer {fake_jwt}"}
     )
-    print(f'Response has guid = {resp.json().get("guid")}')
 
     assert resp.status_code == 400
     assert resp.json().get("detail")
