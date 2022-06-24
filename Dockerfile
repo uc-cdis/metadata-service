@@ -8,7 +8,6 @@ RUN apt-get update \
 
 COPY . /src/
 WORKDIR /src
-RUN poetry --version
 RUN python -m venv /env && . /env/bin/activate && poetry install --no-interaction
 
 FROM base
