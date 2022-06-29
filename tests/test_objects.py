@@ -425,7 +425,7 @@ def test_create_guid_forbidden_alias(client, valid_upload_file_patcher, forbidde
 
 
 @respx.mock
-def test_create_guid_forbidden_guid(client, valid_upload_badid_file_patcher):
+def test_create_guid_forbidden_guid(client, valid_upload_bad_id_file_patcher):
     """
     Test create /objects/upload response for a forbidden guid value
     (listed in FORBIDDEN_IDS, eg 'upload')
