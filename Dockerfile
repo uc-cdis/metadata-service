@@ -8,7 +8,7 @@ RUN apt-get update \
 
 COPY . /src/
 WORKDIR /src
-RUN python -m venv /env && . /env/bin/activate && poetry install --no-interaction
+RUN python -m venv /env && . /env/bin/activate && poetry install --no-interaction --no-dev
 
 FROM base
 COPY --from=builder /env /env

@@ -210,7 +210,7 @@ def valid_upload_file_patcher(client, guid_mock, signed_url_mock):
 
 
 @pytest.fixture(scope="function")
-def valid_upload_badid_file_patcher(client, forbidden_guid_mock, signed_url_mock):
+def valid_upload_bad_id_file_patcher(client, forbidden_guid_mock, signed_url_mock):
     patches = []
 
     data_upload_mocked_reponse = {
