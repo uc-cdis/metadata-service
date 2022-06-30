@@ -1,3 +1,4 @@
+from more_itertools import side_effect
 import respx
 import json
 from mds.agg_mds.adapters import get_metadata, get_json_path_value
@@ -81,9 +82,12 @@ def test_get_metadata_icpsr():
     }
 
     respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
-        status_code=200,
-        content=xml_response,
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=xml_response,
+        )
     )
 
     assert get_metadata("icpsr", "http://test/ok", filters=None, config=None) == {}
@@ -99,9 +103,12 @@ def test_get_metadata_icpsr():
     )
 
     respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
-        status_code=200,
-        content=xml_response,
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=xml_response,
+        )
     )
 
     assert get_metadata(
@@ -259,9 +266,12 @@ def test_get_metadata_icpsr():
 
     # test bad XML response
     respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64257",
-        status_code=200,
-        content="<dsfsdfsd>",
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64257"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content="<dsfsdfsd>",
+        )
     )
 
     assert (
@@ -275,10 +285,11 @@ def test_get_metadata_icpsr():
         == {}
     )
 
-    respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64",
-        status_code=404,
-        content={},
+    respx.get("http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64").mock(
+        return_value=httpx.Response(
+            status_code=404,
+            content={},
+        )
     )
 
     assert (
@@ -298,9 +309,9 @@ def test_get_metadata_icpsr():
         ISCPSRDublin.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror?verb=GetRecord&metadataPrefix=oai_dc&identifier=64",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror?verb=GetRecord&metadataPrefix=oai_dc&identifier=64"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata(
             "icpsr",
             "http://test/timeouterror/",
@@ -701,11 +712,8 @@ def test_get_metadata_clinicaltrials():
 
     item_values = {"NCT01874691": {"__manifest": {"filename": "foo.zip "}}}
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1",
-        status_code=200,
-        content=json.loads(json_response),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1").mock(
+        return_value=httpx.Response(status_code=200, content=json_response)
     )
 
     assert get_metadata("clinicaltrials", "http://test/ok", filters=None) == {}
@@ -1179,18 +1187,18 @@ def test_get_metadata_clinicaltrials():
       }
     }"""
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3",
-        status_code=200,
-        content=json.loads(json_response1),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response1,
+        )
     )
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6",
-        status_code=200,
-        content=json.loads(json_response2),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response2,
+        )
     )
 
     get_metadata(
@@ -1202,11 +1210,11 @@ def test_get_metadata_clinicaltrials():
         keepOriginalFields=True,
     )
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6",
-        status_code=200,
-        content=json.loads(json_response2),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response2,
+        )
     )
 
     get_metadata(
@@ -1239,10 +1247,12 @@ def test_get_metadata_clinicaltrials():
     ## test missing fields
 
     respx.get(
-        "http://test/error404?expr=heart+attack+false&fmt=json&min_rnk=4&max_rnk=6",
-        status_code=404,
-        content={},
-        content_type="text/plain;charset=UTF-8",
+        "http://test/error404?expr=heart+attack+false&fmt=json&min_rnk=4&max_rnk=6"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=404,
+            content={},
+        )
     )
 
     assert (
@@ -1259,9 +1269,12 @@ def test_get_metadata_clinicaltrials():
     ## test bad responses
 
     respx.get(
-        "http://test/ok?expr=should+error+bad+field&fmt=json&min_rnk=1&max_rnk=1",
-        content=json.loads(json_response3),
-        content_type="text/plain;charset=UTF-8",
+        "http://test/ok?expr=should+error+bad+field&fmt=json&min_rnk=1&max_rnk=1"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json.loads(json_response3),
+        )
     )
 
     assert (
@@ -1282,9 +1295,9 @@ def test_get_metadata_clinicaltrials():
         ClinicalTrials.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1",
-            content=httpx.TimeoutException,
-        )
+            "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata(
             "clinicaltrials",
             "http://test/ok",
@@ -2101,11 +2114,14 @@ def test_get_metadata_pdaps():
 
     ## failed calls
 
-    respx.get(
+    respx.request(
+        "get",
         "http://test/ok/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-        status_code=200,
-        content=json.loads(json_response),
-        content_type="text/plain;charset=UTF-8",
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response,
+        )
     )
 
     assert get_metadata("pdaps", "http://test/ok/", filters=None) == {}
@@ -2925,11 +2941,14 @@ def test_get_metadata_pdaps():
 """
     )
 
-    respx.get(
+    respx.request(
+        "get",
         "http://test/err404/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-        status_code=404,
-        content={},
-        content_type="text/plain;charset=UTF-8",
+    ).mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json={},
+        )
     )
 
     get_metadata(
@@ -2956,9 +2975,9 @@ def test_get_metadata_pdaps():
         PDAPS.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata(
             "pdaps",
             "http://test/timeouterror",
@@ -3001,10 +3020,12 @@ def test_gen3_adapter():
     }
 
     respx.get(
-        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=200,
-        content=json_response,
-        content_type="text/plain;charset=UTF-8",
+        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_response,
+        )
     )
 
     expected = {
@@ -3056,10 +3077,12 @@ def test_gen3_adapter():
     }
 
     respx.get(
-        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=64&offset=0",
-        status_code=200,
-        content=json_response,
-        content_type="text/plain;charset=UTF-8",
+        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=64&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_response,
+        )
     )
 
     get_metadata(
@@ -3098,10 +3121,12 @@ def test_gen3_adapter():
     ) == expected
 
     respx.get(
-        "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=404,
-        content=json_response,
-        content_type="text/plain;charset=UTF-8",
+        "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json=json_response,
+        )
     )
 
     assert get_metadata("gen3", "http://test/error/", None, field_mappings) == {}
@@ -3115,9 +3140,9 @@ def test_gen3_adapter():
         Gen3Adapter.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata("gen3", "http://test/timeouterror/", None, field_mappings)
     except Exception as exc:
         assert isinstance(exc, RetryError) == True
