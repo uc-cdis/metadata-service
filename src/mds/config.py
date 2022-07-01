@@ -61,6 +61,13 @@ DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 DB_GEN3_INTERNAL_ID_ALIAS = config(
     "DB_GEN3_INTERNAL_ID_ALIAS", default="gen3_internal_id"
 )
+# Authz string
+
+DEFAULT_AUTHZ_STR = config(
+    "DEFAULT_AUTHZ_STR",
+    cast=str,
+    default='{"version": 0, "_resource_paths": ["/open"]}',
+)
 
 # Security
 

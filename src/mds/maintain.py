@@ -1,3 +1,4 @@
+import json
 import re
 
 from asyncpg import UniqueViolationError
@@ -6,10 +7,17 @@ from sqlalchemy import bindparam
 from sqlalchemy.dialects.postgresql import insert
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_201_CREATED, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT
+from starlette.status import (
+    HTTP_201_CREATED,
+    HTTP_400_BAD_REQUEST,
+    HTTP_404_NOT_FOUND,
+    HTTP_409_CONFLICT,
+)
 
 from .admin_login import admin_required
 from .models import db, Metadata, MetadataInternal
+from . import config
+from .objects import FORBIDDEN_IDS
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 
@@ -28,19 +36,23 @@ async def batch_create_metadata(
     created = []
     updated = []
     conflict = []
+    bad_input = []
+    authz = json.loads(config.DEFAULT_AUTHZ_STR)
     async with db.acquire() as conn:
         if overwrite:
             data = bindparam("data")
             stmt = await conn.prepare(
                 insert(Metadata)
-                .values(guid=bindparam("guid"), data=data)
+                .values(guid=bindparam("guid"), data=data, authz=authz)
                 .on_conflict_do_update(
                     index_elements=[Metadata.guid], set_=dict(data=data)
                 )
                 .returning(db.text("xmax"))
             )
             for data in data_list:
-                if await stmt.scalar(data) == 0:
+                if data["guid"] in FORBIDDEN_IDS:
+                    bad_input.append(data["guid"])
+                elif await stmt.scalar(data) == 0:
                     created.append(data["guid"])
                     if add_internal_id:
                         await conn.prepare(
@@ -52,22 +64,29 @@ async def batch_create_metadata(
                     updated.append(data["guid"])
         else:
             stmt = await conn.prepare(
-                insert(Metadata).values(guid=bindparam("guid"), data=bindparam("data"))
+                insert(Metadata).values(
+                    guid=bindparam("guid"), data=bindparam("data"), authz=authz
+                )
             )
             for data in data_list:
-                try:
-                    await stmt.status(data)
-                except UniqueViolationError:
-                    conflict.append(data["guid"])
+                if data["guid"] in FORBIDDEN_IDS:
+                    bad_input.append(data["guid"])
                 else:
-                    created.append(data["guid"])
-                    if add_internal_id:
-                        await conn.prepare(
-                            insert(MetadataInternal).values(
-                                metadata_guid=bindparam("guid")
+                    try:
+                        await stmt.status(data)
+                    except UniqueViolationError:
+                        conflict.append(data["guid"])
+                    else:
+                        created.append(data["guid"])
+                        if add_internal_id:
+                            await conn.prepare(
+                                insert(MetadataInternal).values(
+                                    metadata_guid=bindparam("guid")
+                                )
                             )
-                        )
-    return dict(created=created, updated=updated, conflict=conflict)
+    return dict(
+        created=created, updated=updated, conflict=conflict, bad_input=bad_input
+    )
 
 
 @mod.post("/metadata/{guid:path}")
@@ -76,10 +95,20 @@ async def create_metadata(
 ):
     """Create metadata for the GUID."""
     created = True
+    authz = json.loads(config.DEFAULT_AUTHZ_STR)
+
+    # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    if guid in FORBIDDEN_IDS:
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, "GUID cannot have value: {FORBIDDEN_IDS}"
+        )
+
     if overwrite:
         rv = await db.first(
             insert(Metadata)
-            .values(guid=guid, data=data)
+            .values(guid=guid, data=data, authz=authz)
             .on_conflict_do_update(index_elements=[Metadata.guid], set_=dict(data=data))
             .returning(Metadata.data, db.text("xmax"))
         )
@@ -89,7 +118,7 @@ async def create_metadata(
         try:
             rv = (
                 await Metadata.insert()
-                .values(guid=guid, data=data)
+                .values(guid=guid, data=data, authz=authz)
                 .returning(*Metadata)
                 .gino.first()
             )

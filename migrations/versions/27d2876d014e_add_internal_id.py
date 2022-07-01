@@ -1,8 +1,8 @@
 """metadata
 
 Revision ID: 27d2876d014e
-Revises: f96cb3b2c523
-Create Date: 2022-04-21 12:02:13.122113
+Revises: 4d93784a25e5
+Create Date: 2022-07-01 12:02:13.122113
 
 """
 from alembic import op
@@ -12,7 +12,7 @@ from sqlalchemy.schema import Sequence, CreateSequence, DropSequence
 
 # revision identifiers, used by Alembic.
 revision = "27d2876d014e"
-down_revision = "f96cb3b2c523"
+down_revision = "4d93784a25e5"
 branch_labels = None
 depends_on = None
 

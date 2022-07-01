@@ -35,6 +35,9 @@ mod = APIRouter()
 # not recieve valid credentials
 bearer = HTTPBearer(auto_error=False)
 
+# Forbidden IDs
+FORBIDDEN_IDS = ["upload"]
+
 
 class FileUploadStatus(str, Enum):
     NOT_STARTED = "not_uploaded"
@@ -74,7 +77,7 @@ class CreateObjForIdInput(BaseModel):
     metadata: dict = None
 
 
-@mod.post("/objects")
+@mod.post("/objects/upload")
 async def create_object(
     body: CreateObjInput,
     request: Request,
@@ -115,6 +118,15 @@ async def create_object(
             f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
         )
 
+    # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable aliases")
+    if any(alias in FORBIDDEN_IDS for alias in aliases):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
+        )
+
     metadata = metadata or {}
 
     # get user id from token claims
@@ -124,6 +136,14 @@ async def create_object(
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
         file_name, authz, auth_header, request
     )
+    # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable GUIDs")
+    if blank_guid in FORBIDDEN_IDS:
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
+        )
 
     if aliases:
         await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
@@ -131,10 +151,11 @@ async def create_object(
     metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
 
     response = {
+        "upload_url": signed_upload_url,
+        "authz": authz,
         "guid": blank_guid,
         "aliases": aliases,
         "metadata": metadata,
-        "upload_url": signed_upload_url,
     }
 
     return JSONResponse(response, HTTP_201_CREATED)
@@ -442,7 +463,9 @@ async def delete_object(
         logger.debug(err)
         # Recreate data in metadata table in case of any exception
         if metadata_obj:
-            await Metadata.create(guid=metadata_obj.guid, data=metadata_obj.data)
+            await Metadata.create(
+                guid=metadata_obj.guid, data=metadata_obj.data, authz=metadata_obj.authz
+            )
         status_code = (
             err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
         )
@@ -666,8 +689,6 @@ async def _create_url_for_blank_record(guid: str, auth_header: str, request: Req
 async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: str):
     # add default metadata to db
     additional_object_metadata = {
-        "_resource_paths": authz.get("resource_paths", []),
-        "_uploader_id": uploader,
         "_upload_status": FileUploadStatus.NOT_STARTED,
     }
     logger.debug(f"attempting to update guid {blank_guid} with metadata: {metadata}")
@@ -676,7 +697,7 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
     try:
         rv = (
             await Metadata.insert()
-            .values(guid=blank_guid, data=metadata)
+            .values(guid=blank_guid, data=metadata, authz=authz)
             .returning(*Metadata)
             .gino.first()
         )
