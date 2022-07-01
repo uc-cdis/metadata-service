@@ -150,6 +150,17 @@ paths:
           description: Return results at this given offset.
           title: Offset
           type: integer
+      - description: Switch to including the internal accession-style ID with data
+          (true), or not (false). Only works when returning metadata
+        in: query
+        name: internal_id
+        required: false
+        schema:
+          default: false
+          description: Switch to including the internal accession-style ID with data
+            (true), or not (false). Only works when returning metadata
+          title: Internal Id
+          type: boolean
       responses:
         '200':
           content:
@@ -175,6 +186,13 @@ paths:
         schema:
           default: true
           title: Overwrite
+          type: boolean
+      - in: query
+        name: add_internal_id
+        required: false
+        schema:
+          default: false
+          title: Add Internal Id
           type: boolean
       requestBody:
         content:
@@ -239,6 +257,12 @@ paths:
         required: true
         schema:
           title: Guid
+      - in: query
+        name: internal_id
+        required: false
+        schema:
+          title: Internal Id
+          type: boolean
       responses:
         '200':
           content:
@@ -269,6 +293,13 @@ paths:
         schema:
           default: false
           title: Overwrite
+          type: boolean
+      - in: query
+        name: add_internal_id
+        required: false
+        schema:
+          default: false
+          title: Add Internal Id
           type: boolean
       requestBody:
         content:
