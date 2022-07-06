@@ -71,7 +71,7 @@ async def metadata(
           ...
         },
     """
-    return await datastore.get_all_metadata(limit, offset, flatten)
+    return await datastore.get_all_metadata(limit, offset, counts=None, flatten=flatten)
 
 
 @mod.get("/aggregate/metadata")

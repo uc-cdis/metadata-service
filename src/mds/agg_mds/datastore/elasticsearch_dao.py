@@ -1,6 +1,5 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
 from typing import List, Dict, Optional, Tuple
-import json
 from math import ceil
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
@@ -117,20 +116,6 @@ async def create_indexes(common_mapping: dict):
             pass  # Index already exists. Ignore.
         else:  # Other exception - raise it
             raise ex
-
-
-def normalize_field(doc, key, normalize_type):
-    try:
-        if normalize_type == "object" and isinstance(doc[key], str):
-            value = doc[key]
-            doc[key] = None if value == "" else json.loads(value)
-        if normalize_type == "number" and isinstance(doc[key], str):
-            doc[key] = None
-    except:
-        logger.warning(
-            f"warning: normalizing {key} ({normalize_type}) for a document, elastic search will auto type"
-        )
-        doc[key] = None
 
 
 async def update_metadata(
@@ -380,52 +365,6 @@ async def get_aggregations(name):
     except Exception as error:
         logger.error(error)
         return []
-
-
-async def get_number_aggregation_for_field(field: str):
-    try:
-        # get the total number of documents in a commons namespace
-        query = {
-            "size": 0,
-            "aggs": {
-                field: {"sum": {"field": field}},
-                "missing": {"missing_bucket": {"field": field}},
-                "types_count": {"value_count": {"field": field}},
-            },
-        }
-        nested = False
-        parts = field.split(".")
-        if len(parts) == 2:
-            nested = True
-            query["aggs"] = {
-                field: {"nested": {"path": parts[0]}, "aggs": query["aggs"]}
-            }
-
-        res = elastic_search_client.search(index=AGG_MDS_INDEX, body=query)
-        agg_results = res["aggregations"][field] if nested else res["aggregations"]
-
-        return {
-            field: {
-                "total_items": res["hits"]["total"],
-                "sum": agg_results[field]["value"],
-                "missing": agg_results["missing_bucket"]["doc_count"],
-            }
-        }
-
-    except Exception as error:
-        logger.error(error)
-        return {}
-
-
-async def does_exists(field):
-    try:
-        query = {"size": 0, "query": {"bool": {"must": {"exists": {"field": field}}}}}
-        res = elastic_search_client.search(index=AGG_MDS_INDEX, body=query)
-        if res["hits"]["total"] > 0:
-            return True
-    except Exception as error:
-        logger.error(error)
-    return False
 
 
 async def get_by_guid(guid):

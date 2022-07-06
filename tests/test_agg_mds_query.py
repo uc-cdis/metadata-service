@@ -5,7 +5,6 @@ from mds.agg_mds import datastore
 from unittest.mock import patch
 from conftest import AsyncMock
 
-
 # https://github.com/encode/starlette/issues/440
 nest_asyncio.apply()
 
@@ -63,6 +62,33 @@ async def test_aggregate_metadata(client):
         assert resp.status_code == 200
         assert resp.json() == mock_data["results"]
         datastore.get_all_metadata.assert_called_with(20, 0, "", False)
+
+
+@pytest.mark.asyncio
+async def test_aggregate_metadata_paged(client):
+    with patch.object(
+        datastore, "get_all_metadata", AsyncMock(return_value={"results": []})
+    ) as datastore_mock:
+        resp = client.get("/aggregate/metadata_paged")
+        assert resp.status_code == 200
+        assert resp.json() == {"results": []}
+        datastore.get_all_metadata.assert_called_with(20, 0, counts=None, flatten=True)
+
+    mock_data = {
+        "results": [
+            {"study1": {}},
+            {"study2": {}},
+        ],
+        "pagination": {"hits": 64, "offset": 0, "pageSize": 20, "pages": 4},
+    }
+
+    with patch.object(
+        datastore, "get_all_metadata", AsyncMock(return_value=mock_data)
+    ) as datastore_mock:
+        resp = client.get("/aggregate/metadata_paged")
+        assert resp.status_code == 200
+        assert resp.json() == mock_data
+        datastore.get_all_metadata.assert_called_with(20, 0, counts=None, flatten=True)
 
 
 @pytest.mark.asyncio
@@ -177,3 +203,25 @@ async def test_aggregate_metadata_name_guid(client):
         assert resp.status_code == 200
         assert resp.json() == {"study2": {}}
         datastore.get_by_guid.assert_called_with("123")
+
+
+@pytest.mark.asyncio
+async def test_aggregate_metadata_get_schema(client):
+    schema = {
+        "_subjects_count": {"type": "integer", "description": ""},
+        "year_awarded": {"type": "integer", "description": ""},
+    }
+    with patch.object(
+        datastore,
+        "get_commons_attribute",
+        AsyncMock(
+            return_value={
+                "_subjects_count": {"type": "integer", "description": ""},
+                "year_awarded": {"type": "integer", "description": ""},
+            }
+        ),
+    ) as datastore_mock:
+        resp = client.get("/aggregate/info/schema")
+        assert resp.status_code == 200
+        assert resp.json() == schema
+        datastore.get_commons_attribute.assert_called_with("schema", "")
