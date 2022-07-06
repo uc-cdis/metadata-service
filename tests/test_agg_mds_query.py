@@ -2,7 +2,7 @@ from typing import Dict
 import pytest
 import nest_asyncio
 from mds.agg_mds import datastore
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from conftest import AsyncMock
 
 # https://github.com/encode/starlette/issues/440
@@ -89,6 +89,89 @@ async def test_aggregate_metadata_paged(client):
         assert resp.status_code == 200
         assert resp.json() == mock_data
         datastore.get_all_metadata.assert_called_with(20, 0, counts=None, flatten=True)
+
+
+@pytest.mark.asyncio
+async def test_aggregate_metadata_counts(client):
+    mock_data = {
+        "took": 3,
+        "timed_out": "false",
+        "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0},
+        "hits": {
+            "total": 161,
+            "max_score": 1.0,
+            "hits": [
+                {
+                    "_index": "default_namespace-commons-index",
+                    "_type": "commons",
+                    "_id": "815616c0-dfsdfjjj",
+                    "_score": 1.0,
+                    "_source": {
+                        "link": "",
+                        "tags": [
+                            {"name": "restricted", "category": "Access"},
+                            {"name": "genomic", "category": "category"},
+                        ],
+                        "commons": "LI",
+                        "_unique_id": "815616c0-c4a4-4883-9107-a05694499a36",
+                        "dataset_code": "LI",
+                        "brief_summary": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                        "dataset_title": "Lorem ipsum dolor sit amet",
+                        "samples_count": "",
+                        "subjects_count": "",
+                        "data_files_count": 11062,
+                        "_subjects_count": "",
+                        "study_description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ultricies tristique nulla aliquet enim tortor at auctor.",
+                        "short_name": "Lorem ipsum dolor sit amet",
+                        "full_name": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                        "commons_name": "Lorem ipsum",
+                        "__manifest": [
+                            {"filename": "foo2.txt"},
+                            {"filename": "foo3.txt"},
+                        ],
+                    },
+                }
+            ],
+        },
+    }
+
+    results = {
+        "Lorem ipsum": [
+            {
+                "815616c0-dfsdfjjj": {
+                    "gen3_discovery": {
+                        "link": "",
+                        "tags": [
+                            {"name": "restricted", "category": "Access"},
+                            {"name": "genomic", "category": "category"},
+                        ],
+                        "commons": "LI",
+                        "_unique_id": "815616c0-c4a4-4883-9107-a05694499a36",
+                        "dataset_code": "LI",
+                        "brief_summary": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+                        "dataset_title": "Lorem ipsum dolor sit amet",
+                        "samples_count": "",
+                        "subjects_count": "",
+                        "data_files_count": 11062,
+                        "_subjects_count": "",
+                        "study_description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ultricies tristique nulla aliquet enim tortor at auctor.",
+                        "short_name": "Lorem ipsum dolor sit amet",
+                        "full_name": "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+                        "commons_name": "Lorem ipsum",
+                        "__manifest": 2,
+                    }
+                }
+            }
+        ]
+    }
+
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
+        MagicMock(return_value=mock_data),
+    ) as search:
+        resp = client.get("/aggregate/metadata?counts=__manifest")
+        assert resp.status_code == 200
+        assert resp.json() == results
 
 
 @pytest.mark.asyncio

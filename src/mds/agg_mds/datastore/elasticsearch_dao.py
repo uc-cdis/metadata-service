@@ -234,6 +234,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             index=AGG_MDS_INDEX,
             body={"size": limit, "from": offset, "query": {"match_all": {}}},
         )
+        print(res)
         if flatten:
             flat = []
             for record in res["hits"]["hits"]:
