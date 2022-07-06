@@ -7,15 +7,23 @@ from mds.agg_mds.mds import pull_mds
 @respx.mock
 def test_pull_mds():
     mock_route1 = respx.get(
-        "http://commons1/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
-        content={
-            "commons1": {"gen3_discovery": {}},
-            "commons2": {"gen3_discovery": {}},
-        },
+        "http://commons1/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json={
+                "commons1": {"gen3_discovery": {}},
+                "commons2": {"gen3_discovery": {}},
+            },
+        )
     )
     mock_route2 = respx.get(
-        "http://commons1/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=2",
-        content={"commons3": {"gen3_discovery": {}}},
+        "http://commons1/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=2"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json={"commons3": {"gen3_discovery": {}}},
+        )
     )
 
     results = pull_mds("http://commons1", "discovery_metadata", 2)
@@ -29,9 +37,12 @@ def test_pull_mds():
 
     # changed
     respx.get(
-        "http://commons2/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
-        content={},
-        status_code=403,
+        "http://commons2/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=403,
+            json={},
+        )
     )
     results = pull_mds("http://commons2", "discovery_metadata", 2)
     assert results == {}
@@ -40,9 +51,9 @@ def test_pull_mds():
         pull_mds.retry.wait = wait_none()
 
         respx.get(
-            "http://commons3/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0",
-            content=httpx.TimeoutException,
-        )
+            "http://commons3/mds/metadata?data=True&_guid_type=discovery_metadata&limit=2&offset=0"
+        ).mock(side_effect=httpx.TimeoutException)
+
         pull_mds("http://commons3", "discovery_metadata", 2)
     except Exception as exc:
         assert isinstance(exc, RetryError) == True
