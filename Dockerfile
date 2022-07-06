@@ -4,7 +4,7 @@ FROM base as builder
 RUN pip install --upgrade pip poetry
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-    build-essential gcc make musl-dev libffi-dev libssl-dev git curl
+    build-essential gcc make musl-dev libffi-dev libssl-dev git curl bash
 
 COPY . /src/
 WORKDIR /src
