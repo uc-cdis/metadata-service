@@ -1,4 +1,3 @@
-# from turtle import st
 from more_itertools import side_effect
 import respx
 import json
