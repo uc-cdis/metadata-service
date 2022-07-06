@@ -1,3 +1,4 @@
+# from turtle import st
 from more_itertools import side_effect
 import respx
 import json
@@ -1270,12 +1271,7 @@ def test_get_metadata_clinicaltrials():
 
     respx.get(
         "http://test/ok?expr=should+error+bad+field&fmt=json&min_rnk=1&max_rnk=1"
-    ).mock(
-        return_value=httpx.Response(
-            status_code=200,
-            content=json.loads(json_response3),
-        )
-    )
+    ).mock(return_value=httpx.Response(status_code=200, content=json_response3))
 
     assert (
         get_metadata(
@@ -4067,17 +4063,11 @@ def test_get_metadata_harvard_dataverse():
 
     # failed calls
     respx.get(
-        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content=json.loads(dataset_json_response),
-        content_type="text/plain;charset=UTF-8",
-    )
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=200, content=dataset_json_response))
 
-    respx.get(
-        "http://test/ok/access/datafile/6297263/metadata/ddi",
-        status_code=200,
-        content=file_ddi_response,
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(status_code=200, content=file_ddi_response)
     )
 
     assert get_metadata("havard_dataverse", "http://test/ok", filters=None) == {}
@@ -4113,17 +4103,13 @@ def test_get_metadata_harvard_dataverse():
 
     # valid single variable call
     respx.get(
-        "http://test/single_variable/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content=json.loads(dataset_json_response),
-        content_type="text/plain;charset=UTF-8",
-    )
+        "http://test/single_variable/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=200, content=dataset_json_response))
 
-    respx.get(
-        "http://test/single_variable/access/datafile/6297263/metadata/ddi",
-        status_code=200,
-        content=file_single_variable_ddi_response,
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/single_variable/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(
+            status_code=200, content=file_single_variable_ddi_response
+        )
     )
 
     assert (
@@ -4138,11 +4124,8 @@ def test_get_metadata_harvard_dataverse():
 
     # invalid responses
     respx.get(
-        "http://test/invalid_dataset_response/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content={"status": "ok"},
-        content_type="text/plain;charset=UTF-8",
-    )
+        "http://test/invalid_dataset_response/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=200, json={"status": "ok"}))
 
     assert (
         get_metadata(
@@ -4155,11 +4138,8 @@ def test_get_metadata_harvard_dataverse():
     )
 
     respx.get(
-        "http://test/err404/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=404,
-        content={},
-        content_type="text/plain:charset=UTF-8",
-    )
+        "http://test/err404/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=404, json={}))
 
     assert (
         get_metadata(
@@ -4173,10 +4153,11 @@ def test_get_metadata_harvard_dataverse():
 
     # Incorrect keys expected in adapter class
     respx.get(
-        "http://test/different_keys/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content=json.loads(dataset_json_different_keys_response),
-        content_type="text/plain:charset=UTF-8",
+        "http://test/different_keys/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200, json=dataset_json_different_keys_response
+        )
     )
 
     assert (
@@ -4195,9 +4176,8 @@ def test_get_metadata_harvard_dataverse():
         HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+        ).mock(side_effect=httpx.TimeoutException)
 
         get_metadata(
             "harvard_dataverse",
