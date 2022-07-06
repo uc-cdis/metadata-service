@@ -244,9 +244,9 @@ class Commons:
             self.configuration = Config(settings=Settings())
 
 
-def parse_config(data: Dict[str, Any]) -> Commons:
+def parse_config(data: str) -> Commons:
     """
-    parses a aggregated config which defines the list of MDS services and the mapping of field to column names
+    parses an aggregated config which defines the list of MDS services and the mapping of field to column names
     for the Ecosystem browser. Returns a dictionary of MDSInfo entries
     """
 

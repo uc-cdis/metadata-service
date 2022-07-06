@@ -2,8 +2,6 @@ from fastapi import HTTPException, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
-from typing import Optional
-
 
 mod = APIRouter()
 
@@ -32,7 +30,7 @@ async def get_commons(what: str):
         )
 
 
-@mod.get("/aggregate/metadata")
+@mod.get("/aggregate/metadata_paged")
 async def metadata(
     _: Request,
     limit: int = Query(
@@ -40,11 +38,53 @@ async def metadata(
     ),
     offset: int = Query(0, description="Return results at this given offset."),
     flatten: bool = Query(
-        False, description="Return the results without grouping items by commons."
+        True, description="Return the results without grouping items by commons."
     ),
 ):
     # TODO WFH How to properly return this? We think grouping by MDS is probably
     #  not ideal in reality. We already have commons_name in the results.
+    """
+    Returns all metadata from all registered commons in the form:
+    {
+        results: {
+          "commonA" : {
+              ... Metadata
+          },
+           "commonB" : {
+              ... Metadata
+          }
+          ...
+        },
+        "pagination": {
+            "hits": 64,
+            "offset": 0,
+            "pageSize": 20,
+            "pages": 4
+        }
+    }
+
+    The flatten option removes the commons namespace so all results are a child or results:
+        results: {
+              ... Metadata from commons A
+              ... Metadata from commons B
+          }
+          ...
+        },
+    """
+    return await datastore.get_all_metadata(limit, offset, flatten)
+
+
+@mod.get("/aggregate/metadata")
+async def metadata(
+    _: Request,
+    limit: int = Query(
+        20, description="Maximum number of records returned. (max: 2000)"
+    ),
+    offset: int = Query(0, description="Return results at this given offset."),
+    counts: str = Query(
+        "", description="Return count of a field instead of the value."
+    ),
+):
     """
     Returns all metadata from all registered commons in the form:
     {
@@ -57,7 +97,8 @@ async def metadata(
       ...
     }
     """
-    return await datastore.get_all_metadata(limit, offset, flatten)
+    results = await datastore.get_all_metadata(limit, offset, counts, False)
+    return results.get("results", {})
 
 
 @mod.get("/aggregate/metadata/{name}")
@@ -102,21 +143,6 @@ async def metadata_info(name: str):
         raise HTTPException(
             HTTP_404_NOT_FOUND,
             {"message": f"no common exists with the given: {name}", "code": 404},
-        )
-
-
-@mod.get("/aggregate/summary/{field}")
-async def metadata_aggregations(field: str):
-    res = await datastore.get_number_aggregations(field)
-    if res:
-        return res
-    else:
-        raise HTTPException(
-            HTTP_404_NOT_FOUND,
-            {
-                "message": f"metadata_aggregations: no common exists with the given: {field}",
-                "code": 404,
-            },
         )
 
 

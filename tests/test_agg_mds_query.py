@@ -34,24 +34,26 @@ async def test_aggregate_commons(client):
 @pytest.mark.asyncio
 async def test_aggregate_metadata(client):
     with patch.object(
-        datastore, "get_all_metadata", AsyncMock(return_value=[])
+        datastore, "get_all_metadata", AsyncMock(return_value={"results": []})
     ) as datastore_mock:
         resp = client.get("/aggregate/metadata")
         assert resp.status_code == 200
         assert resp.json() == []
-        datastore.get_all_metadata.assert_called_with(20, 0)
+        datastore.get_all_metadata.assert_called_with(20, 0, "", False)
 
     mock_data = {
-        "commons1": [
-            {
-                "study1": {},
-            }
-        ],
-        "commons2": [
-            {
-                "study2": {},
-            }
-        ],
+        "results": {
+            "commons1": [
+                {
+                    "study1": {},
+                }
+            ],
+            "commons2": [
+                {
+                    "study2": {},
+                }
+            ],
+        }
     }
 
     with patch.object(
@@ -59,8 +61,8 @@ async def test_aggregate_metadata(client):
     ) as datastore_mock:
         resp = client.get("/aggregate/metadata")
         assert resp.status_code == 200
-        assert resp.json() == mock_data
-        datastore.get_all_metadata.assert_called_with(20, 0)
+        assert resp.json() == mock_data["results"]
+        datastore.get_all_metadata.assert_called_with(20, 0, "", False)
 
 
 @pytest.mark.asyncio
@@ -92,24 +94,39 @@ async def test_aggregate_metadata_name(client):
 @pytest.mark.asyncio
 async def test_aggregate_metadata_tags(client):
     with patch.object(
-        datastore, "get_commons_attribute", AsyncMock(return_value=None)
+        datastore, "get_all_tags", AsyncMock(return_value={})
     ) as datastore_mock:
-        resp = client.get("/aggregate/metadata/commons1/tags")
+        resp = client.get("/aggregate/tags")
         assert resp.status_code == 404
         assert resp.json() == {
             "detail": {
                 "code": 404,
-                "message": "no common exists with the given: commons1",
+                "message": "error retrieving tags from service",
             }
         }
 
+    tags = {
+        "Access": {"total": 63, "names": [{"restricted": 63}]},
+        "Category": {
+            "total": 61,
+            "names": [
+                {
+                    "Family/Twin/Trios": 39,
+                    "Prospective Longitudinal Cohort": 10,
+                    "Tumor vs. Matched-Normal": 9,
+                    "Cross-Sectional": 3,
+                }
+            ],
+        },
+    }
+
     with patch.object(
-        datastore, "get_commons_attribute", AsyncMock(return_value=["mytag1"])
+        datastore, "get_all_tags", AsyncMock(return_value=tags)
     ) as datastore_mock:
-        resp = client.get("/aggregate/metadata/commons1/tags")
+        resp = client.get("/aggregate/tags")
         assert resp.status_code == 200
-        assert resp.json() == ["mytag1"]
-        datastore.get_commons_attribute.assert_called_with("commons1", "tags")
+        assert resp.json() == tags
+        datastore.get_all_tags.assert_called_with()
 
 
 @pytest.mark.asyncio
@@ -136,22 +153,6 @@ async def test_aggregate_metadata_info(client):
         assert resp.status_code == 200
         assert resp.json() == {"commons_url": "http://commons"}
         datastore.get_commons_attribute.assert_called_with("commons1", "info")
-
-
-@pytest.mark.asyncio
-async def test_metadata_aggregations(client):
-    with patch.object(
-        datastore, "get_aggregations", AsyncMock(return_value=None)
-    ) as datastore_mock:
-        resp = client.get("/aggregate/metadata/commons1/aggregations")
-        assert resp.status_code == 404
-        assert resp.json() == {
-            "detail": {
-                "code": 404,
-                "message": "no common exists with the given: commons1",
-            }
-        }
-        datastore.get_aggregations.assert_called_with("commons1")
 
 
 @pytest.mark.asyncio

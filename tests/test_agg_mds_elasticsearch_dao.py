@@ -53,7 +53,7 @@ async def test_drop_all():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
         MagicMock(),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all(COMMON_MAPPING)
+        await elasticsearch_dao.drop_all()
     mock_indices.delete.assert_has_calls(
         [
             call(index=AGG_MDS_INDEX, ignore=[400, 404]),
@@ -62,6 +62,15 @@ async def test_drop_all():
         ],
         any_order=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_create_indexes():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
+        MagicMock(),
+    ) as mock_indices:
+        await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
     mock_indices.create.assert_has_calls(
         [
             call(body={**SEARCH_CONFIG, **COMMON_MAPPING}, index=AGG_MDS_INDEX),
@@ -82,7 +91,8 @@ async def test_create_if_exists():
             )
         ),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all(COMMON_MAPPING)
+        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.create_indexes(COMMON_MAPPING)
 
 
 @pytest.mark.asyncio
@@ -93,7 +103,7 @@ async def test_create_index_raise_exception():
         MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
     ) as mock_indices:
         try:
-            await elasticsearch_dao.drop_all(COMMON_MAPPING)
+            await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
         except Exception as exc:
             assert isinstance(exc, es_exceptions.RequestError) == True
 
@@ -111,7 +121,7 @@ async def test_update_metadata():
                     "my_id": {
                         "gen3_discovery": {
                             "some_field": "some_value",
-                            "__manifest": "{}",
+                            "__manifest": {},
                             "sites": "",
                         }
                     }
@@ -131,7 +141,7 @@ async def test_update_metadata():
                 index="default_namespace-commons-info-index",
             ),
             call(
-                body={"some_field": "some_value", "__manifest": {}, "sites": None},
+                body={"some_field": "some_value", "__manifest": {}, "sites": ""},
                 doc_type="commons",
                 id="my_id",
                 index="default_namespace-commons-index",
@@ -222,7 +232,7 @@ async def test_metadata_tags():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client", MagicMock()
     ) as mock_client:
-        await elasticsearch_dao.metadata_tags("my-commons")
+        await elasticsearch_dao.metadata_tags()
         mock_client.search.assert_called_with(
             index="default_namespace-commons-index",
             body={
@@ -247,7 +257,7 @@ async def test_metadata_tags():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
     ) as mock_search:
-        assert await elasticsearch_dao.metadata_tags("my-commons") == []
+        assert await elasticsearch_dao.metadata_tags() == []
 
 
 @pytest.mark.asyncio

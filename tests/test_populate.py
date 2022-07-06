@@ -7,7 +7,13 @@ from mds.populate import (
     main,
     filter_entries,
 )
-from mds.agg_mds.commons import AdapterMDSInstance, MDSInstance, Commons
+from mds.agg_mds.commons import (
+    AdapterMDSInstance,
+    MDSInstance,
+    Commons,
+    FieldDefinition,
+    Config,
+)
 from mds.agg_mds import adapters
 from mds.agg_mds import datastore
 import json
@@ -86,7 +92,7 @@ async def test_populate_metadata():
 async def test_main():
     with patch("mds.config.USE_AGG_MDS", False):
         with pytest.raises(SystemExit) as pytest_wrapped_e:
-            await main(None, "", 0)
+            await main(commons_config=None)
         assert pytest_wrapped_e.type == SystemExit
         assert pytest_wrapped_e.value.code == 1
 
@@ -94,6 +100,7 @@ async def test_main():
     patch("mds.populate.pull_mds", MagicMock()).start()
     patch.object(datastore, "init", AsyncMock()).start()
     patch.object(datastore, "drop_all", AsyncMock()).start()
+    patch.object(datastore, "create_indexes", AsyncMock()).start()
     patch.object(datastore, "get_status", AsyncMock(return_value="OK")).start()
     patch.object(datastore, "close", AsyncMock()).start()
     patch.object(datastore, "update_metadata", AsyncMock()).start()
@@ -101,6 +108,12 @@ async def test_main():
 
     await main(
         Commons(
+            configuration=Config(
+                schema={
+                    "_subjects_count": FieldDefinition(type="integer"),
+                    "year_awarded": FieldDefinition(type="integer"),
+                }
+            ),
             gen3_commons={
                 "my_commons": MDSInstance(
                     mds_url="",
@@ -115,9 +128,7 @@ async def test_main():
                     adapter="icpsr",
                 ),
             },
-        ),
-        "",
-        0,
+        )
     )
 
 
@@ -159,6 +170,12 @@ def test_parse_config_from_file():
     with NamedTemporaryFile(mode="w+", delete=False) as fp:
         json.dump(
             {
+                "configuration": {
+                    "schema": {
+                        "_subjects_count": {"type": "integer"},
+                        "study_description": {},
+                    }
+                },
                 "gen3_commons": {
                     "mycommons": {
                         "mds_url": "http://mds",
@@ -187,7 +204,13 @@ def test_parse_config_from_file():
     assert (
         config.to_json()
         == Commons(
-            {
+            configuration=Config(
+                schema={
+                    "_subjects_count": FieldDefinition(type="integer"),
+                    "study_description": FieldDefinition(type="string"),
+                }
+            ),
+            gen3_commons={
                 "mycommons": MDSInstance(
                     "http://mds",
                     "http://commons",
@@ -201,7 +224,7 @@ def test_parse_config_from_file():
                     },
                 )
             },
-            {
+            adapter_commons={
                 "non-gen3": AdapterMDSInstance(
                     "http://non-gen3",
                     "non-gen3",

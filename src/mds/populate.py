@@ -102,7 +102,7 @@ async def populate_info(commons_config: Commons) -> None:
     if commons_config.configuration.schema:
         json_schema = {
             k: v.to_schema(all_fields=True)
-            for k, v in commons.configuration.schema.items()
+            for k, v in commons_config.configuration.schema.items()
         }
         await datastore.update_global_info("schema", json_schema)
     await populate_drs_info(commons_config)
@@ -167,7 +167,7 @@ async def main(commons_config: Commons) -> None:
             "commons": {
                 "properties": {
                     k: v.to_schema(True)
-                    for k, v in commons.configuration.schema.items()
+                    for k, v in commons_config.configuration.schema.items()
                 }
             }
         }

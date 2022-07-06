@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
-from typing import Any, List, Dict
+from typing import List, Dict, Optional, Tuple
 import json
 from math import ceil
 from mds import logger
@@ -205,7 +205,45 @@ async def get_commons():
         return []
 
 
-async def get_all_metadata(limit, offset, flatten=False):
+def count(value) -> int:
+    """
+    returns the length of the value if list or dict otherwise returns 0
+    """
+    if isinstance(value, dict) or isinstance(value, list):
+        return len(value)
+    return 0
+
+
+def process_record(record: dict, counts: Optional[str]) -> Tuple[str, dict]:
+    """
+    processed an MDS record from the search
+    returns the id and record, if counts is found in the record the length is returned
+    instead of the entry.
+    """
+    _id = record["_id"]
+    normalized = record["_source"]
+    if counts in normalized:
+        normalized[counts] = count(normalized[counts])
+    return _id, normalized
+
+
+async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=False):
+    """
+    Queries elastic search for metadata and returns up to the limit
+    offset: starting index to return
+    counts: converts the count of the entry[count] if it is a dict or array
+    returns:
+    flattend == true
+    results : MDS results as a dict
+              paging info
+    flattend == false
+    results : {
+        commonsA: metadata
+        commonsB: metadata
+        ...
+        },
+        paging info
+    """
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
@@ -214,15 +252,8 @@ async def get_all_metadata(limit, offset, flatten=False):
         if flatten:
             flat = []
             for record in res["hits"]["hits"]:
-                id = record["_id"]
-                normalized = record["_source"]
-                flat.append(
-                    {
-                        id: {
-                            "gen3_discovery": normalized,
-                        }
-                    }
-                )
+                id, normalized = process_record(record, counts)
+                flat.append({id: {"gen3_discovery": normalized}})
             return {
                 "results": flat,
                 "pagination": {
@@ -243,19 +274,14 @@ async def get_all_metadata(limit, offset, flatten=False):
                 },
             }
             for record in res["hits"]["hits"]:
-                id = record["_id"]
-                normalized = record["_source"]
+                id, normalized = process_record(record, counts)
                 commons_name = normalized["commons_name"]
-
-                if commons_name not in byCommons:
+                if commons_name not in byCommons["results"]:
                     byCommons["results"][commons_name] = []
                 byCommons["results"][commons_name].append(
-                    {
-                        id: {
-                            "gen3_discovery": normalized,
-                        }
-                    }
+                    {id: {"gen3_discovery": normalized}}
                 )
+
             return byCommons
     except Exception as error:
         logger.error(error)
