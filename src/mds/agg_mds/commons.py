@@ -45,6 +45,12 @@ def string_to_array(s: str) -> Optional[List[str]]:
     return [s]
 
 
+def array_to_string(arr: Optional[list]) -> Optional[str]:
+    if arr is None:
+        return None
+    return "".join(arr)
+
+
 def string_to_integer(s: str) -> int:
     return int(s) if s.isnumeric() else None
 
@@ -97,6 +103,7 @@ class FieldDefinition:
         "string_to_object": string_to_dict,
         "object_to_array": dict_to_array,
         "string_to_array": string_to_array,
+        "array_to_string": array_to_string,
     }
 
     MAP_TYPE_TO_JSON_SCHEMA_TYPES = {
