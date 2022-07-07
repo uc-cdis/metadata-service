@@ -3110,15 +3110,18 @@ def test_gen3_adapter():
 
     per_item_override = {"GSE63878": {"dbgap_accession_number": "dg.333344.222"}}
 
-    get_metadata(
-        "gen3",
-        "http://test/ok/",
-        None,
-        config={"batchSize": 64},
-        mappings=field_mappings,
-        keepOriginalFields=False,
-        perItemValues=per_item_override,
-    ) == expected
+    assert (
+        get_metadata(
+            "gen3",
+            "http://test/ok/",
+            None,
+            config={"batchSize": 64},
+            mappings=field_mappings,
+            keepOriginalFields=False,
+            perItemValues=per_item_override,
+        )
+        == expected
+    )
 
     respx.get(
         "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
@@ -3145,7 +3148,7 @@ def test_gen3_adapter():
 
         get_metadata("gen3", "http://test/timeouterror/", None, field_mappings)
     except Exception as exc:
-        assert isinstance(exc, RetryError) == True
+        assert isinstance(exc, RetryError)
 
 
 @respx.mock
@@ -4067,17 +4070,16 @@ def test_get_metadata_harvard_dataverse():
 
     # failed calls
     respx.get(
-        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content=json.loads(dataset_json_response),
-        content_type="text/plain;charset=UTF-8",
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json.loads(dataset_json_response),
+        )
     )
 
-    respx.get(
-        "http://test/ok/access/datafile/6297263/metadata/ddi",
-        status_code=200,
-        content=file_ddi_response,
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(status_code=200, json=file_ddi_response)
     )
 
     assert get_metadata("havard_dataverse", "http://test/ok", filters=None) == {}
@@ -4100,6 +4102,19 @@ def test_get_metadata_harvard_dataverse():
         == {}
     )
 
+    respx.get(
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200, json=json.loads(dataset_json_response)
+        )
+    )
+
+    respx.get("http://test/ok/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(status_code=200, text=file_ddi_response)
+    )
+
     # valid call
     assert (
         get_metadata(
@@ -4113,17 +4128,17 @@ def test_get_metadata_harvard_dataverse():
 
     # valid single variable call
     respx.get(
-        "http://test/single_variable/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content=json.loads(dataset_json_response),
-        content_type="text/plain;charset=UTF-8",
+        "http://test/single_variable/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200, json=json.loads(dataset_json_response)
+        )
     )
 
-    respx.get(
-        "http://test/single_variable/access/datafile/6297263/metadata/ddi",
-        status_code=200,
-        content=file_single_variable_ddi_response,
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/single_variable/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(
+            status_code=200, text=file_single_variable_ddi_response
+        )
     )
 
     assert (
@@ -4138,10 +4153,12 @@ def test_get_metadata_harvard_dataverse():
 
     # invalid responses
     respx.get(
-        "http://test/invalid_dataset_response/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content={"status": "ok"},
-        content_type="text/plain;charset=UTF-8",
+        "http://test/invalid_dataset_response/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json={"status": "ok"},
+        )
     )
 
     assert (
@@ -4155,11 +4172,8 @@ def test_get_metadata_harvard_dataverse():
     )
 
     respx.get(
-        "http://test/err404/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=404,
-        content={},
-        content_type="text/plain:charset=UTF-8",
-    )
+        "http://test/err404/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=404, json={}))
 
     assert (
         get_metadata(
@@ -4172,22 +4186,6 @@ def test_get_metadata_harvard_dataverse():
     )
 
     # Incorrect keys expected in adapter class
-    respx.get(
-        "http://test/different_keys/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-        status_code=200,
-        content=json.loads(dataset_json_different_keys_response),
-        content_type="text/plain:charset=UTF-8",
-    )
-
-    assert (
-        get_metadata(
-            "harvard_dataverse",
-            "http://test/different_keys",
-            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
-            mappings=field_mappings,
-        )
-        == {}
-    )
 
     try:
         from mds.agg_mds.adapters import HarvardDataverse
@@ -4195,9 +4193,8 @@ def test_get_metadata_harvard_dataverse():
         HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+        ).mock(side_effect=httpx.TimeoutException)
 
         get_metadata(
             "harvard_dataverse",
