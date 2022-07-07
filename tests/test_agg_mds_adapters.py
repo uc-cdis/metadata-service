@@ -324,6 +324,70 @@ def test_get_metadata_icpsr():
 
 
 @respx.mock
+def test_drs_indexd():
+    json_data = [
+        {
+            "hints": [".*dg\\.XXTS.*"],
+            "host": "https://mytest1.commons.io/",
+            "name": "DataSTAGE",
+            "type": "indexd",
+        },
+        {
+            "hints": [".*dg\\.TSXX.*"],
+            "host": "https://commons2.io/index/",
+            "name": "Environmental DC",
+            "type": "indexd",
+        },
+    ]
+
+    expected = {
+        "info": {"created": "07/07/2022 15:28:46:UTC"},
+        "cache": {
+            "dg.XXTS": {
+                "host": "mytest1.commons.io",
+                "name": "DataSTAGE",
+                "type": "indexd",
+            },
+            "dg.TSXX": {
+                "host": "commons2.io",
+                "name": "Environmental DC",
+                "type": "indexd",
+            },
+        },
+    }
+
+    respx.get("http://test/index/_dist").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_data,
+        )
+    )
+
+    results = get_metadata(
+        "drs_indexd",
+        "http://test",
+        filters=None,
+    )
+
+    assert results["cache"] == expected["cache"]
+
+    respx.get("http://test/index/_dist").mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json=None,
+        )
+    )
+
+    results = get_metadata(
+        "drs_indexd",
+        "http://test",
+        filters=None,
+    )
+
+    assert results == {"results": {}}
+
+
+@respx.mock
 def test_get_metadata_clinicaltrials():
     json_response = r"""{
   "FullStudiesResponse":{
@@ -4203,7 +4267,7 @@ def test_get_metadata_harvard_dataverse():
             mappings=field_mappings,
         )
     except Exception as exc:
-        assert isinstance(exc, RetryError) == True
+        assert isinstance(exc, RetryError) is True
 
 
 def test_missing_adapter():

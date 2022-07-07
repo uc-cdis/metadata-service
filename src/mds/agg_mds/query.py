@@ -20,7 +20,7 @@ async def get_commons(what: str):
     """
     Returns information from the aggregate metadata service.
     """
-    res = await datastore.get_commons_attribute(what, "")
+    res = await datastore.get_commons_attribute(what)
     if res:
         return res
     else:
@@ -41,8 +41,6 @@ async def metadata(
         True, description="Return the results without grouping items by commons."
     ),
 ):
-    # TODO WFH How to properly return this? We think grouping by MDS is probably
-    #  not ideal in reality. We already have commons_name in the results.
     """
     Returns all metadata from all registered commons in the form:
     {
@@ -71,7 +69,7 @@ async def metadata(
           ...
         },
     """
-    return await datastore.get_all_metadata(limit, offset, counts=None, flatten=flatten)
+    return await datastore.get_all_metadata(limit, offset, None, flatten)
 
 
 @mod.get("/aggregate/metadata")
@@ -136,7 +134,7 @@ async def metadata_info(name: str):
     """
     Returns information from the named commons.
     """
-    res = await datastore.get_commons_attribute(name, "info")
+    res = await datastore.get_commons_attribute(name)
     if res:
         return res
     else:

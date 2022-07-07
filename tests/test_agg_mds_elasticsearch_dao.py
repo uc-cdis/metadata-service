@@ -9,7 +9,7 @@ from mds.agg_mds.datastore.elasticsearch_dao import (
     CONFIG,
     SEARCH_CONFIG,
 )
-from elasticsearch import Elasticsearch, exceptions as es_exceptions
+from elasticsearch import exceptions as es_exceptions
 from mds.config import ES_RETRY_LIMIT, ES_RETRY_INTERVAL
 
 COMMON_MAPPING = {
@@ -97,7 +97,6 @@ async def test_create_if_exists():
 
 @pytest.mark.asyncio
 async def test_create_index_raise_exception():
-
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
         MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
@@ -265,7 +264,7 @@ async def test_get_commons_attribute():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client", MagicMock()
     ) as mock_client:
-        await elasticsearch_dao.get_commons_attribute("my-commons", "attribute")
+        await elasticsearch_dao.get_commons_attribute("my-commons")
         mock_client.search.assert_called_with(
             index="default_namespace-commons-info-index",
             body={"query": {"terms": {"_id": ["my-commons"]}}},
@@ -275,10 +274,7 @@ async def test_get_commons_attribute():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
     ) as mock_search:
-        assert (
-            await elasticsearch_dao.get_commons_attribute("my-commons", "attribute")
-            == None
-        )
+        assert await elasticsearch_dao.get_commons_attribute("my-commons") is None
 
 
 @pytest.mark.asyncio

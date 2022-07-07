@@ -40,8 +40,6 @@ FieldDefinition = TypeVar("FieldDefinition")
 
 
 def string_to_array(s: str) -> Optional[List[str]]:
-    if s is None:
-        return None
     if s == "":
         return []
     return [s]
@@ -97,7 +95,7 @@ class FieldDefinition:
         "string_to_number": string_to_number,
         "string_to_integer": string_to_integer,
         "string_to_object": string_to_dict,
-        "dict_to_array": dict_to_array,
+        "object_to_array": dict_to_array,
         "string_to_array": string_to_array,
     }
 

@@ -1,6 +1,6 @@
 import asyncio
 from argparse import Namespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
 from mds.agg_mds.commons import MDSInstance, ColumnsToFields, Commons, parse_config
@@ -244,9 +244,10 @@ async def filter_entries(
     return filtered
 
 
-def parse_config_from_file(path: Path) -> Commons:
+def parse_config_from_file(path: Path) -> Optional[Commons]:
     if not path.exists():
         logger.error(f"configuration file: {path} does not exist")
+        return None
     try:
         return parse_config(path.read_text())
     except IOError as ex:

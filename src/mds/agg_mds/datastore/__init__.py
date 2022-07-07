@@ -70,15 +70,3 @@ async def get_commons():
 
 async def get_all_metadata(*args):
     return await client.get_all_metadata(*args)
-
-
-async def get_aggregations(*args):
-    return await client.get_aggregations(*args)
-
-
-async def get_number_aggregations(*args):
-    return await client.get_number_aggregation_for_field(*args)
-
-
-async def search(*args):
-    return await client.search(*args)
