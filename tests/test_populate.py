@@ -101,6 +101,7 @@ async def test_main():
     patch.object(datastore, "init", AsyncMock()).start()
     patch.object(datastore, "drop_all", AsyncMock()).start()
     patch.object(datastore, "create_indexes", AsyncMock()).start()
+    patch.object(datastore, "index", AsyncMock()).start()
     patch.object(datastore, "get_status", AsyncMock(return_value="OK")).start()
     patch.object(datastore, "close", AsyncMock()).start()
     patch.object(datastore, "update_global_info", AsyncMock()).start()
