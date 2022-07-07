@@ -1,9 +1,21 @@
 from more_itertools import side_effect
 import respx
 import json
-from mds.agg_mds.adapters import get_metadata, get_json_path_value
+from mds.agg_mds.adapters import (
+    get_metadata,
+    get_json_path_value,
+    strip_email,
+    strip_html,
+    add_icpsr_source_url,
+)
 from tenacity import RetryError, wait_none
 import httpx
+
+
+def test_filters_with_bad_entries():
+    assert strip_email(100) == 100
+    assert strip_html(99) == 99
+    assert add_icpsr_source_url(77) == 77
 
 
 @respx.mock

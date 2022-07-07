@@ -337,6 +337,10 @@ def test_normalization():
     val = FieldDefinition(type="string", default="hi")
     val.has_default_value() == "hi"
 
+    val = FieldDefinition(type="string")
+    assert val.normalize_value(["hello", "how", "are", "you"]) == "hellohowareyou"
+    assert val.normalize_value(None) is None
+
 
 def test_mds_instance():
     val = MDSInstance(
