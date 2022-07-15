@@ -229,7 +229,7 @@ class Settings:
 @dataclass_json
 @dataclass
 class Config:
-    settings: Optional[Dict[str, Settings]] = field(default_factory=dict)
+    settings: Optional[Settings] = field(default_factory=dict)
     schema: Optional[Dict[str, FieldDefinition]] = field(default_factory=dict)
     aggregations: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)
     search_settings: Optional[Dict[str, FieldAggregation]] = field(default_factory=dict)

@@ -6,6 +6,7 @@ from mds.agg_mds.commons import (
     parse_config,
     Commons,
     Config,
+    Settings,
     ColumnsToFields,
     FieldDefinition,
     MDSInstance,
@@ -253,6 +254,7 @@ def test_parse_config():
     )
     expected = Commons(
         configuration=Config(
+            settings=Settings(),
             schema={
                 "_subjects_count": FieldDefinition(type="integer"),
                 "year_awarded": FieldDefinition(type="integer"),
@@ -272,7 +274,7 @@ def test_parse_config():
                 "study_url": FieldDefinition(type="string"),
                 "commons_url": FieldDefinition(type="string"),
                 "authz": FieldDefinition(type="string"),
-            }
+            },
         ),
         gen3_commons={
             "my_gen3_commons": MDSInstance(

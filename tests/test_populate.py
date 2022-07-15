@@ -13,6 +13,7 @@ from mds.agg_mds.commons import (
     AdapterMDSInstance,
     MDSInstance,
     Commons,
+    Settings,
     FieldDefinition,
     Config,
 )
@@ -140,10 +141,11 @@ async def test_populate_main():
     await main(
         Commons(
             configuration=Config(
+                settings=Settings(),
                 schema={
                     "_subjects_count": FieldDefinition(type="integer"),
                     "year_awarded": FieldDefinition(type="integer"),
-                }
+                },
             ),
             gen3_commons={
                 "my_commons": MDSInstance(
@@ -213,7 +215,7 @@ def test_parse_config_from_file():
                     "schema": {
                         "_subjects_count": {"type": "integer"},
                         "study_description": {},
-                    }
+                    },
                 },
                 "gen3_commons": {
                     "mycommons": {
@@ -244,10 +246,11 @@ def test_parse_config_from_file():
         config.to_json()
         == Commons(
             configuration=Config(
+                settings=Settings(),
                 schema={
                     "_subjects_count": FieldDefinition(type="integer"),
                     "study_description": FieldDefinition(type="string"),
-                }
+                },
             ),
             gen3_commons={
                 "mycommons": MDSInstance(
