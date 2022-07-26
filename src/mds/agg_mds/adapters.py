@@ -873,6 +873,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
         results = {}
         for guid, record in data["results"].items():
+            if study_field not in record:
+                logger.error(f"Study field not in record. Skipping")
+                continue
             item = Gen3Adapter.addGen3ExpectedFields(
                 record[study_field],
                 mappings,
