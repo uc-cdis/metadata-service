@@ -223,14 +223,12 @@ class MPSAdapter(RemoteMetadataAdapter):
                     logger.error(
                         f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
                     )
-                except ValueError as exc:
-                    logger.error(
-                        f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
-                    )
+                    break
                 except Exception as exc:
                     logger.error(
                         f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
                     )
+                    break
 
         return results
 

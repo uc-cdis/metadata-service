@@ -3056,10 +3056,47 @@ def test_get_metadata_mps():
         == {}
     )
 
-    respx.get(
-        "http://test/ok/23/",
-        status_code=200,
-        content=json_response,
+    # Test remote client-side error handling
+    respx.get("http://test/err404/23/").mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json={},
+        )
+    )
+    assert (
+        get_metadata(
+            "mps",
+            "http://test/err404",
+            filters={"study_ids": [23]},
+            mappings=field_mappings,
+            keepOriginalFields=False,
+        )
+        == {}
+    )
+
+    # Test general exception handling
+    respx.get("http://test/textresponse/23/").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            text="hello!",
+        )
+    )
+    assert (
+        get_metadata(
+            "mps",
+            "http://test/textresponse",
+            filters={"study_ids": [23]},
+            mappings=field_mappings,
+            keepOriginalFields=False,
+        )
+        == {}
+    )
+
+    respx.get("http://test/ok/23/").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_response,
+        )
     )
 
     assert get_metadata(
@@ -3192,14 +3229,13 @@ def test_get_metadata_mps():
 
         MPSAdapter.getRemoteDataAsJson.retry.wait = wait_none()
 
-        respx.get(
-            "http://test/timeouterror23",
-            content=httpx.TimeoutException,
+        respx.get("http://test/timeouterror/23/",).mock(
+            side_effect=httpx.TimeoutException,
         )
 
         get_metadata(
             "mps",
-            "http://test/timeouterror23",
+            "http://test/timeouterror",
             filters={"study_ids": [23]},
             mappings=field_mappings,
             keepOriginalFields=True,
