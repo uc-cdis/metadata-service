@@ -57,6 +57,14 @@ async def search_metadata(
         {"a": {"b": {"d": 5}}}
         {"a": {"b": {"c": "333", "d": 4}}}
 
+    To query all rows with a given key, regardless of value, use the "*" wildcard. For example:
+
+        GET /metadata?a=* or GET /metadata?a.b=*
+
+    Note that only a single asterisk is supported, not true wildcarding. For
+    example: `?a=1.*` will only match the exact string `"1.*"`.
+
+    To query rows with a value of `"*"` exactly, escape the asterisk. For example: `?a=\*`.
     """
     limit = min(limit, 2000)
     queries = {}
@@ -66,9 +74,18 @@ async def search_metadata(
 
     def add_filter(query):
         for path, values in queries.items():
-            query = query.where(
-                db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-            )
+            if "*" in values:
+                # query all records with a value for this path
+                path = list(path.split("."))
+                field = path.pop()
+                query = query.where(Metadata.data[path].has_key(field))
+            else:
+                values = ["*" if v == "\*" else v for v in values]
+                query = query.where(
+                    db.or_(
+                        Metadata.data[list(path.split("."))].astext == v for v in values
+                    )
+                )
         return query.offset(offset).limit(limit)
 
     if data:

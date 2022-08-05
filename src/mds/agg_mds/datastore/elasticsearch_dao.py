@@ -94,7 +94,7 @@ def normalize_field(doc, key, normalize_type):
             doc[key] = None if value is "" else json.loads(value)
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
-    except:
+    except Exception:
         logger.debug(f"error normalizing {key} for a document")
         doc[key] = None
 
