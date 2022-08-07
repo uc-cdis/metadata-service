@@ -1,5 +1,8 @@
 import pytest
 
+from mds import config
+from mds.objects import FORBIDDEN_IDS
+
 
 @pytest.mark.parametrize("key", ["test_create", "dg.1234/test_create"])
 def test_create(client, key):
@@ -23,6 +26,21 @@ def test_create(client, key):
         client.delete("/metadata/" + key)
 
 
+@pytest.mark.parametrize(
+    "forbidden_id",
+    FORBIDDEN_IDS,
+)
+def test_create_forbidden_guid(client, forbidden_id):
+    data = dict(a=1, b=2)
+    resp = client.post(f"/metadata/{forbidden_id}", json=data)
+
+    assert resp.status_code == 400
+    assert resp.json().get("detail")
+
+    resp = client.get(f"/metadata/{forbidden_id}")
+    assert resp.json().get("detail")
+
+
 def test_batch_create(client):
     data = dict(a=1, b=2)
     try:
@@ -33,6 +51,7 @@ def test_batch_create(client):
         assert len(resp.json()["created"]) == 64
         assert len(resp.json()["updated"]) == 0
         assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 0
 
         resp = client.post(
             "/metadata", json=[dict(guid=f"tbc_{i}", data=data) for i in range(32, 96)]
@@ -41,6 +60,7 @@ def test_batch_create(client):
         assert len(resp.json()["created"]) == 32
         assert len(resp.json()["updated"]) == 32
         assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 0
 
         resp = client.post(
             "/metadata?overwrite=false",
@@ -50,6 +70,52 @@ def test_batch_create(client):
         assert len(resp.json()["created"]) == 32
         assert len(resp.json()["updated"]) == 0
         assert len(resp.json()["conflict"]) == 32
+        assert len(resp.json()["bad_input"]) == 0
+
+    finally:
+        for i in range(128):
+            client.delete(f"/metadata/tbc_{i}")
+
+
+@pytest.mark.parametrize(
+    "forbidden_id",
+    FORBIDDEN_IDS,
+)
+def test_batch_create_forbidden_guid(client, forbidden_id):
+    data = dict(a=1, b=2)
+    batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64)]
+    batch_data.append({"guid": forbidden_id, "data": data})
+    data = dict(a=1, b=2)
+    batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64)]
+    batch_data.append({"guid": forbidden_id, "data": data})
+    try:
+        resp = client.post("/metadata", json=batch_data)
+        resp.raise_for_status()
+        assert len(resp.json()["created"]) == 64
+        assert len(resp.json()["updated"]) == 0
+        assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 1
+
+        batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(32, 96)]
+        batch_data.append({"guid": forbidden_id, "data": data})
+        resp = client.post("/metadata", json=batch_data)
+        resp.raise_for_status()
+        assert len(resp.json()["created"]) == 32
+        assert len(resp.json()["updated"]) == 32
+        assert len(resp.json()["conflict"]) == 0
+        assert len(resp.json()["bad_input"]) == 1
+
+        batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64, 128)]
+        batch_data.append({"guid": forbidden_id, "data": data})
+        resp = client.post(
+            "/metadata?overwrite=false",
+            json=batch_data,
+        )
+        resp.raise_for_status()
+        assert len(resp.json()["created"]) == 32
+        assert len(resp.json()["updated"]) == 0
+        assert len(resp.json()["conflict"]) == 32
+        assert len(resp.json()["bad_input"]) == 1
 
     finally:
         for i in range(128):

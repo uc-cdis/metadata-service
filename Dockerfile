@@ -1,15 +1,16 @@
-FROM quay.io/cdis/python:3.7-alpine as base
+FROM quay.io/cdis/python:python3.9-buster-2.0.0 as base
 
 FROM base as builder
-RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev make postgresql-dev git curl rust cargo
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+RUN pip install --upgrade pip poetry
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    build-essential gcc make musl-dev libffi-dev libssl-dev git curl bash
+
 COPY . /src/
 WORKDIR /src
-RUN python -m venv /env && . /env/bin/activate && $HOME/.poetry/bin/poetry install --no-interaction
+RUN python -m venv /env && . /env/bin/activate && poetry install --no-interaction --no-dev
 
 FROM base
-RUN apk add --no-cache postgresql-libs curl
-COPY --from=builder /root/.poetry /root/.poetry
 COPY --from=builder /env /env
 COPY --from=builder /src /src
 ENV PATH="/env/bin/:${PATH}"

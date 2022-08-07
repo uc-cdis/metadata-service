@@ -113,7 +113,12 @@ paths:
         : 4}}}\n    {\"a\": {\"b\": {\"c\": \"3\", \"d\": 4, \"e\": 5}}}\n\nBut won't\
         \ match these:\n\n    {\"a\": {\"b\": {\"c\": 3}}}\n    {\"a\": {\"b\": {\"\
         c\": 3, \"d\": 5}}}\n    {\"a\": {\"b\": {\"d\": 5}}}\n    {\"a\": {\"b\"\
-        : {\"c\": \"333\", \"d\": 4}}}"
+        : {\"c\": \"333\", \"d\": 4}}}\n\nTo query all rows with a given key, regardless\
+        \ of value, use the \"*\" wildcard. For example:\n\n    GET /metadata?a=*\
+        \ or GET /metadata?a.b=*\n\nNote that only a single asterisk is supported,\
+        \ not true wildcarding. For\nexample: `?a=1.*` will only match the exact string\
+        \ `\"1.*\"`.\n\nTo query rows with a value of `\"*\"` exactly, escape the\
+        \ asterisk. For example: `?a=\\*`."
       operationId: search_metadata_metadata_get
       parameters:
       - description: Switch to returning a list of GUIDs (false), or GUIDs mapping
@@ -411,14 +416,14 @@ paths:
       summary: Create Metadata Indexes
       tags:
       - Index
-  /objects:
+  /objects/upload:
     post:
       description: "Create object placeholder and attach metadata, return Upload url\
         \ to the user.\n\nArgs:\n    body (CreateObjInput): input body for create\
         \ object\n    request (Request): starlette request (which contains reference\
         \ to FastAPI app)\n    token (HTTPAuthorizationCredentials, optional): bearer\
         \ token"
-      operationId: create_object_objects_post
+      operationId: create_object_objects_upload_post
       requestBody:
         content:
           application/json:
@@ -444,14 +449,16 @@ paths:
       - Object
   /objects/{guid}:
     delete:
-      description: "Delete the metadata for the specified object. Remove the object\
-        \ from\nexisting bucket location(s) by proxying to fence DELETE /data/file_id.\n\
-        Uses the response status code from fence to determine whether user has\npermission\
-        \ to delete metadata.\n\nArgs:\n    guid (str): indexd GUID or alias, or MDS\
-        \ key\n    request (Request): starlette request (which contains reference\
-        \ to FastAPI app)\nReturns:\n    204: if record and metadata are deleted\n\
-        \    403: if fence returns a 403 unauthorized response\n    500: if fence\
-        \ does not return 204 or 403 or there is an error deleting metadata"
+      description: "Delete the metadata for the specified object and also delete the\
+        \ record from indexd.\n[Optional] Remove the object from existing bucket location(s)\
+        \ by proxying to\nfence DELETE /data/file_id by using an additional query\
+        \ parameter `delete_file_locations`.\nUses the response status code from fence/indexd\
+        \ to determine whether user has\npermission to delete metadata.\n\nArgs:\n\
+        \    guid (str): indexd GUID or alias, or MDS key\n    request (Request):\
+        \ starlette request (which contains reference to FastAPI app)\nReturns:\n\
+        \    204: if record and metadata are deleted\n    403: if fence/indexd returns\
+        \ a 403 unauthorized response\n    500: if fence/indexd does not return 204\
+        \ or 403 or there is an error deleting metadata"
       operationId: delete_object_objects__guid__delete
       parameters:
       - in: path
