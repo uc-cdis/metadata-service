@@ -1,5 +1,29 @@
 components:
   schemas:
+    CreateAliasesForRecord:
+      description: "Aliases.\n\n\
+        aliases (list, optional): unique name to allow using in place of whatever\
+        \ GUID gets\n    created for this upload"
+      properties:
+        aliases:
+          items: {}
+          title: Aliases
+          type: array
+      required:
+      - aliases
+      title: CreateAliasesForRecord
+      type: object
+    DeleteAliasesForRecord:
+      description: "Aliases.\n\n\
+        aliases (list, optional): unique name to allow using in place of whatever\
+        \ GUID gets\n    created for this upload"
+      properties:
+        aliases:
+          items: {}
+          title: Aliases
+          type: array
+      title: DeleteAliasesForRecord
+      type: object
     CreateObjForIdInput:
       description: "Create object.\n\nfile_name (str): Name for the file being uploaded\n\
         aliases (list, optional): unique name to allow using in place of whatever\
@@ -346,6 +370,173 @@ paths:
       - HTTPBasic: []
       - HTTPBearer: []
       summary: Update Metadata
+      tags:
+      - Maintain
+  /metadata/{guid}/aliases/{alias}:
+    delete:
+      description: Delete the specified metadata alias of the GUID.
+      operationId: delete_metadata_metadata_alias__guid__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      - in: path
+        name: alias
+        required: true
+        schema:
+          title: Alias
+      responses:
+        '204':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete Metadata alias
+      tags:
+      - Maintain
+  /metadata/{guid}/aliases:
+    delete:
+      description: Delete all the metadata aliases of the GUID.
+      operationId: delete_metadata_metadata_alias__guid__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      responses:
+        '204':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete All Metadata aliases
+      tags:
+      - Maintain
+    get:
+      description: Get the metadata aliases of the GUID.
+      operationId: get_metadata_metadata_alias__guid__get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Metadata aliases
+      tags:
+      - Maintain
+    post:
+      description: Create metadata aliases for the GUID.
+      operationId: create_metadata_metadata_alias__guid__post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAliasesForRecord'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '409':
+          content:
+            application/json:
+              schema: {}
+          description: Conflict
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Create Metadata aliases
+      tags:
+      - Maintain
+    put:
+      description: 'Update the metadata alias of the GUID.'
+      operationId: update_metadata_metadata_alias__guid__put
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+      - in: query
+        name: merge
+        required: false
+        description: |
+            whether or not to merge provided aliases with an existing aliases.
+
+            NOTE: If merge is not provided, then aliases given will **FULLY REPLACE** existing ones
+        schema:
+          default: false
+          title: Merge
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAliasesForRecord'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Update Metadata alias
       tags:
       - Maintain
   /metadata_index:

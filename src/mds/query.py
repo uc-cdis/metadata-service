@@ -1,8 +1,9 @@
 from fastapi import HTTPException, Query, APIRouter
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
+from starlette.responses import JSONResponse
 
-from .models import db, Metadata
+from .models import db, Metadata, MetadataAlias
 
 mod = APIRouter()
 
@@ -100,6 +101,24 @@ async def search_metadata(
             .gino.return_model(False)
             .all()
         ]
+
+
+@mod.get("/metadata/{guid:path}/aliases")
+async def get_metadata_aliases(
+    guid: str,
+) -> JSONResponse:
+    """
+    Get the aliases for the provided GUID
+
+    Args:
+        guid (str): Metadata GUID
+    """
+    metadata_aliases = await MetadataAlias.query.where(
+        MetadataAlias.guid == guid
+    ).gino.all()
+
+    aliases = [metadata_alias.alias for metadata_alias in metadata_aliases]
+    return {"guid": guid, "aliases": sorted(aliases)}
 
 
 @mod.get("/metadata/{guid:path}")

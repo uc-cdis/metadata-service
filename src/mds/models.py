@@ -21,3 +21,16 @@ class Metadata(db.Model):
     guid = db.Column(db.Unicode(), primary_key=True)
     data = db.Column(JSONB())
     authz = db.Column(JSONB(), nullable=False)
+
+
+"""
+async for child in Child.load(parent=Parent).gino.iterate():
+    print(f'Parent of {child.id} is {child.parent.id}')
+"""
+
+
+class MetadataAlias(db.Model):
+    __tablename__ = "metadata_alias"
+
+    alias = db.Column(db.String(), primary_key=True)
+    guid = db.Column(db.Unicode(), db.ForeignKey("metadata.guid"), nullable=False)

@@ -42,6 +42,7 @@ nest-asyncio = "^1.5.1"
 "index" = "mds.index"
 "objects" = "mds.objects"
 "agg_mds" = "mds.agg_mds"
+"aliases" = "mds.aliases"
 
 [build-system]
 requires = ["poetry>=0.12"]
