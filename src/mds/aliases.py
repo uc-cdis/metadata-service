@@ -1,7 +1,11 @@
-"""Summary
+"""
+Support for aliases (alternative, unique names) for Metadata blobs
+that already have a Globally Unique IDentifier (GUID).
 
-Attributes:
-    mod (TYPE): Description
+It is always more efficient to use GUIDs as primary method 
+for naming blobs. However in cases where you want multiple identifiers 
+to point to the same blob, aliases allow that without duplicating the
+actual blob.
 """
 import json
 import re
@@ -34,7 +38,7 @@ class AliasObjInput(BaseModel):
     """
     Alias object
 
-    aliases (list, optional): unique name to allow using in place of whatever GUID
+    aliases (list, optional): unique names to allow using in place of whatever GUID
         specified
     """
 
@@ -89,7 +93,8 @@ async def update_metadata_alias(
     request: Request,
     merge: bool = False,
 ) -> JSONResponse:
-    """Update the metadata aliases of the GUID.
+    """
+    Update the metadata aliases of the GUID.
 
     If `merge` is True, then any top-level keys that are not in the new data will be
     kept, and those that also exist in the new data will be replaced completely. This
@@ -146,7 +151,8 @@ async def delete_metadata_alias(
     alias: str,
     request: Request,
 ) -> JSONResponse:
-    """Delete the specified metadata_alias of the GUID.
+    """
+    Delete the specified metadata_alias of the GUID.
 
     Args:
         guid (str): Metadata GUID
@@ -173,7 +179,8 @@ async def delete_all_metadata_aliases(
     guid: str,
     request: Request,
 ) -> JSONResponse:
-    """Delete all metadata_aliases of the GUID.
+    """
+    Delete all metadata_aliases of the GUID.
 
     Args:
         guid (str): Metadata GUID

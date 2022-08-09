@@ -125,10 +125,25 @@ async def get_metadata_aliases(
 async def get_metadata(guid):
     """Get the metadata of the GUID."""
     metadata = await Metadata.get(guid)
-    if metadata:
-        return metadata.data
-    else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+    if not metadata:
+        # check if it's an alias
+        alias = guid
+        metadata_alias = await MetadataAlias.query.where(
+            MetadataAlias.alias == alias
+        ).gino.first()
+
+        if not metadata_alias:
+            raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+        # get metadata for guid based on alias
+        metadata = await Metadata.get(metadata_alias.guid)
+    
+        if not metadata:
+            raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+    return metadata.data
+
 
 
 def init_app(app):
