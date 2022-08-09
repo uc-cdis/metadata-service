@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch, exceptions as es_exceptions
+from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
 from typing import List, Dict, Optional, Tuple
 from math import ceil
 from mds import logger
@@ -6,12 +6,15 @@ from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
+AGG_MDS_INDEX_TEMP = f"{AGG_MDS_NAMESPACE}-commons-index-temp"
 
 AGG_MDS_INFO_INDEX = f"{AGG_MDS_NAMESPACE}-commons-info-index"
 AGG_MDS_INFO_TYPE = "commons-info"
+AGG_MDS_INFO_INDEX_TEMP = f"{AGG_MDS_NAMESPACE}-commons-info-index-temp"
 
 AGG_MDS_CONFIG_INDEX = f"{AGG_MDS_NAMESPACE}-commons-config-index"
 AGG_MDS_CONFIG_TYPE = "commons-config"
+AGG_MDS_CONFIG_INDEX_TEMP = f"{AGG_MDS_NAMESPACE}-commons-config-index-temp"
 
 # Setting Commons Info ES index to only store documents
 # will not be searching on it
@@ -80,6 +83,27 @@ async def drop_all():
         logger.debug(f"deleted index: {index}: {res}")
 
 
+async def drop_all_temp_indexes():
+    for index in [
+        AGG_MDS_INDEX_TEMP,
+        AGG_MDS_INFO_INDEX_TEMP,
+        AGG_MDS_CONFIG_INDEX_TEMP,
+    ]:
+        res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
+        logger.debug(f"deleted index: {index}: {res}")
+
+
+async def clone_temp_indexes_to_real_indexes():
+    for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
+        source_index = index + "-temp"
+        reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
+        logger.debug(f"Cloning index: {source_index} to {index}...")
+        res = Elasticsearch.reindex(elastic_search_client, reqBody)
+        # Elasticsearch >7.4 introduces the clone api we could use later on
+        # res = elastic_search_client.indices.clone(index=source_index, target=index)
+        logger.debug(f"Cloned index: {source_index} to {index}: {res}")
+
+
 async def create_indexes(common_mapping: dict):
     try:
         mapping = {**SEARCH_CONFIG, **common_mapping}
@@ -118,6 +142,46 @@ async def create_indexes(common_mapping: dict):
             raise ex
 
 
+async def create_temp_indexes(common_mapping: dict):
+    try:
+        mapping = {**SEARCH_CONFIG, **common_mapping}
+        res = elastic_search_client.indices.create(
+            index=AGG_MDS_INDEX_TEMP, body=mapping
+        )
+        logger.debug(f"created index {AGG_MDS_INDEX_TEMP}: {res}")
+    except es_exceptions.RequestError as ex:
+        if ex.error == "resource_already_exists_exception":
+            logger.warning(f"index already exists: {AGG_MDS_INDEX_TEMP}")
+            pass  # Index already exists. Ignore.
+        else:  # Other exception - raise it
+            raise ex
+
+    try:
+        res = elastic_search_client.indices.create(
+            index=AGG_MDS_INFO_INDEX_TEMP, body=INFO_MAPPING
+        )
+        logger.debug(f"created index {AGG_MDS_INFO_INDEX_TEMP}: {res}")
+
+    except es_exceptions.RequestError as ex:
+        if ex.error == "resource_already_exists_exception":
+            logger.warning(f"index already exists: {AGG_MDS_INFO_INDEX_TEMP}")
+            pass  # Index already exists. Ignore.
+        else:  # Other exception - raise it
+            raise ex
+
+    try:
+        res = elastic_search_client.indices.create(
+            index=AGG_MDS_CONFIG_INDEX_TEMP, body=CONFIG
+        )
+        logger.debug(f"created index {AGG_MDS_CONFIG_INDEX_TEMP}: {res}")
+    except es_exceptions.RequestError as ex:
+        if ex.error == "resource_already_exists_exception":
+            logger.warning(f"index already exists: {AGG_MDS_CONFIG_INDEX_TEMP}")
+            pass  # Index already exists. Ignore.
+        else:  # Other exception - raise it
+            raise ex
+
+
 async def update_metadata(
     name: str,
     data: List[Dict],
@@ -146,15 +210,58 @@ async def update_metadata(
             print(ex)
 
 
+async def update_metadata_to_temp_index(
+    name: str,
+    data: List[Dict],
+    guid_arr: List[str],
+    tags: Dict[str, List[str]],
+    info: Dict[str, str],
+    study_data_field: str,
+):
+    elastic_search_client.index(
+        index=AGG_MDS_INFO_INDEX_TEMP,
+        doc_type=AGG_MDS_INFO_TYPE,
+        id=name,
+        body=info,
+    )
+
+    for doc in data:
+        key = list(doc.keys())[0]
+        # Flatten out this structure
+        doc = doc[key][study_data_field]
+
+        try:
+            elastic_search_client.index(
+                index=AGG_MDS_INDEX_TEMP, doc_type=AGG_MDS_TYPE, id=key, body=doc
+            )
+        except Exception as ex:
+            print(ex)
+
+
 async def update_global_info(key, doc) -> None:
     elastic_search_client.index(
         index=AGG_MDS_INFO_INDEX, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
     )
 
 
+async def update_global_info_to_temp_index(key, doc) -> None:
+    elastic_search_client.index(
+        index=AGG_MDS_INFO_INDEX_TEMP, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
+    )
+
+
 async def update_config_info(doc) -> None:
     elastic_search_client.index(
         index=AGG_MDS_CONFIG_INDEX,
+        doc_type="_doc",
+        id=AGG_MDS_INDEX,
+        body=doc,
+    )
+
+
+async def update_config_info_to_temp_index(doc) -> None:
+    elastic_search_client.index(
+        index=AGG_MDS_CONFIG_INDEX_TEMP,
         doc_type="_doc",
         id=AGG_MDS_INDEX,
         body=doc,

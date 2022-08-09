@@ -27,7 +27,7 @@ def parse_args(argv: List[str]) -> Namespace:
     return known_args
 
 
-async def populate_metadata(name: str, common, results):
+async def populate_metadata(name: str, common, results, populate_to_temp_index=False):
     mds_arr = [{k: v} for k, v in results.items()]
 
     total_items = len(mds_arr)
@@ -87,10 +87,14 @@ async def populate_metadata(name: str, common, results):
 
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
-
-    await datastore.update_metadata(
-        name, mds_arr, keys, tags, info, common.study_data_field
-    )
+    if not populate_to_temp_index:
+        await datastore.update_metadata(
+            name, mds_arr, keys, tags, info, common.study_data_field
+        )
+    else:
+        await datastore.update_metadata_to_temp_index(
+            name, mds_arr, keys, tags, info, common.study_data_field
+        )
 
 
 async def populate_info(commons_config: Commons) -> None:
@@ -108,16 +112,38 @@ async def populate_info(commons_config: Commons) -> None:
     await populate_drs_info(commons_config)
 
 
-async def populate_drs_info(commons_config: Commons) -> None:
+async def populate_info_to_temp_index(commons_config: Commons) -> None:
+    agg_info = {
+        key: value.to_dict() for key, value in commons_config.aggregations.items()
+    }
+    await datastore.update_global_info_to_temp_index("aggregations", agg_info)
+
+    if commons_config.configuration.schema:
+        json_schema = {
+            k: v.to_schema(all_fields=True)
+            for k, v in commons_config.configuration.schema.items()
+        }
+        await datastore.update_global_info_to_temp_index("schema", json_schema)
+    await populate_drs_info(commons_config, populate_to_temp_index=True)
+
+
+async def populate_drs_info(
+    commons_config: Commons, populate_to_temp_index=False
+) -> None:
     if commons_config.configuration.settings.cache_drs:
         server = commons_config.configuration.settings.drs_indexd_server
         if server is not None:
             drs_data = adapters.get_metadata("drs_indexd", server, None)
             for id, entry in drs_data.get("cache", {}).items():
-                await datastore.update_global_info(id, entry)
+                if not populate_to_temp_index:
+                    await datastore.update_global_info(id, entry)
+                else:
+                    await datastore.update_global_info_to_temp_index(id, entry)
 
 
-async def populate_config(commons_config: Commons) -> None:
+async def populate_config(
+    commons_config: Commons, populate_to_temp_index=False
+) -> None:
     array_definition = {
         "array": [
             field
@@ -125,7 +151,10 @@ async def populate_config(commons_config: Commons) -> None:
             if value.type == "array"
         ]
     }
-    await datastore.update_config_info(array_definition)
+    if not populate_to_temp_index:
+        await datastore.update_config_info(array_definition)
+    else:
+        await datastore.update_config_info_to_temp_index(array_definition)
 
 
 async def main(commons_config: Commons) -> None:
@@ -169,37 +198,67 @@ async def main(commons_config: Commons) -> None:
         }
     }
 
-    await datastore.drop_all()  # TODO: rename indexes to old
-    await datastore.create_indexes(commons_mapping=field_mapping)
+    await datastore.drop_all_temp_indexes()
+    await datastore.create_temp_indexes(commons_mapping=field_mapping)
 
-    for name, common in commons_config.gen3_commons.items():
-        logger.info(f"Populating {name} using Gen3 MDS connector")
-        results = pull_mds(common.mds_url, common.guid_type)
-        logger.info(f"Received {len(results)} from {name}")
-        if len(results) > 0:
-            await populate_metadata(name, common, results)
+    mdsCount = 0
+    try:
+        for name, common in commons_config.gen3_commons.items():
+            logger.info(f"Populating {name} using Gen3 MDS connector")
+            results = pull_mds(common.mds_url, common.guid_type)
+            logger.info(f"Received {len(results)} from {name}")
+            if len(results) > 0:
+                mdsCount += len(results)
+                await populate_metadata(
+                    name, common, results, populate_to_temp_index=True
+                )
 
-    for name, common in commons_config.adapter_commons.items():
-        logger.info(f"Populating {name} using adapter: {common.adapter}")
-        results = adapters.get_metadata(
-            common.adapter,
-            common.mds_url,
-            common.filters,
-            common.config,
-            common.field_mappings,
-            common.per_item_values,
-            common.keep_original_fields,
-            common.global_field_filters,
-            schema=commons_config.configuration.schema,
+        for name, common in commons_config.adapter_commons.items():
+            logger.info(f"Populating {name} using adapter: {common.adapter}")
+            results = adapters.get_metadata(
+                common.adapter,
+                common.mds_url,
+                common.filters,
+                common.config,
+                common.field_mappings,
+                common.per_item_values,
+                common.keep_original_fields,
+                common.global_field_filters,
+                schema=commons_config.configuration.schema,
+            )
+            logger.info(f"Received {len(results)} from {name}")
+            if len(results) > 0:
+                mdsCount += len(results)
+                await populate_metadata(
+                    name, common, results, populate_to_temp_index=True
+                )
+
+        if mdsCount == 0:
+            raise ValueError("Could not obtain any metadata from any adapters.")
+
+        # populate global information index
+        await populate_info_to_temp_index(commons_config)
+        # populate array index information to support guppy
+        await populate_config(commons_config, populate_to_temp_index=True)
+
+    except Exception as ex:
+        logger.error(
+            "Error occurred during mds population. Existing indexes are left in place."
         )
-        logger.info(f"Received {len(results)} from {name}")
-        if len(results) > 0:
-            await populate_metadata(name, common, results)
+        logger.error(ex)
+        raise ex
 
-    # populate global information index
-    await populate_info(commons_config)
-    # populate array index information to support guppy
-    await populate_config(commons_config)
+    logger.info(f"Temp indexes populated successfully. Proceeding to clone")
+    # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
+    try:
+        await datastore.drop_all()  # TODO: rename indexes to old
+        await datastore.create_indexes(commons_mapping=field_mapping)
+        await datastore.clone_temp_indexes_to_real_indexes()
+        await datastore.drop_all_temp_indexes()
+    except Exception as ex:
+        logger.error("Error occurred during cloning.")
+        logger.error(ex)
+        raise ex
 
     res = await datastore.get_status()
     print(res)
