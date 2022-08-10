@@ -83,3 +83,52 @@ async def test_get_all_metadata():
     with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
         await datastore.get_all_metadata()
     mock_client.get_all_metadata.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_drop_all_temp_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.drop_all_temp_indexes()
+    mock_client.drop_all_temp_indexes.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_create_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.create_indexes("{}")
+    mock_client.create_indexes.assert_called_with("{}")
+
+
+@pytest.mark.asyncio
+async def test_create_temp_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.create_temp_indexes("{}")
+    mock_client.create_temp_indexes.assert_called_with("{}")
+
+
+@pytest.mark.asyncio
+async def test_clone_temp_indexes_to_real_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.clone_temp_indexes_to_real_indexes()
+    mock_client.clone_temp_indexes_to_real_indexes.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_update_metadata_to_temp_index():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.update_metadata_to_temp_index()
+    mock_client.update_metadata_to_temp_index.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_update_global_info_to_temp_index():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.update_global_info_to_temp_index()
+    mock_client.update_global_info_to_temp_index.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_update_config_info_to_temp_index():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.update_config_info_to_temp_index()
+    mock_client.update_config_info_to_temp_index.assert_called_with()
