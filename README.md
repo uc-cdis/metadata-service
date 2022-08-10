@@ -102,11 +102,11 @@ Run tests:
 docker-compose exec app pytest --cov=src --cov=migrations/versions tests
 ```
 ### Aggregate MDS
-For local development on OSX, install elasticsearch and ensure it is running.
+For local development ensure the docker container is up.
 
 testing populate:
 ```bash
-python src/mds/populate.py --config <config file> --hostname localhost --port 9200
+python src/mds/populate.py --config <config file>
 ```
 view the loaded data
 ```bash

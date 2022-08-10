@@ -34,16 +34,7 @@ async def test_parse_args():
         assert exception.code == 2
 
     known_args = parse_args(["--config", "some/file.json"])
-    assert known_args == Namespace(
-        config="some/file.json", hostname="localhost", port=6379
-    )
-
-    known_args = parse_args(
-        ["--config", "some/file.json", "--hostname", "server", "--port", "1000"]
-    )
-    assert known_args == Namespace(
-        config="some/file.json", hostname="server", port=1000
-    )
+    assert known_args == Namespace(config="some/file.json")
 
 
 @pytest.mark.asyncio

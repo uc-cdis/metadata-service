@@ -19,10 +19,6 @@ def parse_args(argv: List[str]) -> Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="config file to use", type=str, required=True)
-    parser.add_argument(
-        "--hostname", help="hostname of server", type=str, default="localhost"
-    )
-    parser.add_argument("--port", help="port of server", type=int, default=6379)
     known_args, unknown_args = parser.parse_known_args(argv)
     return known_args
 
