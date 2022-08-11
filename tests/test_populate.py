@@ -87,6 +87,54 @@ async def test_populate_metadata():
 
 
 @pytest.mark.asyncio
+async def test_populate_metadata_to_temp_index():
+    with patch.object(
+        datastore, "update_metadata_to_temp_index", AsyncMock()
+    ) as mock_update:
+        await populate_metadata(
+            "my_commons",
+            MDSInstance(
+                mds_url="http://mds",
+                commons_url="http://commons",
+                columns_to_fields={"column1": "field1"},
+            ),
+            {
+                "id1": {
+                    "gen3_discovery": {
+                        "column1": "some data",
+                        "tags": [{"category": "my_category", "name": "my_name"}],
+                    }
+                }
+            },
+            True,
+        )
+
+        mock_update.assert_called_with(
+            "my_commons",
+            [
+                {
+                    "id1": {
+                        "gen3_discovery": {
+                            "column1": "some data",
+                            "tags": [
+                                {
+                                    "category": "my_category",
+                                    "name": "my_name",
+                                },
+                            ],
+                            "commons_name": "my_commons",
+                        }
+                    }
+                }
+            ],
+            ["id1"],
+            {"my_category": ["my_name"]},
+            {"commons_url": "http://commons"},
+            "gen3_discovery",
+        )
+
+
+@pytest.mark.asyncio
 async def test_populate_info():
     with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
         with NamedTemporaryFile(mode="w+", delete=False) as fp:
@@ -231,6 +279,47 @@ async def test_populate_config():
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config)
         mock_datastore.update_config_info.called_with(["_subjects_count"])
+
+
+@pytest.mark.asyncio
+async def test_populate_config_to_temp_index():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
+        with NamedTemporaryFile(mode="w+", delete=False) as fp:
+            json.dump(
+                {
+                    "configuration": {
+                        "schema": {
+                            "_subjects_count": {"type": "array"},
+                            "study_description": {},
+                        },
+                    },
+                    "gen3_commons": {
+                        "mycommons": {
+                            "mds_url": "http://mds",
+                            "commons_url": "http://commons",
+                            "columns_to_fields": {
+                                "short_name": "name",
+                                "full_name": "full_name",
+                                "_subjects_count": "_subjects_count",
+                                "study_id": "study_id",
+                                "_unique_id": "_unique_id",
+                                "study_description": "study_description",
+                            },
+                        },
+                    },
+                    "adapter_commons": {
+                        "non-gen3": {
+                            "mds_url": "http://non-gen3",
+                            "commons_url": "non-gen3",
+                            "adapter": "icpsr",
+                        }
+                    },
+                },
+                fp,
+            )
+        config = parse_config_from_file(Path(fp.name))
+        await populate_config(config, True)
+        mock_datastore.update_config_info_to_temp_index.called_with(["_subjects_count"])
 
 
 @respx.mock
