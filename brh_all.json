@@ -1,0 +1,285 @@
+{
+	"configuration": {
+		"schema": {
+			"_subjects_count": {
+				"type": "integer"
+			},
+			"__manifest": {
+				"type": "array",
+				"properties": {
+					"file_name": {
+						"type": "string"
+					},
+					"file_size": {
+						"type": "integer"
+					}
+				}
+			},
+			"tags": {
+				"type": "array"
+			},
+			"_unique_id": {},
+			"study_description": {},
+			"study_id": {},
+			"study_url": {},
+			"project_id": {},
+			"short_name": {},
+			"full_name": {},
+			"commons_url": {},
+			"commons" : {},
+			"authz": {
+				"type": "string"
+			}
+		},
+		"settings" : {
+			"cache_drs" : true
+		}
+	},
+	"adapter_commons": {
+		"IBD Commons": {
+			"mds_url": "https://ibdgc.datacommons.io/",
+			"commons_url" : "ibdgc.datacommons.io",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "my_metadata",
+				"study_field": "my_metadata"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:brief_summary",
+				"full_name": "path:dataset_title",
+				"short_name": "path:dataset_code",
+				"commons": "NIDDK IBD Genetics Consortium Data Commons",
+				"study_url": "path:link",
+				"_subjects_count" : "path:subjects_count",
+				"__manifest": "path:__manifest",
+				"commons_url" : "ibdgc.datacommons.io"
+			}
+		},
+		"BioData Catalyst": {
+			"mds_url": "https://gen3.biodatacatalyst.nhlbi.nih.gov/",
+			"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "gen3_discovery"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:study_id",
+				"study_id": "path:study_id",
+				"study_description": "path:study_description",
+				"full_name": "path:full_name",
+				"short_name": "path:short_name",
+				"commons": "BioData Catalyst",
+				"study_url": "path:dbgap_url",
+				"_subjects_count" : {"path":"_subjects_count", "default" : 0 },
+				"__manifest": "path:__manifest",
+				"commons_url" : "gen3.biodatacatalyst.nhlbi.nih.gov"
+			}
+		},
+		"MIDRC": {
+			"mds_url": "https://data.midrc.org/",
+			"commons_url" : "data.midrc.org",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "discovery_metadata"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:auth_resource_path",
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_publication_id",
+				"study_description": "path:study_description_summary",
+				"full_name": "path:study_name_title",
+				"short_name": "path:study_name_title",
+				"commons": "Medical Imaging and Data Resource Center (MIDRC)",
+				"study_url": "path:websites",
+				"_subjects_count" : {"path":"subjects_count", "default" : 0 },
+				"__manifest": "path:__manifest",
+				"commons_url" : "ibdgc.datacommons.io"
+			}
+		},
+		"NIAID ClinicalData": {
+			"mds_url": "https://accessclinicaldata.niaid.nih.gov/",
+			"commons_url" : "accessclinicaldata.niaid.nih.gov",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "my_metadata",
+				"study_field": "my_metadata"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "/open",
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:nct_number",
+				"study_description": "path:brief_summary",
+				"full_name": "path:title",
+				"short_name": "path:title",
+				"commons": "NCT",
+				"study_url": "path:publications",
+				"_subjects_count" : {
+					"path":"subjects_count",
+					"default_value": 0
+				},
+				"__manifest": "path:__manifest",
+				"commons_url" : "accessclinicaldata.niaid.nih.gov"
+			}
+		},
+		"JCOIN": {
+			"mds_url": "https://jcoin.datacommons.io/",
+			"commons_url" : "jcoin.datacommons.io/",
+			"adapter": "gen3",
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:project_number",
+				"study_id": "path:project_number",
+				"study_description": "path:study_description_summary",
+				"full_name": "path:project_title",
+				"short_name": "path:project_title",
+				"commons": "JCOIN",
+				"study_url": "path:publications",
+				"data_availability": "path:data_availability",
+				"_subjects_count" : {
+					"path":"subjects",
+					"default_value": 0
+				},
+				"__manifest": "path:__manifest",
+				"commons_url" : "jcoin.datacommons.io"
+			}
+		},
+		"AnVIL": {
+			"mds_url": "https://internalstaging.theanvil.io/",
+			"commons_url" : "gen3.theanvil.io",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "gen3_discovery"
+			},
+			"adapter": "gen3",
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:study_id",
+				"study_id": "path:study_id",
+				"study_description": "path:study_description",
+				"full_name": "path:full_name",
+				"short_name": "path:short_name",
+				"commons": "AnVIL",
+				"study_url": "path:publications",
+				"_subjects_count" : {"path":"_subjects_count", "default" : 0 },
+				"__manifest": "path:__manifest",
+				"commons_url" : "gen3.theanvil.io"
+			}
+		},
+		"Genomic Data Commons": {
+			"mds_url": "https://brh.data-commons.org/",
+			"commons_url" : "portal.gdc.cancer.gov",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "gen3_discovery",
+				"filters": "gen3_discovery.commons=Genomic Data Commons"
+			},
+			"adapter": "gen3",
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:study_description",
+				"full_name": "path:full_name",
+				"short_name": "N/A",
+				"commons": "GDC",
+				"study_url": "path:publications",
+				"_subjects_count" : {"path":"subjects_count", "default" : 0 },
+				"__manifest": "path:__manifest",
+				"commons_url" : "brh.data-commons.org"
+			}
+		},
+		"Proteomic Data Commons": {
+			"mds_url": "https://brh.data-commons.org/",
+			"commons_url" : "proteomic.datacommons.cancer.gov/pdc",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "gen3_discovery",
+				"filters": "gen3_discovery.commons=Proteomic Data Commons"
+			},
+			"adapter": "gen3",
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:study_description",
+				"full_name": "path:full_name",
+				"short_name": "N/A",
+				"commons": "Proteomic Data Commons",
+				"study_url": "path:publications",
+				"_subjects_count" : {"path":"subjects_count", "default" : 0 },
+				"__manifest": "path:__manifest",
+				"commons_url" : "proteomic.datacommons.cancer.gov/pdc"
+			}
+		},
+		"Cancer Imaging Data Commons": {
+			"mds_url": "https://brh.data-commons.org/",
+			"commons_url" : "imaging.datacommons.cancer.gov",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "gen3_discovery",
+				"filters": "gen3_discovery.commons=Cancer Imaging Data Commons"
+			},
+			"adapter": "gen3",
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:study_description",
+				"full_name": "path:full_name",
+				"short_name": "N/A",
+				"commons": "Cancer Imaging Data Commons",
+				"study_url": "path:publications",
+				"_subjects_count" : {"path":"subjects_count", "default" : 0 },
+				"__manifest": "path:__manifest",
+				"commons_url" : "imaging.datacommons.cancer.gov"
+			}
+		},
+		"Kids First": {
+			"mds_url": "https://gen3staging.kidsfirstdrc.org/",
+			"commons_url": "kidsfirstdrc.org",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "metadata_object",
+				"study_field": "dbgap"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"authz": "path:authz",
+				"tags": "path:gen3_discovery.tags",
+				"_unique_id": "path:_unique_id",
+				"study_id": "path:_unique_id",
+				"study_description": "path:description",
+				"full_name": "path:full_name",
+				"short_name": "path:full_name",
+				"commons": "Kids First Data Resource Center",
+				"study_url": "path:link",
+				"__manifest": "path:__manifest",
+				"commons_url" : "kidsfirstdrc.org"
+			}
+		}
+	}
+}

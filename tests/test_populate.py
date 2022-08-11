@@ -8,6 +8,10 @@ from mds.populate import (
     populate_metadata,
     main,
     filter_entries,
+    populate_info,
+    populate_info_to_temp_index,
+    populate_drs_info,
+    populate_config,
 )
 from mds.agg_mds.commons import (
     AdapterMDSInstance,
@@ -20,7 +24,7 @@ from mds.agg_mds.commons import (
 from mds.agg_mds import adapters
 from mds.agg_mds import datastore
 import json
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, call, MagicMock
 from conftest import AsyncMock
 from tempfile import NamedTemporaryFile
 from pathlib import Path
@@ -80,6 +84,153 @@ async def test_populate_metadata():
             {"commons_url": "http://commons"},
             "gen3_discovery",
         )
+
+
+@pytest.mark.asyncio
+async def test_populate_info():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
+        with NamedTemporaryFile(mode="w+", delete=False) as fp:
+            json.dump(
+                {
+                    "configuration": {
+                        "schema": {
+                            "_subjects_count": {"type": "integer"},
+                            "study_description": {},
+                        },
+                    },
+                    "gen3_commons": {
+                        "mycommons": {
+                            "mds_url": "http://mds",
+                            "commons_url": "http://commons",
+                            "columns_to_fields": {
+                                "short_name": "name",
+                                "full_name": "full_name",
+                                "_subjects_count": "_subjects_count",
+                                "study_id": "study_id",
+                                "_unique_id": "_unique_id",
+                                "study_description": "study_description",
+                            },
+                        },
+                    },
+                    "adapter_commons": {
+                        "non-gen3": {
+                            "mds_url": "http://non-gen3",
+                            "commons_url": "non-gen3",
+                            "adapter": "icpsr",
+                        }
+                    },
+                },
+                fp,
+            )
+        config = parse_config_from_file(Path(fp.name))
+        await populate_info(config)
+        mock_datastore.update_global_info.assert_has_calls(
+            [
+                call("aggregations", {}),
+                call(
+                    "schema",
+                    {
+                        "_subjects_count": {"type": "integer", "description": ""},
+                        "study_description": {"type": "string", "description": ""},
+                    },
+                ),
+            ],
+            any_order=True,
+        )
+
+
+@pytest.mark.asyncio
+async def test_populate_info_to_temp_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
+        with NamedTemporaryFile(mode="w+", delete=False) as fp:
+            json.dump(
+                {
+                    "configuration": {
+                        "schema": {
+                            "_subjects_count": {"type": "integer"},
+                            "study_description": {},
+                        },
+                    },
+                    "gen3_commons": {
+                        "mycommons": {
+                            "mds_url": "http://mds",
+                            "commons_url": "http://commons",
+                            "columns_to_fields": {
+                                "short_name": "name",
+                                "full_name": "full_name",
+                                "_subjects_count": "_subjects_count",
+                                "study_id": "study_id",
+                                "_unique_id": "_unique_id",
+                                "study_description": "study_description",
+                            },
+                        },
+                    },
+                    "adapter_commons": {
+                        "non-gen3": {
+                            "mds_url": "http://non-gen3",
+                            "commons_url": "non-gen3",
+                            "adapter": "icpsr",
+                        }
+                    },
+                },
+                fp,
+            )
+        config = parse_config_from_file(Path(fp.name))
+        await populate_info_to_temp_index(config)
+        mock_datastore.update_global_info_to_temp_index.assert_has_calls(
+            [
+                call("aggregations", {}),
+                call(
+                    "schema",
+                    {
+                        "_subjects_count": {"type": "integer", "description": ""},
+                        "study_description": {"type": "string", "description": ""},
+                    },
+                ),
+            ],
+            any_order=True,
+        )
+
+
+@pytest.mark.asyncio
+async def test_populate_config():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
+        with NamedTemporaryFile(mode="w+", delete=False) as fp:
+            json.dump(
+                {
+                    "configuration": {
+                        "schema": {
+                            "_subjects_count": {"type": "array"},
+                            "study_description": {},
+                        },
+                    },
+                    "gen3_commons": {
+                        "mycommons": {
+                            "mds_url": "http://mds",
+                            "commons_url": "http://commons",
+                            "columns_to_fields": {
+                                "short_name": "name",
+                                "full_name": "full_name",
+                                "_subjects_count": "_subjects_count",
+                                "study_id": "study_id",
+                                "_unique_id": "_unique_id",
+                                "study_description": "study_description",
+                            },
+                        },
+                    },
+                    "adapter_commons": {
+                        "non-gen3": {
+                            "mds_url": "http://non-gen3",
+                            "commons_url": "non-gen3",
+                            "adapter": "icpsr",
+                        }
+                    },
+                },
+                fp,
+            )
+        config = parse_config_from_file(Path(fp.name))
+        await populate_config(config)
+        mock_datastore.update_config_info.called_with(["_subjects_count"])
 
 
 @respx.mock
