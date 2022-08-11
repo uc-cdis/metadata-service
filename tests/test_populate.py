@@ -241,6 +241,100 @@ async def test_populate_info_to_temp_indexes():
 
 
 @pytest.mark.asyncio
+@respx.mock
+async def test_populate_drs_info():
+    mock_adapter = AsyncMock(return_value={})
+    patch("mds.agg_mds.adapters.get_metadata", mock_adapter)
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
+        with NamedTemporaryFile(mode="w+", delete=False) as fp:
+            json.dump(
+                {
+                    "configuration": {
+                        "schema": {
+                            "_subjects_count": {"type": "integer"},
+                            "study_description": {},
+                        },
+                        "settings": {
+                            "cache_drs": True,
+                            "drs_indexd_server": "http://test",
+                            "timestamp_entry": True,
+                        },
+                    },
+                },
+                fp,
+            )
+
+        json_data = [
+            {
+                "hints": [".*dg\\.XXTS.*"],
+                "host": "https://mytest1.commons.io/",
+                "name": "DataSTAGE",
+                "type": "indexd",
+            },
+            {
+                "hints": [".*dg\\.TSXX.*"],
+                "host": "https://commons2.io/index/",
+                "name": "Environmental DC",
+                "type": "indexd",
+            },
+        ]
+
+        respx.get("http://test/index/_dist").mock(
+            return_value=httpx.Response(
+                status_code=200,
+                json=json_data,
+            )
+        )
+
+        config = parse_config_from_file(Path(fp.name))
+        await populate_drs_info(config)
+        mock_datastore.update_global_info.assert_has_calls(
+            [
+                call(
+                    "dg.XXTS",
+                    {
+                        "host": "mytest1.commons.io",
+                        "name": "DataSTAGE",
+                        "type": "indexd",
+                    },
+                ),
+                call(
+                    "dg.TSXX",
+                    {
+                        "host": "commons2.io",
+                        "name": "Environmental DC",
+                        "type": "indexd",
+                    },
+                ),
+            ],
+            any_order=True,
+        )
+
+        await populate_drs_info(config, True)
+        mock_datastore.update_global_info_to_temp_index.assert_has_calls(
+            [
+                call(
+                    "dg.XXTS",
+                    {
+                        "host": "mytest1.commons.io",
+                        "name": "DataSTAGE",
+                        "type": "indexd",
+                    },
+                ),
+                call(
+                    "dg.TSXX",
+                    {
+                        "host": "commons2.io",
+                        "name": "Environmental DC",
+                        "type": "indexd",
+                    },
+                ),
+            ],
+            any_order=True,
+        )
+
+
+@pytest.mark.asyncio
 async def test_populate_config():
     with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
         with NamedTemporaryFile(mode="w+", delete=False) as fp:
