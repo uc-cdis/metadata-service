@@ -17,8 +17,20 @@ async def drop_all():
     await client.drop_all()
 
 
+async def drop_all_temp_indexes():
+    await client.drop_all_temp_indexes()
+
+
 async def create_indexes(commons_mapping):
     await client.create_indexes(commons_mapping)
+
+
+async def create_temp_indexes(commons_mapping):
+    await client.create_temp_indexes(commons_mapping)
+
+
+async def clone_temp_indexes_to_real_indexes():
+    await client.clone_temp_indexes_to_real_indexes()
 
 
 async def close():
@@ -36,12 +48,24 @@ async def update_metadata(*args):
     await client.update_metadata(*args)
 
 
+async def update_metadata_to_temp_index(*args):
+    await client.update_metadata_to_temp_index(*args)
+
+
 async def update_global_info(*args):
     await client.update_global_info(*args)
 
 
+async def update_global_info_to_temp_index(*args):
+    await client.update_global_info_to_temp_index(*args)
+
+
 async def update_config_info(*args):
     await client.update_config_info(*args)
+
+
+async def update_config_info_to_temp_index(*args):
+    await client.update_config_info_to_temp_index(*args)
 
 
 async def get_commons_metadata(*args):
