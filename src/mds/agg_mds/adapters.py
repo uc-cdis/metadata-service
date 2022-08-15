@@ -209,6 +209,9 @@ class RemoteMetadataAdapter(ABC):
                 field_value = FieldFilters.execute(f, field_value)
             if key in schema:
                 field_value = schema[key].normalize_value(field_value)
+            # set to default if conversion failed and a default value is available
+            if field_value is None and hasDefaultValue:
+                field_value = default_value
             results[key] = field_value
         return results
 
