@@ -32,6 +32,9 @@ jobs:
       run: |
         curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | python
         $HOME/.local/bin/poetry install
+    - name: Migrate database
+      run: |
+        alembic upgrade head
     - name: Test with pytest
       env:
         DB_HOST: localhost
