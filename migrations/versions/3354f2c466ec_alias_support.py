@@ -21,7 +21,12 @@ def upgrade():
     op.create_table(
         "metadata_alias",
         sa.Column("alias", sa.String(), primary_key=True),
-        sa.Column("guid", sa.Unicode(), sa.ForeignKey("metadata.guid"), nullable=False),
+        sa.Column(
+            "guid",
+            sa.Unicode(),
+            sa.ForeignKey("metadata.guid", ondelete="CASCADE"),
+            nullable=False,
+        ),
     )
 
 

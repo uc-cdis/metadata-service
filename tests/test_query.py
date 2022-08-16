@@ -15,25 +15,6 @@ def test_get(client, key):
         client.delete("/metadata/" + key)
 
 
-@pytest.mark.parametrize(
-    "guid,aliases",
-    [("test_get_aliases", ["alias_a"]), ("dg.1234/test_get_aliases", ["alias_b"])],
-)
-def test_post_get_aliases(client, guid, aliases):
-    data = dict(a=1, b=2)
-    client.post("/metadata/" + guid, json=data).raise_for_status()
-    client.post(
-        "/metadata/" + guid + "/aliases", json={"aliases": aliases}
-    ).raise_for_status()
-    try:
-        assert client.get("/metadata/" + guid).json() == data
-
-        resp = client.get("/metadata/{}_not_exist".format(guid))
-        assert resp.status_code == 404
-    finally:
-        client.delete("/metadata/" + guid)
-
-
 def test_query_data(client):
     data = dict(a=1, b=2)
     try:

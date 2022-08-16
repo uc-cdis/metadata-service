@@ -2,8 +2,8 @@
 Support for aliases (alternative, unique names) for Metadata blobs
 that already have a Globally Unique IDentifier (GUID).
 
-It is always more efficient to use GUIDs as primary method 
-for naming blobs. However in cases where you want multiple identifiers 
+It is always more efficient to use GUIDs as primary method
+for naming blobs. However in cases where you want multiple identifiers
 to point to the same blob, aliases allow that without duplicating the
 actual blob.
 """
@@ -25,6 +25,7 @@ from starlette.status import (
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
 )
+import urllib.parse
 
 from .admin_login import admin_required
 from .models import db, MetadataAlias, Metadata
@@ -96,10 +97,8 @@ async def update_metadata_alias(
     """
     Update the metadata aliases of the GUID.
 
-    If `merge` is True, then any top-level keys that are not in the new data will be
-    kept, and those that also exist in the new data will be replaced completely. This
-    is also known as the shallow merge. The metadata service currently doesn't support
-    deep merge.
+    If `merge` is True, then any aliases that are not in the new data will be
+    kept.
 
     Args:
         guid (str): Metadata GUID
@@ -117,10 +116,13 @@ async def update_metadata_alias(
     if merge:
         aliases = list(set(existing_aliases) | set(new_aliases))
     else:
-        # remove old aliases
-        for alias in existing_metadata_aliases:
-            logger.debug(f"deleting MetadataAlias(alias={alias}, guid={guid})")
-            await alias.delete()
+        # remove old aliases if they don't exist in new ones
+        for alias_metadata in existing_metadata_aliases:
+            if alias_metadata.alias not in new_aliases:
+                logger.debug(
+                    f"deleting MetadataAlias(alias={alias_metadata.alias}, guid={guid})"
+                )
+                await alias_metadata.delete()
 
         aliases = new_aliases
 
