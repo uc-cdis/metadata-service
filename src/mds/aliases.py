@@ -3,7 +3,7 @@ Support for aliases (alternative, unique names) for Metadata blobs
 that already have a Globally Unique IDentifier (GUID).
 
 It is always more efficient to use GUIDs as primary method
-for naming blobs. However in cases where you want multiple identifiers
+for naming blobs. However, in cases where you want multiple identifiers
 to point to the same blob, aliases allow that without duplicating the
 actual blob.
 """
@@ -106,7 +106,6 @@ async def update_metadata_alias(
         request (Request): incoming request
         merge (bool, optional): Description
     """
-    # TODO PUT should create if it doesn't exist...
     existing_metadata_aliases = await MetadataAlias.query.where(
         MetadataAlias.guid == guid
     ).gino.all()
