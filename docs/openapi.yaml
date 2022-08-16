@@ -403,8 +403,7 @@ paths:
         '200':
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/AliasObjInput'
+              schema: {}
           description: Successful Response
         '422':
           content:
@@ -453,12 +452,10 @@ paths:
       - Aliases
     put:
       description: "Update the metadata aliases of the GUID.\n\nIf `merge` is True,\
-        \ then any top-level keys that are not in the new data will be\nkept, and\
-        \ those that also exist in the new data will be replaced completely. This\n\
-        is also known as the shallow merge. The metadata service currently doesn't\
-        \ support\ndeep merge.\n\nArgs:\n    guid (str): Metadata GUID\n    body (AliasObjInput):\
-        \ JSON body with list of aliases\n    request (Request): incoming request\n\
-        \    merge (bool, optional): Description"
+        \ then any aliases that are not in the new data will be\nkept.\n\nArgs:\n\
+        \    guid (str): Metadata GUID\n    body (AliasObjInput): JSON body with list\
+        \ of aliases\n    request (Request): incoming request\n    merge (bool, optional):\
+        \ Description"
       operationId: update_metadata_alias_metadata__guid__aliases_put
       parameters:
       - in: path
