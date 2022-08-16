@@ -138,12 +138,11 @@ async def get_metadata(guid):
 
         # get metadata for guid based on alias
         metadata = await Metadata.get(metadata_alias.guid)
-    
+
         if not metadata:
             raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
 
     return metadata.data
-
 
 
 def init_app(app):
