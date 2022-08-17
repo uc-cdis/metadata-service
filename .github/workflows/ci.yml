@@ -35,7 +35,7 @@ jobs:
         $HOME/.local/bin/poetry show -vv
     - name: Migrate database
       run: |
-        $HOME/.local/bin/poetry/alembic upgrade head
+        poetry run alembic upgrade head
     - name: Test with pytest
       env:
         DB_HOST: localhost
