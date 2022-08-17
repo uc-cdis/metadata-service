@@ -35,7 +35,7 @@ jobs:
         $HOME/.local/bin/poetry show -vv
     - name: Migrate database then test with pytest
       env:
-        DB_HOST: postgres
+        DB_HOST: localhost
         DB_PORT: 5432
         DB_USER: metadata_user
         DB_PASSWORD: metadata_pass
