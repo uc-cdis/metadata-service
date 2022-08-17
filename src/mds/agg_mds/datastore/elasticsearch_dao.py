@@ -14,6 +14,12 @@ FIELD_NORMALIZERS = {
     "advSearchFilters": "object",
     "data_dictionary": "object",
     "sites": "number",
+    "budget_end": "date",
+    "date_added": "date",
+    "budget_start": "date",
+    "project_end_date": "date",
+    "award_notice_date": "date",
+    "project_start_date": "date",
 }
 
 
@@ -91,8 +97,10 @@ def normalize_field(doc, key, normalize_type):
     try:
         if normalize_type == "object" and isinstance(doc[key], str):
             value = doc[key]
-            doc[key] = None if value is "" else json.loads(value)
+            doc[key] = None if value == "" else json.loads(value)
         if normalize_type == "number" and isinstance(doc[key], str):
+            doc[key] = None
+        if normalize_type == "date" and isinstance(doc[key], str) and doc[key] == "":
             doc[key] = None
     except Exception:
         logger.debug(f"error normalizing {key} for a document")
