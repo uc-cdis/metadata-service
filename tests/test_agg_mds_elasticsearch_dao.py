@@ -55,12 +55,12 @@ async def test_init():
 
 
 @pytest.mark.asyncio
-async def test_drop_all():
+async def test_drop_all_non_temp_indexes():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
         MagicMock(),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.drop_all_non_temp_indexes()
     mock_indices.delete.assert_has_calls(
         [
             call(index=AGG_MDS_INDEX, ignore=[400, 404]),
@@ -184,7 +184,7 @@ async def test_create_if_exists():
             )
         ),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.drop_all_non_temp_indexes()
         await elasticsearch_dao.create_indexes(COMMON_MAPPING)
 
 
@@ -249,7 +249,7 @@ async def test_update_metadata_to_temp_index():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.index",
         MagicMock(),
     ) as mock_index:
-        await elasticsearch_dao.update_metadata_to_temp_index(
+        await elasticsearch_dao.update_metadata(
             "my_commons",
             [
                 {
@@ -266,6 +266,7 @@ async def test_update_metadata_to_temp_index():
             {},
             {},
             "gen3_discovery",
+            use_temp_index=True,
         )
     mock_index.assert_has_calls(
         [
@@ -305,7 +306,9 @@ async def test_update_global_info_to_temp_index():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
         MagicMock(),
     ) as mock_client:
-        await elasticsearch_dao.update_global_info_to_temp_index(key="123", doc={})
+        await elasticsearch_dao.update_global_info(
+            key="123", doc={}, use_temp_index=True
+        )
 
     mock_client.index.assert_called_with(
         index=AGG_MDS_INFO_INDEX_TEMP, doc_type=AGG_MDS_INFO_TYPE, id="123", body={}
@@ -331,7 +334,7 @@ async def test_update_config_info_to_temp_index():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
         MagicMock(),
     ) as mock_client:
-        await elasticsearch_dao.update_config_info_to_temp_index(doc={})
+        await elasticsearch_dao.update_config_info(doc={}, use_temp_index=True)
 
     mock_client.index.assert_called_with(
         index=AGG_MDS_CONFIG_INDEX_TEMP, doc_type="_doc", id=AGG_MDS_INDEX, body={}

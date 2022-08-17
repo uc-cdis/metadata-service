@@ -9,7 +9,6 @@ from mds.populate import (
     main,
     filter_entries,
     populate_info,
-    populate_info_to_temp_index,
     populate_drs_info,
     populate_config,
 )
@@ -83,54 +82,7 @@ async def test_populate_metadata():
             {"my_category": ["my_name"]},
             {"commons_url": "http://commons"},
             "gen3_discovery",
-        )
-
-
-@pytest.mark.asyncio
-async def test_populate_metadata_to_temp_index():
-    with patch.object(
-        datastore, "update_metadata_to_temp_index", AsyncMock()
-    ) as mock_update:
-        await populate_metadata(
-            "my_commons",
-            MDSInstance(
-                mds_url="http://mds",
-                commons_url="http://commons",
-                columns_to_fields={"column1": "field1"},
-            ),
-            {
-                "id1": {
-                    "gen3_discovery": {
-                        "column1": "some data",
-                        "tags": [{"category": "my_category", "name": "my_name"}],
-                    }
-                }
-            },
-            True,
-        )
-
-        mock_update.assert_called_with(
-            "my_commons",
-            [
-                {
-                    "id1": {
-                        "gen3_discovery": {
-                            "column1": "some data",
-                            "tags": [
-                                {
-                                    "category": "my_category",
-                                    "name": "my_name",
-                                },
-                            ],
-                            "commons_name": "my_commons",
-                        }
-                    }
-                }
-            ],
-            ["id1"],
-            {"my_category": ["my_name"]},
-            {"commons_url": "http://commons"},
-            "gen3_discovery",
+            False,
         )
 
 
@@ -174,66 +126,14 @@ async def test_populate_info():
         await populate_info(config)
         mock_datastore.update_global_info.assert_has_calls(
             [
-                call("aggregations", {}),
+                call("aggregations", {}, False),
                 call(
                     "schema",
                     {
                         "_subjects_count": {"type": "integer", "description": ""},
                         "study_description": {"type": "string", "description": ""},
                     },
-                ),
-            ],
-            any_order=True,
-        )
-
-
-@pytest.mark.asyncio
-async def test_populate_info_to_temp_indexes():
-    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_datastore:
-        with NamedTemporaryFile(mode="w+", delete=False) as fp:
-            json.dump(
-                {
-                    "configuration": {
-                        "schema": {
-                            "_subjects_count": {"type": "integer"},
-                            "study_description": {},
-                        },
-                    },
-                    "gen3_commons": {
-                        "mycommons": {
-                            "mds_url": "http://mds",
-                            "commons_url": "http://commons",
-                            "columns_to_fields": {
-                                "short_name": "name",
-                                "full_name": "full_name",
-                                "_subjects_count": "_subjects_count",
-                                "study_id": "study_id",
-                                "_unique_id": "_unique_id",
-                                "study_description": "study_description",
-                            },
-                        },
-                    },
-                    "adapter_commons": {
-                        "non-gen3": {
-                            "mds_url": "http://non-gen3",
-                            "commons_url": "non-gen3",
-                            "adapter": "icpsr",
-                        }
-                    },
-                },
-                fp,
-            )
-        config = parse_config_from_file(Path(fp.name))
-        await populate_info_to_temp_index(config)
-        mock_datastore.update_global_info_to_temp_index.assert_has_calls(
-            [
-                call("aggregations", {}),
-                call(
-                    "schema",
-                    {
-                        "_subjects_count": {"type": "integer", "description": ""},
-                        "study_description": {"type": "string", "description": ""},
-                    },
+                    False,
                 ),
             ],
             any_order=True,
@@ -297,6 +197,7 @@ async def test_populate_drs_info():
                         "name": "DataSTAGE",
                         "type": "indexd",
                     },
+                    False,
                 ),
                 call(
                     "dg.TSXX",
@@ -305,13 +206,14 @@ async def test_populate_drs_info():
                         "name": "Environmental DC",
                         "type": "indexd",
                     },
+                    False,
                 ),
             ],
             any_order=True,
         )
 
         await populate_drs_info(config, True)
-        mock_datastore.update_global_info_to_temp_index.assert_has_calls(
+        mock_datastore.update_global_info.assert_has_calls(
             [
                 call(
                     "dg.XXTS",
@@ -320,6 +222,7 @@ async def test_populate_drs_info():
                         "name": "DataSTAGE",
                         "type": "indexd",
                     },
+                    True,
                 ),
                 call(
                     "dg.TSXX",
@@ -328,6 +231,7 @@ async def test_populate_drs_info():
                         "name": "Environmental DC",
                         "type": "indexd",
                     },
+                    True,
                 ),
             ],
             any_order=True,
@@ -413,7 +317,9 @@ async def test_populate_config_to_temp_index():
             )
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config, True)
-        mock_datastore.update_config_info_to_temp_index.called_with(["_subjects_count"])
+        mock_datastore.update_config_info.called_with(
+            ["_subjects_count"], use_temp_index=True
+        )
 
 
 @respx.mock
@@ -427,18 +333,15 @@ async def test_populate_main():
 
     patch("mds.config.USE_AGG_MDS", True).start()
     patch.object(datastore, "init", AsyncMock()).start()
-    patch.object(datastore, "drop_all", AsyncMock()).start()
+    patch.object(datastore, "drop_all_non_temp_indexes", AsyncMock()).start()
     patch.object(datastore, "drop_all_temp_indexes", AsyncMock()).start()
     patch.object(datastore, "create_indexes", AsyncMock()).start()
     patch.object(datastore, "create_temp_indexes", AsyncMock()).start()
     patch.object(datastore, "update_config_info", AsyncMock()).start()
-    patch.object(datastore, "update_config_info_to_temp_index", AsyncMock()).start()
     patch.object(datastore, "get_status", AsyncMock(return_value="OK")).start()
     patch.object(datastore, "close", AsyncMock()).start()
     patch.object(datastore, "update_global_info", AsyncMock()).start()
-    patch.object(datastore, "update_global_info_to_temp_index", AsyncMock()).start()
     patch.object(datastore, "update_metadata", AsyncMock()).start()
-    patch.object(datastore, "update_metadata_to_temp_index", AsyncMock()).start()
     patch.object(adapters, "get_metadata", MagicMock()).start()
     patch.object(datastore, "clone_temp_indexes_to_real_indexes", AsyncMock()).start()
 
@@ -513,11 +416,11 @@ async def test_populate_main_fail():
     patch.object(datastore, "drop_all_temp_indexes", AsyncMock()).start()
     patch.object(datastore, "create_indexes", AsyncMock()).start()
     patch.object(datastore, "create_temp_indexes", AsyncMock()).start()
-    patch.object(datastore, "update_config_info_to_temp_index", AsyncMock()).start()
+    patch.object(datastore, "update_config_info", AsyncMock()).start()
     patch.object(datastore, "get_status", AsyncMock(return_value="OK")).start()
     patch.object(datastore, "close", AsyncMock()).start()
-    patch.object(datastore, "update_global_info_to_temp_index", AsyncMock()).start()
-    patch.object(datastore, "update_metadata_to_temp_index", AsyncMock()).start()
+    patch.object(datastore, "update_global_info", AsyncMock()).start()
+    patch.object(datastore, "update_metadata", AsyncMock()).start()
     patch.object(adapters, "get_metadata", MagicMock()).start()
     patch.object(datastore, "clone_temp_indexes_to_real_indexes", AsyncMock()).start()
 
@@ -550,7 +453,7 @@ async def test_populate_main_fail():
     drop_all_indexes_mock = AsyncMock(
         side_effect=wipe_return_value(get_all_metadata_mock)
     )
-    patch.object(datastore, "drop_all", drop_all_indexes_mock).start()
+    patch.object(datastore, "drop_all_non_temp_indexes", drop_all_indexes_mock).start()
 
     respx.get(
         "http://testfail/ok//mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
@@ -607,7 +510,7 @@ async def test_populate_main_fail():
     # Unable to update temp index, raise exception
     patch.object(
         datastore,
-        "update_metadata_to_temp_index",
+        "update_metadata",
         AsyncMock(side_effect=Exception("Unable")),
     ).start()
     with pytest.raises(Exception):

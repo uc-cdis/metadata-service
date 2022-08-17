@@ -131,9 +131,9 @@ def filter_function(s:str) -> str:
 
 ### Default Values
 Defining default values for fields is handled in one of two way:
-If a field in the metdata does not need a path, simply define the
+If a field in the metadata does not need a path, simply define the
 field name and a value. If a remote metadata field has a value, it will override the default.
-If a path is use then use the longer form and set the ```default_value``` to use
+If a path is used, then use the longer form and set the ```default_value``` to use
 if the path is not found.
 
 ```json

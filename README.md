@@ -21,6 +21,18 @@ The aggregate metadata APIs and migrations are disabled by default unless `USE_A
 
 The aggregate cache is built using Elasticsearch. See the `docker-compose.yaml` file (specifically the `aggregate_migration` service) for details regarding how aggregate data is populated.
 
+### Aggregate MDS
+For local development ensure the docker container is up.
+
+testing populate:
+```bash
+python src/mds/populate.py --config <config file>
+```
+view the loaded data
+```bash
+http://localhost:8000/aggregate/metadata?limit=1000
+```
+
 ## Installation
 
 Install required software:
@@ -101,18 +113,6 @@ Run tests:
 ```bash
 docker-compose exec app pytest --cov=src --cov=migrations/versions tests
 ```
-### Aggregate MDS
-For local development ensure the docker container is up.
-
-testing populate:
-```bash
-python src/mds/populate.py --config <config file>
-```
-view the loaded data
-```bash
-http://localhost:8000/aggregate/metadata?limit=1000
-```
-
 
 ## Deployment
 

@@ -77,7 +77,7 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
     )
 
 
-async def drop_all():
+async def drop_all_non_temp_indexes():
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         res = elastic_search_client.indices.delete(index=index, ignore=[400, 404])
         logger.debug(f"deleted index: {index}: {res}")
@@ -189,14 +189,17 @@ async def update_metadata(
     tags: Dict[str, List[str]],
     info: Dict[str, str],
     study_data_field: str,
+    use_temp_index: bool = False,
 ):
+    index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
     elastic_search_client.index(
-        index=AGG_MDS_INFO_INDEX,
+        index=index_to_update,
         doc_type=AGG_MDS_INFO_TYPE,
         id=name,
         body=info,
     )
 
+    index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
     for doc in data:
         key = list(doc.keys())[0]
         # Flatten out this structure
@@ -204,64 +207,25 @@ async def update_metadata(
 
         try:
             elastic_search_client.index(
-                index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
+                index=index_to_update, doc_type=AGG_MDS_TYPE, id=key, body=doc
             )
         except Exception as ex:
-            print(ex)
+            raise (ex)
 
 
-async def update_metadata_to_temp_index(
-    name: str,
-    data: List[Dict],
-    guid_arr: List[str],
-    tags: Dict[str, List[str]],
-    info: Dict[str, str],
-    study_data_field: str,
-):
+async def update_global_info(key, doc, use_temp_index: bool = False) -> None:
+    index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
     elastic_search_client.index(
-        index=AGG_MDS_INFO_INDEX_TEMP,
-        doc_type=AGG_MDS_INFO_TYPE,
-        id=name,
-        body=info,
-    )
-
-    for doc in data:
-        key = list(doc.keys())[0]
-        # Flatten out this structure
-        doc = doc[key][study_data_field]
-
-        try:
-            elastic_search_client.index(
-                index=AGG_MDS_INDEX_TEMP, doc_type=AGG_MDS_TYPE, id=key, body=doc
-            )
-        except Exception as ex:
-            print(ex)
-
-
-async def update_global_info(key, doc) -> None:
-    elastic_search_client.index(
-        index=AGG_MDS_INFO_INDEX, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
+        index=index_to_update, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
     )
 
 
-async def update_global_info_to_temp_index(key, doc) -> None:
-    elastic_search_client.index(
-        index=AGG_MDS_INFO_INDEX_TEMP, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
+async def update_config_info(doc, use_temp_index: bool = False) -> None:
+    index_to_update = (
+        AGG_MDS_CONFIG_INDEX_TEMP if use_temp_index else AGG_MDS_CONFIG_INDEX
     )
-
-
-async def update_config_info(doc) -> None:
     elastic_search_client.index(
-        index=AGG_MDS_CONFIG_INDEX,
-        doc_type="_doc",
-        id=AGG_MDS_INDEX,
-        body=doc,
-    )
-
-
-async def update_config_info_to_temp_index(doc) -> None:
-    elastic_search_client.index(
-        index=AGG_MDS_CONFIG_INDEX_TEMP,
+        index=index_to_update,
         doc_type="_doc",
         id=AGG_MDS_INDEX,
         body=doc,
