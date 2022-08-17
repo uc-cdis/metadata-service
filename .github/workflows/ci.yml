@@ -35,10 +35,11 @@ jobs:
         $HOME/.local/bin/poetry show -vv
     - name: Migrate database then test with pytest
       env:
-        DB_HOST: localhost
-        DB_PORT: ${{ job.services.postgres.ports[5432] }}
+        DB_HOST: postgres
+        DB_PORT: 5432
         DB_USER: metadata_user
         DB_PASSWORD: metadata_pass
+        DB_DATABASE: test_metadata
         USE_AGG_MDS: true
       run: |
         $HOME/.local/bin/poetry run alembic upgrade head
