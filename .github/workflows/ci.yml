@@ -25,7 +25,7 @@ jobs:
     - uses: actions/cache@preview
       with:
         path: ~/.cache/pypoetry/virtualenvs
-        key: ${{ runner.os }}-poetry2-${{ hashFiles(format('{0}{1}', github.workspace, '/poetry.lock')) }}
+        key: ${{ runner.os }}-poetry-${{ hashFiles(format('{0}{1}', github.workspace, '/poetry.lock')) }}
         restore-keys: |
           ${{ runner.os }}-poetry-
     - name: Install dependencies
@@ -44,7 +44,6 @@ jobs:
         USE_AGG_MDS: true
         PGPASSWORD: metadata_pass
       run: |
-        psql -h $DB_HOST --dbname=$DB_DATABASE --username=$DB_USER -c 'select * from information_schema.columns;'
         $HOME/.local/bin/poetry run alembic current
         $HOME/.local/bin/poetry run alembic upgrade head
     - name: Test with pytest
@@ -57,7 +56,8 @@ jobs:
         USE_AGG_MDS: true
         PGPASSWORD: metadata_pass
       run: |
-        psql -h $DB_HOST --dbname=test_metadata --username=$DB_USER -c 'select * from information_schema.columns;'
+        psql -h $DB_HOST --dbname=test_metadata --username=$DB_USER -c 'select * from information_schema.columns;' | grep alias
+        printenv | grep DB
         $HOME/.local/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
