@@ -43,7 +43,7 @@ jobs:
         TESTING: false
         USE_AGG_MDS: true
       run: |
-        psql -h $DB_HOST --username=$DB_USER --passport=$DB_PASSWORD --list
+        psql -h $DB_HOST --username=$DB_USER --password=$DB_PASSWORD --list
         $HOME/.local/bin/poetry run alembic current
         $HOME/.local/bin/poetry run alembic upgrade head
     - name: Test with pytest
@@ -55,7 +55,7 @@ jobs:
         TESTING: true
         USE_AGG_MDS: true
       run: |
-        psql -h $DB_HOST --username=$DB_USER --passport=$DB_PASSWORD --list
+        psql -h $DB_HOST --username=$DB_USER --password=$DB_PASSWORD --list
         $HOME/.local/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
