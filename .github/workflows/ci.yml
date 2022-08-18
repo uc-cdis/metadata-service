@@ -39,6 +39,7 @@ jobs:
         DB_PORT: 5432
         DB_USER: metadata_user
         DB_PASSWORD: metadata_pass
+        TESTING: true
         USE_AGG_MDS: true
       run: |
         $HOME/.local/bin/poetry run alembic upgrade head
