@@ -42,6 +42,7 @@ jobs:
         TESTING: true
         USE_AGG_MDS: true
       run: |
+        $HOME/.local/bin/poetry run alembic current
         $HOME/.local/bin/poetry run alembic upgrade head
         $HOME/.local/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml
     - name: Submit coverage report

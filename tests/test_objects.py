@@ -152,7 +152,7 @@ def test_create(client, valid_upload_file_patcher, data):
     resp.raise_for_status()
 
     assert str(resp.status_code).startswith("20")
-    assert resp.json().get("aliases") == data.get("aliases", [])
+    assert sorted(resp.json().get("aliases")) == sorted(data.get("aliases", []))
     for key, value in data.get("metadata", {}).items():
         assert resp.json().get("metadata", {}).get(key) == value
 
@@ -257,7 +257,7 @@ def test_create_no_access_to_create_aliases(
     else:
         # in this case we expect a successful response b/c no aliases were requested
         assert str(resp.status_code).startswith("20")
-        assert resp.json().get("aliases") == data.get("aliases", [])
+        assert sorted(resp.json().get("aliases")) == sorted(data.get("aliases", []))
         for key, value in data.get("metadata", {}).items():
             assert resp.json().get("metadata", {}).get(key) == value
 
@@ -538,7 +538,7 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
 
     # check response contents
     assert str(resp.status_code).startswith("20")
-    assert resp.json().get("aliases") == data.get("aliases", [])
+    assert sorted(resp.json().get("aliases")) == sorted(data.get("aliases", []))
     for key, value in data.get("metadata", {}).items():
         assert resp.json().get("metadata", {}).get(key) == value
 
