@@ -13,8 +13,8 @@ async def init(hostname, port):
     await client.init(hostname, port)
 
 
-async def drop_all():
-    await client.drop_all()
+async def drop_all_non_temp_indexes():
+    await client.drop_all_non_temp_indexes()
 
 
 async def drop_all_temp_indexes():
@@ -48,24 +48,12 @@ async def update_metadata(*args):
     await client.update_metadata(*args)
 
 
-async def update_metadata_to_temp_index(*args):
-    await client.update_metadata_to_temp_index(*args)
-
-
 async def update_global_info(*args):
     await client.update_global_info(*args)
 
 
-async def update_global_info_to_temp_index(*args):
-    await client.update_global_info_to_temp_index(*args)
-
-
 async def update_config_info(*args):
     await client.update_config_info(*args)
-
-
-async def update_config_info_to_temp_index(*args):
-    await client.update_config_info_to_temp_index(*args)
 
 
 async def get_commons_metadata(*args):

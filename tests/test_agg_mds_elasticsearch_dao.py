@@ -8,6 +8,13 @@ from mds.agg_mds.datastore.elasticsearch_dao import (
     AGG_MDS_CONFIG_INDEX,
     CONFIG,
     SEARCH_CONFIG,
+    AGG_MDS_INDEX_TEMP,
+    AGG_MDS_INFO_INDEX_TEMP,
+    AGG_MDS_CONFIG_INDEX_TEMP,
+    AGG_MDS_INFO_TYPE,
+    AGG_MDS_CONFIG_TYPE,
+    count,
+    process_record,
 )
 from elasticsearch import exceptions as es_exceptions
 from mds.config import ES_RETRY_LIMIT, ES_RETRY_INTERVAL
@@ -48,17 +55,69 @@ async def test_init():
 
 
 @pytest.mark.asyncio
-async def test_drop_all():
+async def test_drop_all_non_temp_indexes():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
         MagicMock(),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.drop_all_non_temp_indexes()
     mock_indices.delete.assert_has_calls(
         [
             call(index=AGG_MDS_INDEX, ignore=[400, 404]),
             call(index=AGG_MDS_INFO_INDEX, ignore=[400, 404]),
             call(index=AGG_MDS_CONFIG_INDEX, ignore=[400, 404]),
+        ],
+        any_order=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_drop_all_temp_indexes():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
+        MagicMock(),
+    ) as mock_indices:
+        await elasticsearch_dao.drop_all_temp_indexes()
+    mock_indices.delete.assert_has_calls(
+        [
+            call(index=AGG_MDS_INDEX_TEMP, ignore=[400, 404]),
+            call(index=AGG_MDS_INFO_INDEX_TEMP, ignore=[400, 404]),
+            call(index=AGG_MDS_CONFIG_INDEX_TEMP, ignore=[400, 404]),
+        ],
+        any_order=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_clone_temp_indexes_to_real_indexes():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.Elasticsearch",
+        MagicMock(),
+    ) as mock_es:
+        await elasticsearch_dao.clone_temp_indexes_to_real_indexes()
+    mock_es.reindex.assert_has_calls(
+        [
+            call(
+                elasticsearch_dao.elastic_search_client,
+                {
+                    "source": {"index": AGG_MDS_INDEX_TEMP},
+                    "dest": {"index": AGG_MDS_INDEX},
+                },
+            ),
+            call(
+                elasticsearch_dao.elastic_search_client,
+                {
+                    "source": {"index": AGG_MDS_INFO_INDEX_TEMP},
+                    "dest": {"index": AGG_MDS_INFO_INDEX},
+                },
+            ),
+            call(
+                elasticsearch_dao.elastic_search_client,
+                {
+                    "source": {"index": AGG_MDS_CONFIG_INDEX_TEMP},
+                    "dest": {"index": AGG_MDS_CONFIG_INDEX},
+                },
+            ),
         ],
         any_order=True,
     )
@@ -82,6 +141,40 @@ async def test_create_indexes():
 
 
 @pytest.mark.asyncio
+async def test_create_indexes():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
+        MagicMock(),
+    ) as mock_indices:
+        await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
+    mock_indices.create.assert_has_calls(
+        [
+            call(body={**SEARCH_CONFIG, **COMMON_MAPPING}, index=AGG_MDS_INDEX),
+            call(body=INFO_MAPPING, index=AGG_MDS_INFO_INDEX),
+            call(body=CONFIG, index=AGG_MDS_CONFIG_INDEX),
+        ],
+        any_order=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_temp_indexes():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices",
+        MagicMock(),
+    ) as mock_indices:
+        await elasticsearch_dao.create_temp_indexes(common_mapping=COMMON_MAPPING)
+    mock_indices.create.assert_has_calls(
+        [
+            call(body={**SEARCH_CONFIG, **COMMON_MAPPING}, index=AGG_MDS_INDEX_TEMP),
+            call(body=INFO_MAPPING, index=AGG_MDS_INFO_INDEX_TEMP),
+            call(body=CONFIG, index=AGG_MDS_CONFIG_INDEX_TEMP),
+        ],
+        any_order=True,
+    )
+
+
+@pytest.mark.asyncio
 async def test_create_if_exists():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
@@ -91,7 +184,7 @@ async def test_create_if_exists():
             )
         ),
     ) as mock_indices:
-        await elasticsearch_dao.drop_all()
+        await elasticsearch_dao.drop_all_non_temp_indexes()
         await elasticsearch_dao.create_indexes(COMMON_MAPPING)
 
 
@@ -137,16 +230,114 @@ async def test_update_metadata():
                 body={},
                 doc_type="commons-info",
                 id="my_commons",
-                index="default_namespace-commons-info-index",
+                index=AGG_MDS_INFO_INDEX,
             ),
             call(
                 body={"some_field": "some_value", "__manifest": {}, "sites": ""},
                 doc_type="commons",
                 id="my_id",
-                index="default_namespace-commons-index",
+                index=AGG_MDS_INDEX,
             ),
         ],
         any_order=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_metadata_to_temp_index():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.index",
+        MagicMock(),
+    ) as mock_index:
+        await elasticsearch_dao.update_metadata(
+            "my_commons",
+            [
+                {
+                    "my_id": {
+                        "gen3_discovery": {
+                            "some_field": "some_value",
+                            "__manifest": {},
+                            "sites": "",
+                        }
+                    }
+                }
+            ],
+            [],
+            {},
+            {},
+            "gen3_discovery",
+            use_temp_index=True,
+        )
+    mock_index.assert_has_calls(
+        [
+            call(
+                body={},
+                doc_type="commons-info",
+                id="my_commons",
+                index=AGG_MDS_INFO_INDEX_TEMP,
+            ),
+            call(
+                body={"some_field": "some_value", "__manifest": {}, "sites": ""},
+                doc_type="commons",
+                id="my_id",
+                index=AGG_MDS_INDEX_TEMP,
+            ),
+        ],
+        any_order=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_global_info():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
+        MagicMock(),
+    ) as mock_client:
+        await elasticsearch_dao.update_global_info(key="123", doc={})
+
+    mock_client.index.assert_called_with(
+        index=AGG_MDS_INFO_INDEX, doc_type=AGG_MDS_INFO_TYPE, id="123", body={}
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_global_info_to_temp_index():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
+        MagicMock(),
+    ) as mock_client:
+        await elasticsearch_dao.update_global_info(
+            key="123", doc={}, use_temp_index=True
+        )
+
+    mock_client.index.assert_called_with(
+        index=AGG_MDS_INFO_INDEX_TEMP, doc_type=AGG_MDS_INFO_TYPE, id="123", body={}
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_config_info():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
+        MagicMock(),
+    ) as mock_client:
+        await elasticsearch_dao.update_config_info(doc={})
+
+    mock_client.index.assert_called_with(
+        index=AGG_MDS_CONFIG_INDEX, doc_type="_doc", id=AGG_MDS_INDEX, body={}
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_config_info_to_temp_index():
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
+        MagicMock(),
+    ) as mock_client:
+        await elasticsearch_dao.update_config_info(doc={}, use_temp_index=True)
+
+    mock_client.index.assert_called_with(
+        index=AGG_MDS_CONFIG_INDEX_TEMP, doc_type="_doc", id=AGG_MDS_INDEX, body={}
     )
 
 
@@ -162,6 +353,11 @@ async def test_get_status():
 
 
 @pytest.mark.asyncio
+async def close():
+    assert True
+
+
+@pytest.mark.asyncio
 async def test_get_commons():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
@@ -169,7 +365,7 @@ async def test_get_commons():
     ) as mock_search:
         await elasticsearch_dao.get_commons()
         mock_search.assert_called_with(
-            index="default_namespace-commons-index",
+            index=AGG_MDS_INDEX,
             body={
                 "size": 0,
                 "aggs": {"commons_names": {"terms": {"field": "commons_name.keyword"}}},
@@ -181,6 +377,27 @@ async def test_get_commons():
         MagicMock(side_effect=Exception("some error")),
     ) as mock_search:
         assert await elasticsearch_dao.get_commons() == []
+
+
+def test_count_dict():
+    assert count({1: 2, 3: 4}) == 2
+
+
+def test_count_list():
+    assert count([1, 2, 3]) == 3
+
+
+def test_count_fail():
+    assert count(123) == 0
+
+
+def test_process_records():
+    _id = "123"
+    _source = {"count": [1, 2, 3, 4]}
+    record = {"_id": _id, "_source": _source}
+    id, normalized = process_record(record, "count")
+    assert id == _id
+    assert normalized == {"count": 4}
 
 
 @pytest.mark.asyncio
@@ -195,7 +412,7 @@ async def test_get_all_metadata():
     ) as mock_search:
         await elasticsearch_dao.get_all_metadata(5, 9)
         mock_search.assert_called_with(
-            index="default_namespace-commons-index",
+            index=AGG_MDS_INDEX,
             body={"size": 5, "from": 9, "query": {"match_all": {}}},
         )
 
@@ -213,7 +430,7 @@ async def test_get_all_named_commons_metadata():
     ) as mock_client:
         await elasticsearch_dao.get_all_named_commons_metadata("my-commons")
         mock_client.search.assert_called_with(
-            index="default_namespace-commons-index",
+            index=AGG_MDS_INDEX,
             body={"query": {"match": {"commons_name.keyword": "my-commons"}}},
         )
 
@@ -233,7 +450,7 @@ async def test_metadata_tags():
     ) as mock_client:
         await elasticsearch_dao.metadata_tags()
         mock_client.search.assert_called_with(
-            index="default_namespace-commons-index",
+            index=AGG_MDS_INDEX,
             body={
                 "size": 0,
                 "aggs": {
@@ -266,7 +483,7 @@ async def test_get_commons_attribute():
     ) as mock_client:
         await elasticsearch_dao.get_commons_attribute("my-commons")
         mock_client.search.assert_called_with(
-            index="default_namespace-commons-info-index",
+            index=AGG_MDS_INFO_INDEX,
             body={"query": {"terms": {"_id": ["my-commons"]}}},
         )
 
@@ -284,7 +501,7 @@ async def test_get_aggregations():
     ) as mock_client:
         await elasticsearch_dao.get_aggregations("my-commons")
         mock_client.search.assert_called_with(
-            index="default_namespace-commons-index",
+            index=AGG_MDS_INDEX,
             body={
                 "size": 0,
                 "query": {
@@ -310,7 +527,7 @@ async def test_get_by_guid():
     ) as mock_client:
         await elasticsearch_dao.get_by_guid("my-commons")
         mock_client.get.assert_called_with(
-            index="default_namespace-commons-index",
+            index=AGG_MDS_INDEX,
             doc_type="commons",
             id="my-commons",
         )
