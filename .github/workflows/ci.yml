@@ -44,7 +44,7 @@ jobs:
         USE_AGG_MDS: true
         PGPASSWORD: metadata_pass
       run: |
-        psql -h $DB_HOST --username=$DB_USER --list
+        psql -h $DB_HOST --dbname=$DB_DATABASE --username=$DB_USER -c 'select * from information_schema.columns;'
         $HOME/.local/bin/poetry run alembic current
         $HOME/.local/bin/poetry run alembic upgrade head
     - name: Test with pytest
@@ -57,7 +57,7 @@ jobs:
         USE_AGG_MDS: true
         PGPASSWORD: metadata_pass
       run: |
-        psql -h $DB_HOST --username=$DB_USER --list
+        psql -h $DB_HOST --dbname=test_metadata --username=$DB_USER -c 'select * from information_schema.columns;'
         $HOME/.local/bin/poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
