@@ -30,20 +30,36 @@ async def get_commons(what: str):
         )
 
 
-@mod.get("/aggregate/metadata_paged")
+@mod.get("/aggregate/metadata")
 async def metadata(
     _: Request,
     limit: int = Query(
         20, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    counts: str = Query(
+        "", description="Return count of a field instead of the value."
+    ),
     flatten: bool = Query(
-        True, description="Return the results without grouping items by commons."
+        False, description="Return the results without grouping items by commons."
+    ),
+    pagination: bool = Query(
+        False, description="If true will return a pagination object in the response"
     ),
 ):
     """
-    Returns all metadata from all registered commons in the form:
+    The pagination option adds a pagination object to the response:
     {
+      "commonA" : {
+          ... Metadata
+      },
+       "commonB" : {
+          ... Metadata
+      }
+      ...
+    }
+
+        {
         results: {
           "commonA" : {
               ... Metadata
@@ -68,35 +84,12 @@ async def metadata(
           }
           ...
         },
-    """
-    return await datastore.get_all_metadata(limit, offset, None, flatten)
 
-
-@mod.get("/aggregate/metadata")
-async def metadata(
-    _: Request,
-    limit: int = Query(
-        20, description="Maximum number of records returned. (max: 2000)"
-    ),
-    offset: int = Query(0, description="Return results at this given offset."),
-    counts: str = Query(
-        "", description="Return count of a field instead of the value."
-    ),
-):
     """
-    Returns all metadata from all registered commons in the form:
-    {
-      "commonA" : {
-          ... Metadata
-      },
-       "commonB" : {
-          ... Metadata
-      }
-      ...
-    }
-    """
-    results = await datastore.get_all_metadata(limit, offset, counts, False)
-    return results.get("results", {})
+    results = await datastore.get_all_metadata(limit, offset, counts, flatten)
+    if pagination is False:
+        return results.get("results", {})
+    return results
 
 
 @mod.get("/aggregate/metadata/{name}")

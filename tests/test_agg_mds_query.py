@@ -69,10 +69,10 @@ async def test_aggregate_metadata_paged(client):
     with patch.object(
         datastore, "get_all_metadata", AsyncMock(return_value={"results": []})
     ) as datastore_mock:
-        resp = client.get("/aggregate/metadata_paged")
+        resp = client.get("/aggregate/metadata?pagination=1&flatten=1")
         assert resp.status_code == 200
         assert resp.json() == {"results": []}
-        datastore.get_all_metadata.assert_called_with(20, 0, None, True)
+        datastore.get_all_metadata.assert_called_with(20, 0, "", True)
 
     mock_data = {
         "results": [
@@ -85,10 +85,10 @@ async def test_aggregate_metadata_paged(client):
     with patch.object(
         datastore, "get_all_metadata", AsyncMock(return_value=mock_data)
     ) as datastore_mock:
-        resp = client.get("/aggregate/metadata_paged")
+        resp = client.get("/aggregate/metadata?pagination=1&flatten=1")
         assert resp.status_code == 200
         assert resp.json() == mock_data
-        datastore.get_all_metadata.assert_called_with(20, 0, None, True)
+        datastore.get_all_metadata.assert_called_with(20, 0, "", True)
 
 
 @pytest.mark.asyncio
@@ -173,7 +173,7 @@ async def test_aggregate_metadata_paged_flat(client):
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(return_value=mock_data),
     ) as search:
-        resp = client.get("/aggregate/metadata_paged?flatten=true")
+        resp = client.get("/aggregate/metadata?flatten=true&pagination=true")
         assert resp.status_code == 200
         assert resp.json() == results
 
