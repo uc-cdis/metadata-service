@@ -5,6 +5,7 @@
 				"type": "integer"
 			},
 			"__manifest": {
+				"description": "an array of filename (usually DRS ids and its size",
 				"type": "array",
 				"properties": {
 					"file_name": {
@@ -23,13 +24,18 @@
 			"study_id": {},
 			"study_url": {},
 			"project_id": {},
-			"short_name": {},
+			"short_name": {
+				"default" : "not_set"
+			},
+			"year": {
+				"default" : "not_set"
+			},
 			"full_name": {},
 			"commons_url": {},
 			"commons" : {}
 		},
 		"settings" : {
-			"cache_drs" : false
+			"cache_drs" : true
 		}
 	},
 	"adapter_commons": {
@@ -47,9 +53,14 @@
 				"_unique_id": "path:_unique_id",
 				"study_description": "path:summary",
 				"full_name": "path:study_title",
+				"short_name": "path:short_name",
+				"year": "path:year",
 				"accession_number": "path:accession_number",
 				"commons": "Gen3 Data Commons",
-				"study_url": "path:link"
+				"study_url": {
+					"path": "link",
+					"default": "unknown"
+				}
 			}
 		}
 	}
