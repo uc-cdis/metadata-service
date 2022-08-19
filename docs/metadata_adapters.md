@@ -32,11 +32,11 @@ The adapter works in the following order of operations:
 
 A metadata service is configurable via a JSON object, with the following format:
 ```json lines
-    "configuration": {
-        "schema": {
+"configuration": {
+   "schema": {
         ...
-        },
-        "settings": {
+    },
+    "settings": {
         ...
         }
   },
@@ -46,7 +46,7 @@ A metadata service is configurable via a JSON object, with the following format:
 ```
 ### Schema
 
-The schema section is optional. It allows finer controls over the Elastic Search backend and if defined
+The schema section is optional. It allows user to have a finer level of control over the Elastic Search backend and if defined
 will allow for schema introspection via a JSON schema.
 A schema is of the form:
 
@@ -158,8 +158,9 @@ http://localhost:8000/aggregate/info/schema
 connected to dataguids.org and cache the DRS directory information. This information is available via the
 into API endpoint:
 ```
-wget http://localhost:8000/aggregate/info/dg.H35L
-
+http://localhost:8000/aggregate/info/dg.H35L
+```
+```
 {
     "host": "externaldata.healdata.org",
     "name": "External Data HEAL",
@@ -169,8 +170,8 @@ wget http://localhost:8000/aggregate/info/dg.H35L
 
 ## Adapter Configuration
 
-The ```adapter_commons``` section of the configuration file is used to define where the aggregate metadata service pull data from.
-There can be any of adapters, in fact a single Gen3 commons can be queried more that once by defining different adapter setting.
+The ```adapter_commons``` section of the configuration file is used to define where the aggregate metadata service will pull data from.
+There can be any of adapters, in fact a single Gen3 commons can be queried more than once by defining different adapter setting.
 
 ```json
 {
@@ -221,7 +222,7 @@ There can be any of adapters, in fact a single Gen3 commons can be queried more 
 For a fully working configuration file to pull sample data from [gen3.datacommons.io](gen3.datacommon.io) is [here](sample_aggregate_mds_config.json).
 
 Any number of adapters can be added to a configuration file as long as the
-key per adapter is unique.
+commons name (used as a key) per adapter is unique.
 ### Parameters
 
 The parameters of an adapter are:
@@ -251,14 +252,14 @@ after the data has been processed so the values needs to be mapped or normalized
 * **field_value** - set to a string. Any fields NOT matching this value will ot be added.
 
 A sample:
-```"select_field": {
+```
+     ...
+     "select_field": {
         "field_name": "data_resource",
         "field_value": "SAMHDA"
       },
+     ...
 ```
-
-
-
 
 ### Field Mappings
 The next section of the configuration, is the field mappings which map a field name from the remote metadata into a standard name. This process is also called normalization. The mapping is simply the name of the normalized field (what is stored in the Aggregate metadata service ) to the remote field. Think of it as ```AggMDS field = Remote Field```. While this works for simple cases, there are many instances where the field is deeper in a JSON object. To resolve this you can specify a **path selector**
@@ -297,10 +298,10 @@ def filter_function(s:str) -> str:
 ```
 
 #### Default Values
-Defining default values for fields is handled in one of two way:
+Defining default values for fields is handled in one of two ways:
 If a field in the metadata does not need a path, simply define the
 field name and a value. If a remote metadata field has a value, it will override the default.
-If a path is used, then use the longer form and set the ```default_value``` to use
+If a path is used, then use the longer form and set the ```default``` to use
 if the path is not found.
 
 ```json
@@ -311,7 +312,7 @@ if the path is not found.
     "filters": [
       "strip_html"
     ],
-    "default_value": "N/A"
+    "default": "N/A"
   },
   ...
 }
