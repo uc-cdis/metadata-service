@@ -1,4 +1,4 @@
-# Gen3 Metadata Adapters
+# Configuring the Gen3 Aggregate Metadata Service and Adapters
 
 Ingesting data into an Aggregate Metadata Service from a remote Metadata
 Service is handled by an adapter. An adapter is used to interface with a
