@@ -20,6 +20,10 @@ FIELD_NORMALIZERS = {
     "project_end_date": "date",
     "award_notice_date": "date",
     "project_start_date": "date",
+    "data_collection_finish_date": "date",
+    "data_collection_start_date": "date",
+    "data_release_finish_date": "date",
+    "data_release_start_date": "date",
 }
 
 
