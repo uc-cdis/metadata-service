@@ -83,6 +83,12 @@ async def create_metadata_aliases(
     except ForeignKeyViolationError as exc:
         logger.debug(exc)
         raise HTTPException(HTTP_404_NOT_FOUND, f"GUID: '{guid}' does not exist.")
+    except UniqueViolationError as exc:
+        logger.debug(exc)
+        raise HTTPException(
+            HTTP_409_CONFLICT,
+            f"Alias: '{alias}' is already in use by a different GUID.",
+        )
 
     return JSONResponse({"guid": guid, "aliases": sorted(aliases)}, HTTP_201_CREATED)
 
@@ -142,6 +148,12 @@ async def update_metadata_alias(
         except ForeignKeyViolationError as exc:
             logger.debug(exc)
             raise HTTPException(HTTP_404_NOT_FOUND, f"GUID: '{guid}' does not exist.")
+        except UniqueViolationError as exc:
+            logger.debug(exc)
+            raise HTTPException(
+                HTTP_409_CONFLICT,
+                f"Alias: '{alias}' is already in use by a different GUID.",
+            )
 
     return JSONResponse({"guid": guid, "aliases": sorted(aliases)}, HTTP_201_CREATED)
 

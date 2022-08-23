@@ -108,6 +108,69 @@ def test_create_already_created_aliases(guid, aliases, client):
 
 
 @pytest.mark.parametrize(
+    "guid1,aliases1,guid2,aliases2",
+    [
+        ("test_get_aliases", ["alias_a"], "test_get_aliases2", ["alias_a"]),
+        (
+            "dg.1234/test_get_aliases",
+            ["alias_b"],
+            "dg.1234/test_get_aliases2",
+            ["alias_b"],
+        ),
+        (
+            "dg.2345/test_get_aliases",
+            ["alias_b", "alias_b_2"],
+            "dg.1234/test_get_aliases2",
+            ["alias_b_2", "new_one"],
+        ),
+        (
+            "dg.6789/test_get_aliases",
+            ["!@(#_*&$)^-!@#)%*_(&"],
+            "dg.1234/test_get_aliases2",
+            ["!@(#_*&$)^-!@#)%*_(&", "new_one"],
+        ),
+        (
+            "dg.7890/test_get_aliases",
+            ["/\\|_.,-;__"],
+            "dg.1234/test_get_aliases2",
+            ["!@(#_*&$)^-!@#)%*_(&", "new_one", "/\\|_.,-;__"],
+        ),
+    ],
+)
+def test_create_already_created_aliases_on_different_guid(
+    guid1, aliases1, guid2, aliases2, client
+):
+    """
+    Ensure non-successful response when trying to POST an already existing alias
+    """
+    data = dict(a=1, b=2)
+    client.post(f"/metadata/{guid1}", json=data).raise_for_status()
+    client.post(f"/metadata/{guid2}", json=data).raise_for_status()
+
+    client.post(
+        f"/metadata/{guid1}/aliases", json={"aliases": aliases1}
+    ).raise_for_status()
+
+    try:
+        response = client.post(f"/metadata/{guid2}/aliases", json={"aliases": aliases2})
+        assert str(response.status_code) == "409"
+
+        # ensure the original aliases data did not get modified
+        assert client.get(f"/metadata/{guid1}").json() == data
+        assert client.get(f"/metadata/{guid1}/aliases").json().get("aliases") == sorted(
+            aliases1
+        )
+        assert client.get(f"/metadata/{guid1}/aliases").json().get("guid") == guid1
+
+        for alias in aliases1:
+            # NOTE you have to percent encode aliases in urls
+            assert client.get(f"/metadata/{urllib.parse.quote(alias)}").json() == data
+    finally:
+        client.delete(f"/metadata/{guid1}").raise_for_status()
+        client.delete(f"/metadata/{guid2}").raise_for_status()
+
+
+@pytest.mark.parametrize(
     "guid,aliases,updates,merge",
     [
         ("test_get_aliases", ["alias_a"], ["alias_a", "another_alias"], False),
