@@ -132,9 +132,6 @@ async def update_metadata(
         # Flatten out this structure
         doc = doc[key][study_data_field]
 
-        print("THIS IS THE DOC")
-        print(doc)
-
         for field in FIELD_NORMALIZERS.keys():
             if pydash.has(doc, field):
                 normalize_field(doc, field, FIELD_NORMALIZERS[field])
