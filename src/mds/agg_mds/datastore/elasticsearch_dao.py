@@ -136,6 +136,10 @@ async def update_metadata(
             if pydash.has(doc, field):
                 normalize_field(doc, field, FIELD_NORMALIZERS[field])
 
+        if key == '9898132':
+            print("THISIS THE BODY THAT WE CARE ABOUT")
+            print(doc)
+
         elastic_search_client.index(
             index=AGG_MDS_INDEX, doc_type=AGG_MDS_TYPE, id=key, body=doc
         )
