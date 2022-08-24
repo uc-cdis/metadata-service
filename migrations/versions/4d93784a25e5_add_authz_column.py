@@ -38,8 +38,10 @@ def upgrade():
 
     # extract existing PK (guid) and authz data (resource_path) from the metadata column
     connection = op.get_bind()
-    results = connection.execute("SELECT guid, data from metadata").fetchall()
-    for r in results:
+    query = "SELECT guid, data from metadata"
+    results = connection.execute(query)
+    r = results.fetchone()
+    while r:
         guid, data = r[0], r[1]
         # default values for authz (["/open"])
         authz_data = json.loads(DEFAULT_AUTHZ_STR)
@@ -57,6 +59,7 @@ def upgrade():
         else:
             sql_statement = f"UPDATE metadata SET authz='{json.dumps(authz_data)}' WHERE guid='{guid}'"
         connection.execute(sql_statement)
+        r = results.fetchone()
 
     # now that there are no null values, make the column non-nullable
     op.alter_column("metadata", "authz", nullable=False)
@@ -80,9 +83,11 @@ def downgrade():
     default_paths = default_authz.get(authz_key, ["/open"])
 
     connection = op.get_bind()
-    results = connection.execute("SELECT guid, authz, data from metadata").fetchall()
+    query = "SELECT guid, authz, data from metadata"
+    res = connection.execute(query)
+    r = res.fetchone()
+    while r:
 
-    for r in results:
         guid = r[0]
         authz_data = r[1]
         data = r[2]
@@ -95,6 +100,8 @@ def downgrade():
                 data[authz_key] = authz_data.pop(authz_key)
             sql_statement = f"UPDATE metadata SET data='{escape(json.dumps(data))}' WHERE guid='{guid}'"
             connection.execute(sql_statement)
+
+        r = res.fetchone()
 
     # drop the `authz` column
     op.drop_column("metadata", "authz")
