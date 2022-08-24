@@ -106,7 +106,7 @@ def normalize_field(doc, key, normalize_type):
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
         if normalize_type == "date" and isinstance(pydash.get(doc, key), str) and pydash.get(doc, key) == "":
-            doc[key] = None
+            pydash.set_(doc, field, None)
     except Exception:
         logger.debug(f"error normalizing {key} for a document")
         doc[key] = None
