@@ -244,7 +244,7 @@ pull from ICPSR.
 field in a study when loading. If set to true, any field already defined and process will be updated to
 the processed value.
 
-Sometimes a need arises to filter down entries based on a field value. ```select_fields```
+Sometimes a need arises to filter entries based on a field value. ```select_fields```
 config provides a way to filter out data that does NOT match. The setting are:
 
 * **field_name** - the field name to filter. Note that the filter is executed
@@ -276,7 +276,7 @@ The above methods should allow you to pull any nested value from a metadata entr
 "summary": {
       "path":"description",
       "filters": ["strip_html"],
-      "default_value" : "N/A"
+      "default" : "N/A"
 }
 ```
 In this case, the ```summary``` is set to a JSON object which optionally defines:
@@ -288,8 +288,8 @@ The filters are applied to the text value of the remote field. Furthermore, the 
 
 * **strip_html**: remove HTML tags from a text field
 * **strip_email**: remove email addresses from a text field
-* **add_icpsr_source_url**: creates a url to the study data on ICPSR
-* **add_clinical_trials_source_url**: creates a url to the study on clinicaltrials.gov
+* **add_icpsr_source_url**: creates an url to the study data on ICPSR
+* **add_clinical_trials_source_url**: creates an url to the study on clinicaltrials.gov
 
 You can add your own filters, and register them by creating a python function with the signature:
 ```python
@@ -302,8 +302,18 @@ Defining default values for fields is handled in one of two ways:
 If a field in the metadata does not need a path, simply define the
 field name and a value. If a remote metadata field has a value, it will override the default.
 If a path is used, then use the longer form and set the ```default``` to use
-if the path is not found.
-
+if the path is not found. The longer form of a field mapping is:
+```json lines
+      "summary": {
+            "path":"description",
+            "filters": ["strip_html"],
+            "default" : "N/A"
+      },
+```
+where:
+* ```path``` is the json path to the field
+* ```filters```: list of filters to apply (optional)
+* ```default```: value to set the field to if the path does not resolve (also optional)
 ```json
 {
   ...

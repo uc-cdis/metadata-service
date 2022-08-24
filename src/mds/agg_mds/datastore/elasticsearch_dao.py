@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
-from typing import List, Dict, Optional, Tuple
+from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
@@ -262,25 +262,29 @@ async def get_commons():
         return []
 
 
-def count(value) -> int:
+def count(value) -> Union[int, Any]:
     """
-    returns the length of the value if list or dict otherwise returns 0
+    Returns the length of the value if list or dict otherwise returns the value
+    If value is None returns 0
     """
+    if value is None:
+        return 0
     if isinstance(value, dict) or isinstance(value, list):
         return len(value)
-    return 0
+    return value
 
 
-def process_record(record: dict, counts: Optional[str]) -> Tuple[str, dict]:
+def process_record(record: dict, counts: Optional[List[str]]) -> Tuple[str, dict]:
     """
     processed an MDS record from the search
-    returns the id and record, if counts is found in the record the length is returned
+    returns the id and record, if an entry in counts is found in the record the length is returned
     instead of the entry.
     """
     _id = record["_id"]
     normalized = record["_source"]
-    if counts in normalized:
-        normalized[counts] = count(normalized[counts])
+    for c in counts:
+        if c in normalized:
+            normalized[c] = count(normalized[c])
     return _id, normalized
 
 
@@ -290,9 +294,11 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
     offset: starting index to return
     counts: converts the count of the entry[count] if it is a dict or array
     returns:
+
     flattend == true
     results : MDS results as a dict
               paging info
+
     flattend == false
     results : {
         commonsA: metadata
@@ -300,43 +306,72 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
         ...
         },
         paging info
+
+    The counts parameter provides a way to "compress" an array field to it's length.
+    For example:
+        if the record is:
+                {"count": [1, 2, 3, 4], "name": "my_name"}
+        then setting counts=count the result would be:
+            {"count": 4, "name": "my_name"}
+
+    counts can take a comma separated list of field names:
+            {
+            "count": [1, 2, 3, 4],
+            "__manifest" : [
+                { "filename": "filename1.txt", "filesize": 1000 },
+                { "filename": "filename2.txt", "filesize": 5555 },
+            ],
+            "name": "my_name"
+            }
+
+       setting counts=count,__manifest the result would be:
+            {
+            "count": 4,
+            "__manifest" : 2,
+            "name": "my_name"
+            }
+
+        if a counts field is not a list then it is unchanged, unless it
+        is null, in which case the field will be set to 0
     """
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
             body={"size": limit, "from": offset, "query": {"match_all": {}}},
         )
+        hitsTotal = res["hits"]["total"]
+        toReduce = counts.split(",") if counts is not None else None
         if flatten:
             flat = []
             for record in res["hits"]["hits"]:
-                id, normalized = process_record(record, counts)
-                flat.append({id: {"gen3_discovery": normalized}})
+                rid, normalized = process_record(record, toReduce)
+                flat.append({rid: {"gen3_discovery": normalized}})
             return {
                 "results": flat,
                 "pagination": {
-                    "hits": res["hits"]["total"],
+                    "hits": hitsTotal,
                     "offset": offset,
                     "pageSize": limit,
-                    "pages": ceil(int(res["hits"]["total"]) / limit),
+                    "pages": ceil(int(hitsTotal) / limit),
                 },
             }
         else:
             byCommons = {
                 "results": {},
                 "pagination": {
-                    "hits": res["hits"]["total"],
+                    "hits": hitsTotal,
                     "offset": offset,
                     "pageSize": limit,
-                    "pages": ceil(int(res["hits"]["total"]) / limit),
+                    "pages": ceil(int(hitsTotal) / limit),
                 },
             }
             for record in res["hits"]["hits"]:
-                id, normalized = process_record(record, counts)
+                rid, normalized = process_record(record, toReduce)
                 commons_name = normalized["commons_name"]
                 if commons_name not in byCommons["results"]:
                     byCommons["results"][commons_name] = []
                 byCommons["results"][commons_name].append(
-                    {id: {"gen3_discovery": normalized}}
+                    {rid: {"gen3_discovery": normalized}}
                 )
 
             return byCommons

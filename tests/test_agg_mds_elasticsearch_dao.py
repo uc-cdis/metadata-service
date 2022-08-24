@@ -12,7 +12,6 @@ from mds.agg_mds.datastore.elasticsearch_dao import (
     AGG_MDS_INFO_INDEX_TEMP,
     AGG_MDS_CONFIG_INDEX_TEMP,
     AGG_MDS_INFO_TYPE,
-    AGG_MDS_CONFIG_TYPE,
     count,
     process_record,
 )
@@ -183,7 +182,7 @@ async def test_create_if_exists():
                 400, "resource_already_exists_exception"
             )
         ),
-    ) as mock_indices:
+    ):
         await elasticsearch_dao.drop_all_non_temp_indexes()
         await elasticsearch_dao.create_indexes(COMMON_MAPPING)
 
@@ -193,11 +192,11 @@ async def test_create_index_raise_exception():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
         MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
-    ) as mock_indices:
+    ):
         try:
             await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
         except Exception as exc:
-            assert isinstance(exc, es_exceptions.RequestError) == True
+            assert isinstance(exc, es_exceptions.RequestError) is True
 
 
 @pytest.mark.asyncio
@@ -375,7 +374,7 @@ async def test_get_commons():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_search:
+    ):
         assert await elasticsearch_dao.get_commons() == []
 
 
@@ -387,17 +386,30 @@ def test_count_list():
     assert count([1, 2, 3]) == 3
 
 
-def test_count_fail():
-    assert count(123) == 0
+def test_count_value_number():
+    assert count(123) == 123
+
+
+def test_count_value_string():
+    assert count("imastring") == "imastring"
+
+
+def test_count_value_none():
+    assert count(None) == 0
 
 
 def test_process_records():
     _id = "123"
-    _source = {"count": [1, 2, 3, 4]}
+    _source = {"count": [1, 2, 3, 4], "name": "my_name"}
     record = {"_id": _id, "_source": _source}
-    id, normalized = process_record(record, "count")
-    assert id == _id
-    assert normalized == {"count": 4}
+    rid, normalized = process_record(record, ["count"])
+    assert rid == _id
+    assert normalized == {"count": 4, "name": "my_name"}
+
+    # test if passed dict field is not array
+    rid, normalized = process_record(record, ["name"])
+    assert rid == _id
+    assert normalized == _source
 
 
 @pytest.mark.asyncio
@@ -419,7 +431,7 @@ async def test_get_all_metadata():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_search:
+    ):
         assert await elasticsearch_dao.get_all_metadata(5, 9) == {}
 
 
@@ -437,7 +449,7 @@ async def test_get_all_named_commons_metadata():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_search:
+    ):
         assert (
             await elasticsearch_dao.get_all_named_commons_metadata("my-commons") == {}
         )
@@ -472,7 +484,7 @@ async def test_metadata_tags():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_search:
+    ):
         assert await elasticsearch_dao.metadata_tags() == []
 
 
@@ -490,7 +502,7 @@ async def test_get_commons_attribute():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_search:
+    ):
         assert await elasticsearch_dao.get_commons_attribute("my-commons") is None
 
 
@@ -516,7 +528,7 @@ async def test_get_aggregations():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_search:
+    ):
         assert await elasticsearch_dao.get_aggregations("my-commons") == []
 
 
@@ -535,5 +547,5 @@ async def test_get_by_guid():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.get",
         MagicMock(side_effect=Exception("some error")),
-    ) as mock_get:
-        assert await elasticsearch_dao.get_by_guid("my-commons") == None
+    ):
+        assert await elasticsearch_dao.get_by_guid("my-commons") is None

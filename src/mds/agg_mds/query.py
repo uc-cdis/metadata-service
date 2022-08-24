@@ -77,7 +77,7 @@ async def metadata(
         }
     }
 
-    The flatten option removes the commons namespace so all results are a child or results:
+    The flatten option removes the commons' namespace so all results are a child or results:
         results: {
               ... Metadata from commons A
               ... Metadata from commons B
@@ -85,6 +85,8 @@ async def metadata(
           ...
         },
 
+
+    The counts options when applied to a
     """
     results = await datastore.get_all_metadata(limit, offset, counts, flatten)
     if pagination is False:

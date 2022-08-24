@@ -260,6 +260,20 @@ async def test_aggregate_metadata_counts(client):
         assert resp.status_code == 200
         assert resp.json() == results
 
+    # test multiple counts field
+    mock_data["hits"]["hits"][0]["_source"]["__manifest"] = [
+        {"filename": "foo2.txt"},
+        {"filename": "foo3.txt"},
+    ]
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.search",
+        MagicMock(return_value=mock_data),
+    ) as search:
+        results["Lorem ipsum"][0]["815616c0-dfsdfjjj"]["gen3_discovery"]["tags"] = 2
+        resp = client.get("/aggregate/metadata?counts=__manifest,tags")
+        assert resp.status_code == 200
+        assert resp.json() == results
+
 
 @pytest.mark.asyncio
 async def test_aggregate_metadata_counts_null(client):
