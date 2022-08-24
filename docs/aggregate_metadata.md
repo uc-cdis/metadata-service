@@ -228,6 +228,10 @@ commons name (used as a key) per adapter is unique.
 The parameters of an adapter are:
  * ```mds_url```: URL of the metadata serviceAPI.
  * ```commons_url```: the URL for the homepage the metadata source
+ * ```commons_name``` : override the commons_name. Typically, the commons is named using the entry name for the adapter. (ICPSR in the above config file). However there are case where
+using a different name is preferred. For example if one of more adapters are assigned the same name
+all the entries will be added to the commons name in the aggregateMDS. This can use to have multiple adapters
+pull data from the same source, but using different mappings of filtering operations.
  * ```adapter```: registered name of the adapter, used to bind a particular
 adapter to a site: NOTE there is no checking to ensure that the correct
 adapters are being used. Usually, in the case of a mismatch, errors are
@@ -236,7 +240,8 @@ logged and nothing is pulled.
  * ```filters```: the parameters (or filter
 properties) passed to the adapter, this is adapter specific. In the
 above example, the ```study_id``` parameter for the ICPSR adapter is used to select which study ids to
-pull from ICPSR.
+pull from ICPSR. Note that adapter themselves can have filtering options, this is
+provided as a backup if no other filter option is available.
 
 #### Adapter Setting
 
@@ -500,3 +505,15 @@ this will the look for metadata entries such as:
     "unregistered_discovery_metadata": "discovery_metadata",
     "my_metadata": { ...
 ```
+### Advanced filtering
+
+The Gen3 metadata-service supports filtering as described in the documentation. The Gen3 Adapter
+allows a filter option to be configs which is passed to the MDS. Specific studies can
+be pulled from the MDS by defining the filters.
+The filters are part of the config setting:
+```json lines
+      "config": {
+        "filters": "gen3_discovery.data_resource=SAMHDA"
+      },
+```
+Note that this can work along with the ```guid_type``` and ```study_field```.

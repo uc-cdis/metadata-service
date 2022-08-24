@@ -216,6 +216,7 @@ class AdapterMDSInstance:
     study_data_field: str = "gen3_discovery"
     keep_original_fields: bool = True
     global_field_filters: List[str] = field(default_factory=list)
+    commons_name: Optional[str] = None
 
 
 @dataclass_json

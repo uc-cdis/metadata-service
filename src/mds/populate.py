@@ -66,8 +66,13 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
 
         entry = normalize(entry)
 
-        # add the common field and url to the entry
-        entry[common.study_data_field]["commons_name"] = name
+        # add the common field, selecting the name or an override (i.e. commons_name) and url to the entry
+
+        entry[common.study_data_field]["commons_name"] = (
+            common.commons_name
+            if hasattr(common, "commons_name") and common.commons_name is not None
+            else name
+        )
 
         # add to tags
         item_tags = entry[common.study_data_field].get("tags", {})
