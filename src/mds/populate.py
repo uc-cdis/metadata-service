@@ -31,6 +31,9 @@ def parse_args(argv: List[str]) -> Namespace:
 async def populate_metadata(name: str, common, results):
     mds_arr = [{k: v} for k, v in results.items()]
 
+    print("THIS IS THE MDS ARR")
+    print(mds_arr)
+
     total_items = len(mds_arr)
 
     if total_items == 0:
@@ -105,9 +108,6 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
     if not config.USE_AGG_MDS:
         print("aggregate MDS disabled")
         exit(1)
-
-    print("This is the config")
-    print(config)
 
     url_parts = urlparse(config.ES_ENDPOINT)
 
