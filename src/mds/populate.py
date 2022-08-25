@@ -79,9 +79,6 @@ async def populate_metadata(name: str, common, results):
     for k, v in tags.items():
         tags[k] = list(tags[k])
 
-    print("THIS IS THE TAGS")
-    print(tags)
-
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
     await datastore.update_metadata(
