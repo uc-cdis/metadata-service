@@ -107,7 +107,8 @@ async def test_update_metadata():
                 id="my_id",
                 body={"some_field": "some_value", "__manifest": {}, "sites": None},
             ),
-        ],
+        ]
+        any_order=True,
     )
 
 
