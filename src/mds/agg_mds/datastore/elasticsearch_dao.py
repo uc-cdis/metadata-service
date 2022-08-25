@@ -3,6 +3,7 @@ from typing import List, Dict
 import json
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE
+import pydash
 
 
 # TODO WFH Why do we have both __manifest and _file_manifest?
@@ -20,7 +21,12 @@ FIELD_NORMALIZERS = {
     "project_end_date": "date",
     "award_notice_date": "date",
     "project_start_date": "date",
+    "Data Availability.data_collection_finish_date": "date",
+    "Data Availability.data_collection_start_date": "date",
+    "Data Availability.data_release_finish_date": "date",
+    "Data Availability.data_release_start_date": "date",
 }
+
 
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
@@ -100,8 +106,8 @@ def normalize_field(doc, key, normalize_type):
             doc[key] = None if value == "" else json.loads(value)
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
-        if normalize_type == "date" and isinstance(doc[key], str) and doc[key] == "":
-            doc[key] = None
+        if normalize_type == "date" and isinstance(pydash.get(doc, key), str) and pydash.get(doc, key) == "":
+            pydash.set_(doc, key, None)
     except Exception:
         logger.debug(f"error normalizing {key} for a document")
         doc[key] = None
@@ -128,7 +134,7 @@ async def update_metadata(
         doc = doc[key][study_data_field]
 
         for field in FIELD_NORMALIZERS.keys():
-            if field in doc:
+            if pydash.has(doc, field):
                 normalize_field(doc, field, FIELD_NORMALIZERS[field])
 
         elastic_search_client.index(
