@@ -28,7 +28,6 @@ FIELD_NORMALIZERS = {
 }
 
 
-
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
 
@@ -106,7 +105,11 @@ def normalize_field(doc, key, normalize_type):
             doc[key] = None if value == "" else json.loads(value)
         if normalize_type == "number" and isinstance(doc[key], str):
             doc[key] = None
-        if normalize_type == "date" and isinstance(pydash.get(doc, key), str) and pydash.get(doc, key) == "":
+        if (
+            normalize_type == "date"
+            and isinstance(pydash.get(doc, key), str)
+            and pydash.get(doc, key) == ""
+        ):
             pydash.set_(doc, key, None)
     except Exception:
         logger.debug(f"error normalizing {key} for a document")
