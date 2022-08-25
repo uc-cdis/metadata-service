@@ -102,7 +102,7 @@ def normalize_field(doc, key, normalize_type):
     try:
         if normalize_type == "object" and isinstance(pydash.get(doc, key), str):
             value = pydash.get(doc, key)
-            pydash.set_(doc, key, None) if value == "" else json.loads(value)
+            pydash.set_(doc, key, None) if value == "" else pydash.set_(doc, key, value)
         if normalize_type == "number" and isinstance(pydash.get(doc, key), str):
             pydash.set_(doc, key, None)
         if (
