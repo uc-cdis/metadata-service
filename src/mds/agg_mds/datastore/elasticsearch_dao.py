@@ -331,7 +331,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             "name": "my_name"
             }
 
-        if a counts field is not a list then it is unchanged, unless it
+        if a counts field is not a list or dict then it is unchanged, unless it
         is null, in which case the field will be set to 0
     """
     try:

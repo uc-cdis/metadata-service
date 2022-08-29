@@ -34,7 +34,7 @@ async def get_commons(what: str):
 async def metadata(
     _: Request,
     limit: int = Query(
-        20, description="Maximum number of records returned. (max: 2000)"
+        20, description="Maximum number of records returned. (e.g. max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
     counts: str = Query(
@@ -86,7 +86,9 @@ async def metadata(
         },
 
 
-    The counts options when applied to a
+    The counts options when applied to an array or dictionary will replace
+    the field value with its length. If the field values is None it will replace it with 0.
+    All other type will be unchanged.
     """
     results = await datastore.get_all_metadata(limit, offset, counts, flatten)
     if pagination is False:
