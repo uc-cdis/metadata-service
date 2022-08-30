@@ -805,7 +805,7 @@ paths:
       - Aggregate
   /aggregate/metadata/guid/{guid}:
     get:
-      description: "Returns a metadata record by guid"
+      description: "Returns a metadata record by GUID"
       operationId: get_aggregate_metadata_guid
       responses:
         '200':
