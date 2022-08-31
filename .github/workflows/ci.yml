@@ -56,8 +56,6 @@ jobs:
         USE_AGG_MDS: true
         PGPASSWORD: metadata_pass
       run: |
-        psql -h $DB_HOST --dbname=test_metadata --username=$DB_USER -c 'select * from information_schema.columns;' | grep alias
-        printenv | grep DB
         poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
