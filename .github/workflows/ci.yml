@@ -31,7 +31,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install poetry
-        poetry install -vv
+        poetry install -vv --no-root --no-interaction
         poetry show -vv
     - name: Migrate database
       env:
