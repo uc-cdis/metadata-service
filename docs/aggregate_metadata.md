@@ -53,7 +53,7 @@ A schema is of the form:
 ```json lines
    "schema": {
       "__manifest": {
-        "description": "and array of filename (usually DRS ids and its size",
+        "description": "an array of filename (usually DRS ids and its size",
         "type": "array",
         "properties": {
           "file_name": {
