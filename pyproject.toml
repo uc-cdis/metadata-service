@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mds"
-version = "1.8.1"
+version = "1.8.2"
 description = "Metadata Service"
 authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ authutils = "^5.0.4"
 cdislogging = "^1.0"
 click = "==7.1.*,>=7.1.2"
 pyyaml = "==5.4.*,>=5.4.1"
-setuptools = "==52.0.*,>=52.0.0"
+setuptools = "*"
 dataclasses-json = "==0.5.*,>=0.5.2"
 pytest-asyncio = "^0.15.1"
 jsonpath-ng = "^1.5.3"
