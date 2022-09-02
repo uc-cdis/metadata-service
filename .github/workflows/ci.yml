@@ -33,19 +33,6 @@ jobs:
         pip install poetry
         poetry install -vv --no-root --no-interaction
         poetry show -vv
-    - name: Migrate database
-      env:
-        DB_HOST: localhost
-        DB_PORT: 5432
-        DB_USER: metadata_user
-        DB_PASSWORD: metadata_pass
-        DB_DATABASE: test_metadata
-        TESTING: false
-        USE_AGG_MDS: true
-        PGPASSWORD: metadata_pass
-      run: |
-        poetry run alembic current
-        poetry run alembic upgrade head
     - name: Test with pytest
       env:
         DB_HOST: localhost
