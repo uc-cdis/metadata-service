@@ -96,10 +96,10 @@ def load_modules(app=None):
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
         msg = "Loaded module: "
-        logger.info(
+        print(
             msg + "%s",
             ep.name,
-            extra={"color_message": msg + click.style("%s", fg="cyan")},
+            # extra={"color_message": msg + click.style("%s", fg="cyan")},
         )
 
 
