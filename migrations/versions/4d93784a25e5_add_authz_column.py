@@ -29,6 +29,7 @@ def upgrade():
     """Migrate the authz data from the `data` column and remove some metadata fields."""
 
     authz_key = "_resource_paths"
+    authz_data = {}
     remove_metadata_keys = ["_uploader_id", "_filename", "_bucket", "_file_extension"]
 
     # add the new `authz` column (nullable for now)
@@ -47,8 +48,6 @@ def upgrade():
     while results:
         for r in results:
             guid, data = r[0], r[1]
-            # default values for authz (["/open"])
-            authz_data = json.loads(DEFAULT_AUTHZ_STR)
             # check for any existing authz-resource-paths in the `data` column
             if data is not None and authz_key in data:
                 authz_data[authz_key] = data.pop(authz_key)
@@ -61,7 +60,8 @@ def upgrade():
                                     data='{escape(json.dumps(data))}'
                                     WHERE guid='{guid}'"""
             else:
-                sql_statement = f"UPDATE metadata SET authz='{json.dumps(authz_data)}' WHERE guid='{guid}'"
+                # default values for authz (["/open"])
+                sql_statement = f"UPDATE metadata SET authz='{DEFAULT_AUTHZ_STR}' WHERE guid='{guid}'"
             connection.execute(sql_statement)
         # Grab another batch of rows
         offset += limit
