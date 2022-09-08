@@ -29,7 +29,8 @@ def upgrade():
     """Migrate the authz data from the `data` column and remove some metadata fields."""
 
     authz_key = "_resource_paths"
-    authz_data = {}
+    default_version = json.loads(DEFAULT_AUTHZ_STR).get("version", 0)
+    authz_data = {"version": default_version}
     remove_metadata_keys = ["_uploader_id", "_filename", "_bucket", "_file_extension"]
 
     # add the new `authz` column (nullable for now)
