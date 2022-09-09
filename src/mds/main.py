@@ -90,6 +90,13 @@ class ClientDisconnectMiddleware:
 
 
 def load_modules(app=None):
+    """
+    Loop through Poetry [plugins](https://python-poetry.org/docs/master/pyproject/#plugins)
+    which behave like setuptools Entry Points, then load() each one
+
+    See also:
+        https://setuptools.pypa.io/en/latest/userguide/entry_point.html#entry-points-for-plugins
+    """
     logger.info("Start to load modules.")
     # sorted set ensures deterministic loading order
     for ep in sorted(set(entry_points()["mds.modules"])):
