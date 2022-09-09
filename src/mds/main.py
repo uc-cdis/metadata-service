@@ -91,7 +91,8 @@ class ClientDisconnectMiddleware:
 
 def load_modules(app=None):
     logger.info("Start to load modules.")
-    for ep in entry_points()["mds.modules"]:
+    # sorted set ensures deterministic loading order
+    for ep in sorted(set(entry_points()["mds.modules"])):
         mod = ep.load()
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
