@@ -91,21 +91,8 @@ class ClientDisconnectMiddleware:
 
 def load_modules(app=None):
     logger.info("Start to load modules.")
-    for ep in entry_points()["mds.modules"]:
-        if ep.name != "aliases":
-            continue
-        mod = ep.load()
-        if app and hasattr(mod, "init_app"):
-            mod.init_app(app)
-        msg = "Loaded module: "
-        print(
-            msg + "%s",
-            ep.name,
-            # extra={"color_message": msg + click.style("%s", fg="cyan")},
-        )
-    for ep in entry_points()["mds.modules"]:
-        if ep.name == "aliases":
-            continue
+    # sorted set ensures deterministic loading order
+    for ep in sorted(set(entry_points()["mds.modules"])):
         mod = ep.load()
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
