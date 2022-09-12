@@ -96,18 +96,18 @@ async def test_update_metadata():
     mock_index.assert_has_calls(
         [
             call(
-                body={},
+                index="default_namespace-commons-info-index",
                 doc_type="commons-info",
                 id="my_commons",
-                index="default_namespace-commons-info-index",
+                body={},
             ),
             call(
-                body={"some_field": "some_value", "__manifest": {}, "sites": None},
+                index="default_namespace-commons-index",
                 doc_type="commons",
                 id="my_id",
-                index="default_namespace-commons-index",
+                body={"some_field": "some_value", "__manifest": {}, "sites": None},
             ),
-        ],
+        ]
     )
 
 
