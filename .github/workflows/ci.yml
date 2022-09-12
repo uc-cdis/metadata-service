@@ -25,9 +25,9 @@ jobs:
     - uses: actions/cache@preview
       with:
         path: ~/.cache/pypoetry/virtualenvs
-        key: ${{ runner.os }}-poetry-2-${{ hashFiles(format('{0}{1}', github.workspace, '/poetry.lock')) }}
+        key: ${{ runner.os }}-poetry-3-${{ hashFiles(format('{0}{1}', github.workspace, '/poetry.lock')) }}
         restore-keys: |
-          ${{ runner.os }}-poetry-
+          ${{ runner.os }}-poetry-3
     - name: Install dependencies
       run: |
         pip install poetry
