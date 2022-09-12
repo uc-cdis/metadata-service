@@ -771,6 +771,14 @@ paths:
       - Aggregate
   /aggregate/metadata/{name}:
     get:
+      parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          title: Name
+          type: string
+          default: false
       description: "Returns an array containing all the metadata entries for a single commons. There are no limit/offset parameters."
       operationId: get_aggregate_metadata_for_commons
       responses:
@@ -788,6 +796,14 @@ paths:
       - Aggregate
   /aggregate/metadata/{name}/info:
     get:
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            title: Name
+            type: string
+            default: false
       description: "Returns an object containing additional information about a commons"
       operationId: get_aggregate_metadata_commons_info
       responses:
@@ -805,6 +821,14 @@ paths:
       - Aggregate
   /aggregate/metadata/guid/{guid}:
     get:
+      parameters:
+        - in: path
+          name: guid
+          required: true
+          schema:
+            title: Guid
+            type: string
+            default: false
       description: "Returns a metadata record by GUID"
       operationId: get_aggregate_metadata_guid
       responses:
