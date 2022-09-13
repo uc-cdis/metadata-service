@@ -453,7 +453,8 @@ paths:
         \ then any aliases that are not in the new data will be\nkept.\n\nArgs:\n\
         \    guid (str): Metadata GUID\n    body (AliasObjInput): JSON body with list\
         \ of aliases\n    request (Request): incoming request\n    merge (bool, optional):\
-        \ Description"
+        \ If `merge` is True, then any aliases that are not\n        in the new data\
+        \ will be kept."
       operationId: update_metadata_alias_metadata__guid__aliases_put
       parameters:
       - in: path
