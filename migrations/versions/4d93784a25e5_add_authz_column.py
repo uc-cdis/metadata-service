@@ -102,7 +102,7 @@ def downgrade():
             authz_data = r[1]
             data = r[2]
             # keep only non-default resource paths
-            if authz_data.get(authz_key) != default_paths:
+            if authz_data.get(authz_key) and authz_data.get(authz_key) != default_paths:
                 if data is None:
                     data = {authz_key: authz_data.pop(authz_key)}
                 else:
