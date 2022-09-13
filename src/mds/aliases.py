@@ -107,35 +107,32 @@ async def update_metadata_alias(
         guid (str): Metadata GUID
         body (AliasObjInput): JSON body with list of aliases
         request (Request): incoming request
-        merge (bool, optional): Description
+        merge (bool, optional): If `merge` is True, then any aliases that are not
+            in the new data will be kept.
     """
+    input_body_aliases = body.aliases or []
+    requested_aliases = set(input_body_aliases)
+    logger.debug(f"requested_aliases: {requested_aliases}")
+
     existing_metadata_aliases = await MetadataAlias.query.where(
         MetadataAlias.guid == guid
     ).gino.all()
-    existing_aliases = [item.alias for item in existing_metadata_aliases]
 
-    input_body_aliases = body.aliases or []
-    new_aliases = list(set(input_body_aliases))
+    existing_aliases = set([item.alias for item in existing_metadata_aliases])
+    aliases_to_add = requested_aliases - existing_aliases
+    final_aliases = requested_aliases | existing_aliases
 
-    if merge:
-        aliases = list(set(existing_aliases) | set(new_aliases))
-    else:
+    if not merge:
         # remove old aliases if they don't exist in new ones
         for alias_metadata in existing_metadata_aliases:
-            if alias_metadata.alias not in new_aliases:
+            if alias_metadata.alias not in requested_aliases:
                 logger.debug(
                     f"deleting MetadataAlias(alias={alias_metadata.alias}, guid={guid})"
                 )
                 await alias_metadata.delete()
+        final_aliases = requested_aliases
 
-        aliases = new_aliases
-
-    for alias in aliases:
-        # don't create a new entry if one already exists
-        if alias in existing_aliases:
-            logger.debug(f"already exists MetadataAlias(alias={alias}, guid={guid})")
-            continue
-
+    for alias in aliases_to_add:
         try:
             logger.debug(f"inserting MetadataAlias(alias={alias}, guid={guid})")
             metadata_alias = (
@@ -154,7 +151,9 @@ async def update_metadata_alias(
                 f"Alias: '{alias}' is already in use by a different GUID.",
             )
 
-    return JSONResponse({"guid": guid, "aliases": sorted(aliases)}, HTTP_201_CREATED)
+    return JSONResponse(
+        {"guid": guid, "aliases": sorted(list(final_aliases))}, HTTP_201_CREATED
+    )
 
 
 @mod.delete("/metadata/{guid:path}/aliases/{alias:path}")
