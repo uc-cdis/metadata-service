@@ -415,9 +415,7 @@ paths:
       tags:
       - Query
     post:
-      description: "Create metadata aliases for the GUID.\n\nArgs:\n    guid (str):\
-        \ Metadata GUID\n    body (AliasObjInput): JSON body with list of aliases\n\
-        \    request (Request): incoming request"
+      description: Create metadata aliases for the GUID.
       operationId: create_metadata_aliases_metadata__guid__aliases_post
       parameters:
       - in: path
