@@ -50,7 +50,6 @@ Create a file `.env` in the root directory of the checkout:
 # DB_USER = "..."                     # default: current user
 # DB_PASSWORD = "..."                 # default: empty
 # DB_DATABASE = "..."                 # default: current user
-# USE_AGG_MDS = "..."                 # default: false
 # AGG_MDS_NAMESPACE = "..."           # default: default_namespace
 # GEN3_ES_ENDPOINT = "..."            # default: empty
 # INDEXING_SERVICE_ENDPOINT = "..."   # default: http://indexd-service

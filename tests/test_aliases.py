@@ -16,12 +16,14 @@ import urllib.parse
         ("dg.3456/test_get_aliases", ["1", "2", "3", "4", "5"], False),
         ("dg.4567/test_get_aliases", [], True),
         ("dg.4567/test_get_aliases", [], False),
-        ("dg.5678/test_get_aliases", ["dg.1234/test_get_aliases"], True),
-        ("dg.5678/test_get_aliases", ["dg.1234/test_get_aliases"], False),
-        ("dg.6789/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"], True),
-        ("dg.6789/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"], False),
-        ("dg.7890/test_get_aliases", ["/\\|_.,-;__"], True),
-        ("dg.7890/test_get_aliases", ["/\\|_.,-;__"], False),
+        ("dg.5678/test_get_aliases", None, True),
+        ("dg.5678/test_get_aliases", None, False),
+        ("dg.6789/test_get_aliases", ["dg.1234/test_get_aliases"], True),
+        ("dg.6789/test_get_aliases", ["dg.1234/test_get_aliases"], False),
+        ("dg.7890/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"], True),
+        ("dg.7890/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"], False),
+        ("dg.8890/test_get_aliases", ["/\\|_.,-;__"], True),
+        ("dg.8890/test_get_aliases", ["/\\|_.,-;__"], False),
     ],
 )
 def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
@@ -29,6 +31,9 @@ def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
     Create a metadata record, then try POST and PUT new aliases.
     Ensure you are able to GET the new aliases and DELETE them one by one.
     """
+    # convert None to empty list
+    aliases = aliases or []
+
     data = dict(a=1, b=2)
     client.post(f"/metadata/{guid}", json=data).raise_for_status()
 
@@ -91,7 +96,7 @@ def test_create_already_created_aliases(guid, aliases, client):
         response = client.post(
             f"/metadata/{guid}/aliases", json={"aliases": ["new", "stuff"]}
         )
-        assert not str(response.status_code).startswith("20")
+        assert str(response.status_code) == "409"
 
         # ensure the original aliases data did not get modified
         assert client.get(f"/metadata/{guid}").json() == data
@@ -221,27 +226,27 @@ def test_update_already_created_aliases(guid, aliases, updates, merge, client):
         assert str(response.status_code).startswith("20")
 
         if merge:
-            excepted_aliases = sorted(list(set(aliases) | set(updates)))
+            expected_aliases = sorted(list(set(aliases) | set(updates)))
         else:
-            excepted_aliases = sorted(list(set(updates)))
+            expected_aliases = sorted(list(set(updates)))
 
         # ensure the new aliases exist
         assert client.get(f"/metadata/{guid}").json() == data
         assert (
             client.get(f"/metadata/{guid}/aliases").json().get("aliases")
-            == excepted_aliases
+            == expected_aliases
         )
         assert client.get(f"/metadata/{guid}/aliases").json().get("guid") == guid
 
-        for alias in excepted_aliases:
+        for alias in expected_aliases:
             # NOTE you have to percent encode aliases in urls
             assert client.get(f"/metadata/{urllib.parse.quote(alias)}").json() == data
 
         # old aliases should no longer work/exist
         for alias in aliases:
-            if alias not in excepted_aliases:
+            if alias not in expected_aliases:
                 response = client.get(f"/metadata/{urllib.parse.quote(alias)}")
-                assert not str(response.status_code).startswith("20")
+                assert str(response.status_code) == "404"
     finally:
         client.delete(f"/metadata/{guid}").raise_for_status()
 
@@ -286,6 +291,6 @@ def test_delete_all_aliases(guid, aliases, client):
         # old aliases should no longer work/exist
         for alias in aliases:
             response = client.get(f"/metadata/{urllib.parse.quote(alias)}")
-            assert not str(response.status_code).startswith("20")
+            assert str(response.status_code) == "404"
     finally:
         client.delete(f"/metadata/{guid}").raise_for_status()

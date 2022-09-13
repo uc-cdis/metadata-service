@@ -1,6 +1,6 @@
 from fastapi import HTTPException, Query, APIRouter
 from starlette.requests import Request
-from starlette.status import HTTP_404_NOT_FOUND
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 from starlette.responses import JSONResponse
 
 from .models import db, Metadata, MetadataAlias
@@ -140,7 +140,9 @@ async def get_metadata(guid):
         metadata = await Metadata.get(metadata_alias.guid)
 
         if not metadata:
-            raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+            message = f"Alias record exists but GUID not found: {guid}"
+            logging.error(message)
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, message)
 
     return metadata.data
 

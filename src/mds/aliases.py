@@ -52,14 +52,11 @@ async def create_metadata_aliases(
     body: AliasObjInput,
     request: Request,
 ) -> JSONResponse:
-    """Create metadata aliases for the GUID.
-
-    Args:
-        guid (str): Metadata GUID
-        body (AliasObjInput): JSON body with list of aliases
-        request (Request): incoming request
     """
-    aliases = list(set(body.aliases)) or []
+    Create metadata aliases for the GUID.
+    """
+    input_body_aliases = body.aliases or []
+    aliases = list(set(input_body_aliases))
 
     metadata_aliases = await MetadataAlias.query.where(
         MetadataAlias.guid == guid
@@ -116,7 +113,9 @@ async def update_metadata_alias(
         MetadataAlias.guid == guid
     ).gino.all()
     existing_aliases = [item.alias for item in existing_metadata_aliases]
-    new_aliases = list(set(body.aliases)) or []
+
+    input_body_aliases = body.aliases or []
+    new_aliases = list(set(input_body_aliases))
 
     if merge:
         aliases = list(set(existing_aliases) | set(new_aliases))
@@ -178,7 +177,7 @@ async def delete_metadata_alias(
         .returning(*MetadataAlias)
         .gino.first()
     )
-    logger.info(metadata_alias)
+    logger.debug(f"deleting: {metadata_alias}")
     if metadata_alias:
         return JSONResponse({}, HTTP_204_NO_CONTENT)
     else:
