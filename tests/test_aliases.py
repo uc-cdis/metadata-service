@@ -31,8 +31,6 @@ def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
     Create a metadata record, then try POST and PUT new aliases.
     Ensure you are able to GET the new aliases and DELETE them one by one.
     """
-    # convert None to empty list
-    aliases = aliases or []
 
     data = dict(a=1, b=2)
     client.post(f"/metadata/{guid}", json=data).raise_for_status()
@@ -46,6 +44,10 @@ def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
         client.put(
             f"/metadata/{guid}/aliases", json={"aliases": aliases}
         ).raise_for_status()
+
+    # convert None to empty list for comparison of output
+    # because we always expect the output to be a list, even if the input is not
+    aliases = aliases or []
 
     try:
         assert client.get(f"/metadata/{guid}").json() == data
