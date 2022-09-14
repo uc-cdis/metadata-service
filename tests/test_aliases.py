@@ -4,28 +4,20 @@ import urllib.parse
 
 
 @pytest.mark.parametrize(
-    "guid,aliases,is_post",
+    "guid,aliases",
     [
-        ("test_get_aliases", ["alias_a"], True),
-        ("test_get_aliases", ["alias_a"], False),
-        ("dg.1234/test_get_aliases", ["alias_b"], True),
-        ("dg.1234/test_get_aliases", ["alias_b"], False),
-        ("dg.2345/test_get_aliases", ["alias_b", "alias_b_2"], True),
-        ("dg.2345/test_get_aliases", ["alias_b", "alias_b_2"], False),
-        ("dg.3456/test_get_aliases", ["1", "2", "3", "4", "5"], True),
-        ("dg.3456/test_get_aliases", ["1", "2", "3", "4", "5"], False),
-        ("dg.4567/test_get_aliases", [], True),
-        ("dg.4567/test_get_aliases", [], False),
-        ("dg.5678/test_get_aliases", None, True),
-        ("dg.5678/test_get_aliases", None, False),
-        ("dg.6789/test_get_aliases", ["dg.1234/test_get_aliases"], True),
-        ("dg.6789/test_get_aliases", ["dg.1234/test_get_aliases"], False),
-        ("dg.7890/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"], True),
-        ("dg.7890/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"], False),
-        ("dg.8890/test_get_aliases", ["/\\|_.,-;__"], True),
-        ("dg.8890/test_get_aliases", ["/\\|_.,-;__"], False),
+        ("test_get_aliases", ["alias_a"]),
+        ("dg.1234/test_get_aliases", ["alias_b"]),
+        ("dg.2345/test_get_aliases", ["alias_b", "alias_b_2"]),
+        ("dg.3456/test_get_aliases", ["1", "2", "3", "4", "5"]),
+        ("dg.4567/test_get_aliases", []),
+        ("dg.5678/test_get_aliases", None),
+        ("dg.6789/test_get_aliases", ["dg.1234/test_get_aliases"]),
+        ("dg.7890/test_get_aliases", ["!@(#_*&$)^-!@#)%*_(&"]),
+        ("dg.8890/test_get_aliases", ["/\\|_.,-;__"]),
     ],
 )
+@pytest.mark.parametrize("is_post", [True, False])
 def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
     """
     Create a metadata record, then try POST and PUT new aliases.
@@ -178,37 +170,25 @@ def test_create_already_created_aliases_on_different_guid(
 
 
 @pytest.mark.parametrize(
-    "guid,aliases,updates,merge",
+    "guid,aliases,updates",
     [
-        ("test_get_aliases", ["alias_a"], ["alias_a", "another_alias"], False),
-        ("test_get_aliases", ["alias_a"], ["alias_a", "another_alias"], True),
-        ("test_get_aliases", ["alias_a"], ["alias_a"], False),
-        ("test_get_aliases", ["alias_a"], ["alias_a"], True),
+        ("test_get_aliases", ["alias_a"], ["alias_a", "another_alias"]),
+        ("test_get_aliases", ["alias_a"], ["alias_a"]),
         (
             "test_get_aliases",
             ["alias_a"],
             ["new_alias", "alias_a", "another_alias"],
-            False,
         ),
-        (
-            "test_get_aliases",
-            ["alias_a"],
-            ["new_alias", "alias_a", "another_alias"],
-            True,
-        ),
-        ("test_get_aliases", ["alias_a"], ["only_alias"], False),
-        ("test_get_aliases", ["alias_a"], ["only_alias"], True),
+        ("test_get_aliases", ["alias_a"], ["only_alias"]),
         (
             "test_get_aliases",
             ["alias_a"],
             ["duplicate_alias", "duplicate_alias"],
-            False,
         ),
-        ("test_get_aliases", ["alias_a"], ["duplicate_alias", "duplicate_alias"], True),
-        ("test_get_aliases", ["alias_a"], [], False),
-        ("test_get_aliases", ["alias_a"], [], True),
+        ("test_get_aliases", ["alias_a"], []),
     ],
 )
+@pytest.mark.parametrize("merge", [True, False])
 def test_update_already_created_aliases(guid, aliases, updates, merge, client):
     """
     Ensure successful response when trying to PUT an already existing record with
