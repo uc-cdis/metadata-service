@@ -54,6 +54,11 @@ async def create_metadata_aliases(
 ) -> JSONResponse:
     """
     Create metadata aliases for the GUID.
+
+    Args:
+        guid (str): Metadata GUID
+        body (AliasObjInput): JSON body with list of aliases
+        request (Request): incoming request
     """
     input_body_aliases = body.aliases or []
     aliases = list(set(input_body_aliases))

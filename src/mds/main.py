@@ -126,7 +126,6 @@ async def get_status():
      * error: if there was no error this will be "none"
      * last_update: timestamp of the last data pull from the commons
      * count: number of entries
-    :return:
     """
     now = await db.scalar("SELECT now()")
 
