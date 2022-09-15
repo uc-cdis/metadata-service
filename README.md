@@ -6,120 +6,17 @@
 [![Dependabot Badge](https://img.shields.io/badge/Dependabot-active-brightgreen?logo=dependabot)](https://dependabot.com/)
 [![License](https://img.shields.io/github/license/uc-cdis/metadata-service?logo=apache)](https://github.com/uc-cdis/metadata-service/blob/master/LICENSE)
 
-The Metadata Service provides API for retrieving JSON metadata of GUIDs.
+The Metadata Service provides an API for retrieving JSON metadata of GUIDs. It is a flexible option for "semi-structured" data (key:value mappings).
+
+The GUID (the key) can be any string that is unique within the instance. The value is the metadata associated with the GUID, it’s a JSON blob whose structure is not enforced on the server side.
 
 The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged with
 [Poetry](https://poetry.eustace.io/).
 
-[View API Documentation](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml)
+## Key documentation
 
-## Aggregation APIs
+The documentation can be browsed in the [docs](docs) folder, and key documents are linked below.
 
-The aggregated MDS APIs and scripts copy metadata from one or many metadata services into a single data store. This enables a metadata service to act as a central API for browsing Metadata using clients such as the Ecosystem browser.
-
-The aggregate metadata APIs and migrations are disabled by default unless `USE_AGG_MDS=true` is specified. The `AGG_MDS_NAMESPACE` should also be defined for shared Elasticserach environments so that a unique index is used per-instance.
-
-The aggregate cache is built using Elasticsearch. See the `docker-compose.yaml` file (specifically the `aggregate_migration` service) for details regarding how aggregate data is populated.
-
-## Installation
-
-Install required software:
-
-* [PostgreSQL](PostgreSQL) 9.6 or above
-* [Python](https://www.python.org/downloads/) 3.9 or above
-* [Poetry](https://poetry.eustace.io/docs/#installation)
-
-Then use `poetry install` to install the dependencies. Before that,
-a [virtualenv](https://virtualenv.pypa.io/) is recommended.
-If you don't manage your own, Poetry will create one for you
-during `poetry install`, and you must activate it by:
-
-```bash
-poetry shell
-```
-
-## Development
-
-Create a file `.env` in the root directory of the checkout:
-(uncomment to override the default)
-
-```python
-# USE_AGG_MDS = True                  # default: False
-# DB_HOST = "..."                     # default: localhost
-# DB_PORT = ...                       # default: 5432
-# DB_USER = "..."                     # default: current user
-# DB_PASSWORD = "..."                 # default: empty
-# DB_DATABASE = "..."                 # default: current user
-# AGG_MDS_NAMESPACE = "..."           # default: default_namespace
-# GEN3_ES_ENDPOINT = "..."            # default: empty
-# INDEXING_SERVICE_ENDPOINT = "..."   # default: http://indexd-service
-# DATA_ACCESS_SERVICE_ENDPOINT= "..." # default: http://fence-service
-```
-
-Run database schema migration:
-
-```bash
-alembic upgrade head
-```
-
-Run the server with auto-reloading:
-
-```bash
-python run.py
-```
-
-Try out the API at: <http://localhost:8000/docs>.
-
-## Run tests
-
-Please note that the name of the test database is prepended with "test_", you
-need to create that database first:
-
-```bash
-psql
-CREATE DATABASE test_metadata;
-```
-
-```bash
-pytest --cov=src --cov=migrations/versions tests
-```
-
-## Develop with Docker
-
-Use Docker compose:
-
-```bash
-docker-compose up
-```
-
-Run database schema migration as well:
-
-```bash
-docker-compose exec app alembic upgrade head
-```
-
-Run tests:
-
-```bash
-docker-compose exec app pytest --cov=src --cov=migrations/versions tests
-```
-
-## Deployment
-
-For production, use [gunicorn](https://gunicorn.org/):
-
-```bash
-gunicorn mds.asgi:app -k uvicorn.workers.UvicornWorker -c gunicorn.conf.py
-```
-
-Or use the Docker image built from the `Dockerfile`, using environment variables
-with the same name to configure the server.
-
-Other than database configuration, please also set:
-
-```bash
-DEBUG=0
-ADMIN_LOGINS=alice:123,bob:456
-```
-
-Except that, don't use `123` or `456` as the password.
+* [Detailed API Documentation](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml)
+* [Development and deployment](docs/dev.md)
+* [Aggregate Metadata Service](docs/agg_mds.md)
