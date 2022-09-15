@@ -1,8 +1,9 @@
 from fastapi import HTTPException, Query, APIRouter
 from starlette.requests import Request
-from starlette.status import HTTP_404_NOT_FOUND
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
+from starlette.responses import JSONResponse
 
-from .models import db, Metadata
+from .models import db, Metadata, MetadataAlias
 
 mod = APIRouter()
 
@@ -102,14 +103,48 @@ async def search_metadata(
         ]
 
 
+@mod.get("/metadata/{guid:path}/aliases")
+async def get_metadata_aliases(
+    guid: str,
+) -> JSONResponse:
+    """
+    Get the aliases for the provided GUID
+
+    Args:
+        guid (str): Metadata GUID
+    """
+    metadata_aliases = await MetadataAlias.query.where(
+        MetadataAlias.guid == guid
+    ).gino.all()
+
+    aliases = [metadata_alias.alias for metadata_alias in metadata_aliases]
+    return {"guid": guid, "aliases": sorted(aliases)}
+
+
 @mod.get("/metadata/{guid:path}")
 async def get_metadata(guid):
     """Get the metadata of the GUID."""
     metadata = await Metadata.get(guid)
-    if metadata:
-        return metadata.data
-    else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+    if not metadata:
+        # check if it's an alias
+        alias = guid
+        metadata_alias = await MetadataAlias.query.where(
+            MetadataAlias.alias == alias
+        ).gino.first()
+
+        if not metadata_alias:
+            raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+        # get metadata for guid based on alias
+        metadata = await Metadata.get(metadata_alias.guid)
+
+        if not metadata:
+            message = f"Alias record exists but GUID not found: {guid}"
+            logging.error(message)
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, message)
+
+    return metadata.data
 
 
 def init_app(app):

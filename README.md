@@ -44,14 +44,16 @@ Create a file `.env` in the root directory of the checkout:
 (uncomment to override the default)
 
 ```python
-# DB_HOST = "..."           # default: localhost
-# DB_PORT = ...             # default: 5432
-# DB_USER = "..."           # default: current user
-# DB_PASSWORD = "..."       # default: empty
-# DB_DATABASE = "..."       # default: current user
-# USE_AGG_MDS = "..."       # default: false
-# AGG_MDS_NAMESPACE = "..." # default: default_namespace
-# GEN3_ES_ENDPOINT = "..."  # default: empty
+# USE_AGG_MDS = True                  # default: False
+# DB_HOST = "..."                     # default: localhost
+# DB_PORT = ...                       # default: 5432
+# DB_USER = "..."                     # default: current user
+# DB_PASSWORD = "..."                 # default: empty
+# DB_DATABASE = "..."                 # default: current user
+# AGG_MDS_NAMESPACE = "..."           # default: default_namespace
+# GEN3_ES_ENDPOINT = "..."            # default: empty
+# INDEXING_SERVICE_ENDPOINT = "..."   # default: http://indexd-service
+# DATA_ACCESS_SERVICE_ENDPOINT= "..." # default: http://fence-service
 ```
 
 Run database schema migration:
