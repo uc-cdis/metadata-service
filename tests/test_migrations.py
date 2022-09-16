@@ -131,6 +131,7 @@ async def test_4d93784a25e5_downgrade(
 
         finally:
             await db.all(db.text(f"DELETE FROM metadata WHERE guid = '{fake_guid}'"))
+        _reset_migrations()
 
 
 @pytest.mark.asyncio
@@ -233,3 +234,9 @@ async def test_4d93784a25e5_upgrade(
 
         finally:
             await db.all(db.text(f"DELETE FROM metadata WHERE guid = '{fake_guid}'"))
+
+        _reset_migrations()
+
+
+def _reset_migrations():
+    alembic_main(["--raiseerr", "upgrade", "head"])

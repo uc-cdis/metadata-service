@@ -25,7 +25,7 @@ def get_app():
         title="Framework Services Object Management Service",
         version=pkg_resources.get_distribution("mds").version,
         debug=config.DEBUG,
-        openapi_prefix=config.URL_PREFIX,
+        root_path=config.URL_PREFIX,
     )
     app.include_router(router)
     db.init_app(app)
@@ -90,8 +90,16 @@ class ClientDisconnectMiddleware:
 
 
 def load_modules(app=None):
+    """
+    Loop through Poetry [plugins](https://python-poetry.org/docs/master/pyproject/#plugins)
+    which behave like setuptools Entry Points, then load() each one
+
+    See also:
+        https://setuptools.pypa.io/en/latest/userguide/entry_point.html#entry-points-for-plugins
+    """
     logger.info("Start to load modules.")
-    for ep in entry_points()["mds.modules"]:
+    # sorted set ensures deterministic loading order
+    for ep in sorted(set(entry_points()["mds.modules"])):
         mod = ep.load()
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
@@ -118,7 +126,6 @@ async def get_status():
      * error: if there was no error this will be "none"
      * last_update: timestamp of the last data pull from the commons
      * count: number of entries
-    :return:
     """
     now = await db.scalar("SELECT now()")
 

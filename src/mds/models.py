@@ -21,3 +21,12 @@ class Metadata(db.Model):
     guid = db.Column(db.Unicode(), primary_key=True)
     data = db.Column(JSONB())
     authz = db.Column(JSONB(), nullable=False)
+
+
+class MetadataAlias(db.Model):
+    __tablename__ = "metadata_alias"
+
+    alias = db.Column(db.String(), primary_key=True)
+    guid = db.Column(
+        db.Unicode(), db.ForeignKey("metadata.guid", ondelete="CASCADE"), nullable=False
+    )

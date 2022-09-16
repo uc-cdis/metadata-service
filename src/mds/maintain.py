@@ -19,8 +19,6 @@ from .models import db, Metadata
 from . import config
 from .objects import FORBIDDEN_IDS
 
-INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
-
 mod = APIRouter()
 
 
@@ -122,6 +120,7 @@ async def update_metadata(guid, data: dict, merge: bool = False):
     is also known as the shallow merge. The metadata service currently doesn't support
     deep merge.
     """
+    # TODO PUT should create if it doesn't exist...
     metadata = (
         await Metadata.update.values(data=(Metadata.data + data) if merge else data)
         .where(Metadata.guid == guid)

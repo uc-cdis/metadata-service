@@ -1,5 +1,15 @@
 components:
   schemas:
+    AliasObjInput:
+      description: "Alias object\n\naliases (list, optional): unique names to allow\
+        \ using in place of whatever GUID\n    specified"
+      properties:
+        aliases:
+          items: {}
+          title: Aliases
+          type: array
+      title: AliasObjInput
+      type: object
     CreateObjForIdInput:
       description: "Create object.\n\nfile_name (str): Name for the file being uploaded\n\
         aliases (list, optional): unique name to allow using in place of whatever\
@@ -82,14 +92,14 @@ components:
       type: http
 info:
   title: Framework Services Object Management Service
-  version: 1.8.2
+  version: 1.9.0
 openapi: 3.0.2
 paths:
   /_status:
     get:
       description: "Returns the status of the MDS:\n * error: if there was no error\
         \ this will be \"none\"\n * last_update: timestamp of the last data pull from\
-        \ the commons\n * count: number of entries\n:return:"
+        \ the commons\n * count: number of entries"
       operationId: get_status__status_get
       responses:
         '200':
@@ -348,6 +358,175 @@ paths:
       summary: Update Metadata
       tags:
       - Maintain
+  /metadata/{guid}/aliases:
+    delete:
+      description: Delete all metadata_aliases of the GUID.
+      operationId: delete_all_metadata_aliases_metadata__guid__aliases_delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete All Metadata Aliases
+      tags:
+      - Aliases
+    get:
+      description: Get the aliases for the provided GUID
+      operationId: get_metadata_aliases_metadata__guid__aliases_get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Metadata Aliases
+      tags:
+      - Query
+    post:
+      description: Create metadata aliases for the GUID.
+      operationId: create_metadata_aliases_metadata__guid__aliases_post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AliasObjInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Create Metadata Aliases
+      tags:
+      - Aliases
+    put:
+      description: 'Update the metadata aliases of the GUID.
+
+
+        If `merge` is True, then any aliases that are not in the new data will be
+
+        kept.'
+      operationId: update_metadata_alias_metadata__guid__aliases_put
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      - in: query
+        name: merge
+        required: false
+        schema:
+          default: false
+          title: Merge
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AliasObjInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Update Metadata Alias
+      tags:
+      - Aliases
+  /metadata/{guid}/aliases/{alias}:
+    delete:
+      description: Delete the specified metadata_alias of the GUID.
+      operationId: delete_metadata_alias_metadata__guid__aliases__alias__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      - in: path
+        name: alias
+        required: true
+        schema:
+          title: Alias
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete Metadata Alias
+      tags:
+      - Aliases
   /metadata_index:
     get:
       description: List all the metadata key paths indexed in the database.
@@ -418,11 +597,8 @@ paths:
       - Index
   /objects/upload:
     post:
-      description: "Create object placeholder and attach metadata, return Upload url\
-        \ to the user.\n\nArgs:\n    body (CreateObjInput): input body for create\
-        \ object\n    request (Request): starlette request (which contains reference\
-        \ to FastAPI app)\n    token (HTTPAuthorizationCredentials, optional): bearer\
-        \ token"
+      description: Create object placeholder and attach metadata, return Upload url
+        to the user.
       operationId: create_object_objects_upload_post
       requestBody:
         content:
@@ -449,16 +625,18 @@ paths:
       - Object
   /objects/{guid}:
     delete:
-      description: "Delete the metadata for the specified object and also delete the\
-        \ record from indexd.\n[Optional] Remove the object from existing bucket location(s)\
-        \ by proxying to\nfence DELETE /data/file_id by using an additional query\
-        \ parameter `delete_file_locations`.\nUses the response status code from fence/indexd\
-        \ to determine whether user has\npermission to delete metadata.\n\nArgs:\n\
-        \    guid (str): indexd GUID or alias, or MDS key\n    request (Request):\
-        \ starlette request (which contains reference to FastAPI app)\nReturns:\n\
-        \    204: if record and metadata are deleted\n    403: if fence/indexd returns\
-        \ a 403 unauthorized response\n    500: if fence/indexd does not return 204\
-        \ or 403 or there is an error deleting metadata"
+      description: 'Delete the metadata for the specified object and also delete the
+        record from indexd.
+
+        [Optional] Remove the object from existing bucket location(s) by proxying
+        to
+
+        fence DELETE /data/file_id by using an additional query parameter `delete_file_locations`.
+
+        Uses the response status code from fence/indexd to determine whether user
+        has
+
+        permission to delete metadata.'
       operationId: delete_object_objects__guid__delete
       parameters:
       - in: path
@@ -485,12 +663,10 @@ paths:
       tags:
       - Object
     get:
-      description: "Get the metadata associated with the provided key. If the key\
-        \ is an\nindexd GUID or alias, also returns the indexd record.\n\nArgs:\n\
-        \    guid (str): indexd GUID or alias, or MDS key\n    request (Request):\
-        \ starlette request (which contains reference to FastAPI app)\n\nReturns:\n\
-        \    200: { \"record\": { indexd record }, \"metadata\": { MDS metadata }\
-        \ }\n    404: if the key is not in indexd and not in MDS"
+      description: 'Get the metadata associated with the provided key. If the key
+        is an
+
+        indexd GUID or alias, also returns the indexd record.'
       operationId: get_object_objects__guid__get
       parameters:
       - in: path
@@ -515,13 +691,12 @@ paths:
       tags:
       - Object
     post:
-      description: "Create object placeholder and attach metadata, return Upload url\
-        \ to the\nuser. A new GUID (new version of the provided GUID) will be created\
-        \ for\nthis object. The new record will have the same authz as the original\
-        \ one.\n\nArgs:\n    guid (str): indexd GUID or alias\n    body (CreateObjForIdInput):\
-        \ input body for create object for ID\n    request (Request): starlette request\
-        \ (which contains reference to FastAPI app)\n    token (HTTPAuthorizationCredentials,\
-        \ optional): bearer token"
+      description: 'Create object placeholder and attach metadata, return Upload url
+        to the
+
+        user. A new GUID (new version of the provided GUID) will be created for
+
+        this object. The new record will have the same authz as the original one.'
       operationId: create_object_for_id_objects__guid__post
       parameters:
       - in: path
@@ -555,15 +730,12 @@ paths:
       - Object
   /objects/{guid}/download:
     get:
-      description: "Send a GET request to the data access service to generate a signed\
-        \ download\nurl for the given GUID or alias. Returns the generated signed\
-        \ download url\nto the user.\n\nArgs:\n    guid (str): indexd GUID or alias\n\
-        \    request (Request): starlette request (which contains reference to FastAPI\
-        \ app)\n\nReturns:\n    200: { \"url\": signed download url }\n    404: if\
-        \ the data access service can not find GUID/alias in indexd\n    403: if the\
-        \ data access service returns a 401 or a 403\n    500: if there is an error\
-        \ making the request to the data access service\n    or the data access service\
-        \ returns any other 400-range or 500-range\n    error"
+      description: 'Send a GET request to the data access service to generate a signed
+        download
+
+        url for the given GUID or alias. Returns the generated signed download url
+
+        to the user.'
       operationId: get_object_signed_download_url_objects__guid__download_get
       parameters:
       - in: path
@@ -589,16 +761,16 @@ paths:
       - Object
   /objects/{guid}/latest:
     get:
-      description: "Attempt to fetch the latest version of the provided guid/key from\
-        \ indexd.\nIf the provided guid/key is found in indexd, return the indexd\
-        \ record and\nmetadata object associated with the latest guid fetched from\
-        \ indexd. If the\nprovided guid/key is not found in indexd, return the metadata\
-        \ object\nassociated with the provided guid/key.\n\nArgs:\n    guid (str):\
-        \ indexd GUID or MDS key. alias is NOT supported because the\n        corresponding\
-        \ endpoint in indexd does not accept alias\n    request (Request): starlette\
-        \ request (which contains reference to FastAPI app)\n\nReturns:\n    200:\
-        \ { \"record\": { indexd record }, \"metadata\": { MDS metadata } }\n    404:\
-        \ if the key is not in indexd and not in MDS"
+      description: 'Attempt to fetch the latest version of the provided guid/key from
+        indexd.
+
+        If the provided guid/key is found in indexd, return the indexd record and
+
+        metadata object associated with the latest guid fetched from indexd. If the
+
+        provided guid/key is not found in indexd, return the metadata object
+
+        associated with the provided guid/key.'
       operationId: get_object_latest_objects__guid__latest_get
       parameters:
       - in: path
@@ -624,6 +796,7 @@ paths:
       - Object
   /version:
     get:
+      description: ''
       operationId: get_version_version_get
       responses:
         '200':
