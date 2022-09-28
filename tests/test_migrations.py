@@ -238,5 +238,81 @@ async def test_4d93784a25e5_upgrade(
         _reset_migrations()
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "old_metadata, new_metadata",
+    [
+        # data has keys
+        (
+            {
+                "foo": "bar",
+                "bizz": "buzz",
+                "_uploader_id": "uploader",
+                "_filename": "hello.txt",
+                "_bucket": "mybucket",
+                "_file_extension": ".txt",
+            },
+            {"foo": "bar", "bizz": "buzz"},
+        ),
+        # data unchanged if no keys are present
+        (
+            {"foo": "bar", "bizz": "buzz"},
+            {"foo": "bar", "bizz": "buzz"},
+        ),
+    ],
+)
+async def test_6819874e85b9_upgrade(old_metadata: dict, new_metadata: dict):
+    """
+    We can't create metadata by using the `client` fixture because of two reasons:
+    1) Calling the API when the db is in the downgraded state will give
+       UndefinedColumnErrors (metadata.authz) because the db and the data model are out of sync
+    2) this issue: https://github.com/encode/starlette/issues/440
+    so inserting directly into the DB instead.
+    """
+
+    # before "remove_deprecated_metadata" migration
+    alembic_main(["--raiseerr", "downgrade", "3354f2c466ec"])
+
+    fake_guid = "7891011"
+    authz_data = {"version": 0, "_resource_paths": ["/programs/DEV"]}
+
+    async with db.with_bind(DB_DSN):
+
+        # insert data
+        sql_old_metadata = escape(json.dumps(old_metadata))
+        sql_authz_data = escape(json.dumps(authz_data))
+        insert_stmt = f"INSERT INTO metadata(\"guid\", \"data\", \"authz\") VALUES ('{fake_guid}', '{sql_old_metadata}', '{sql_authz_data}')"
+        await db.scalar(db.text(insert_stmt))
+
+        try:
+            # check that the request data was inserted correctly
+            data = await db.all(
+                db.text(
+                    f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
+                )
+            )
+            row = {k: v for k, v in data[0].items()}
+            assert row == {"guid": fake_guid, "data": old_metadata, "authz": authz_data}
+
+            # run "add_authz_column" migration
+            alembic_main(["--raiseerr", "upgrade", "6819874e85b9"])
+
+            # check that the migration removed the deprecated keys
+            data = await db.all(
+                db.text(
+                    f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
+                )
+            )
+            assert len(data) == 1
+            row = {k: v for k, v in data[0].items()}
+
+            assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
+
+        finally:
+            await db.all(db.text(f"DELETE FROM metadata WHERE guid = '{fake_guid}'"))
+
+        _reset_migrations()
+
+
 def _reset_migrations():
     alembic_main(["--raiseerr", "upgrade", "head"])
