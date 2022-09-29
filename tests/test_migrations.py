@@ -239,29 +239,7 @@ async def test_4d93784a25e5_upgrade(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "old_metadata, new_metadata",
-    [
-        # data has keys
-        (
-            {
-                "foo": "bar",
-                "bizz": "buzz",
-                "_uploader_id": "uploader",
-                "_filename": "hello.txt",
-                "_bucket": "mybucket",
-                "_file_extension": ".txt",
-            },
-            {"foo": "bar", "bizz": "buzz"},
-        ),
-        # data unchanged if no keys are present
-        (
-            {"foo": "bar", "bizz": "buzz"},
-            {"foo": "bar", "bizz": "buzz"},
-        ),
-    ],
-)
-async def test_6819874e85b9_upgrade(old_metadata: dict, new_metadata: dict):
+async def test_6819874e85b9_upgrade():
     """
     We can't create metadata by using the `client` fixture because of two reasons:
     1) Calling the API when the db is in the downgraded state will give
@@ -274,6 +252,15 @@ async def test_6819874e85b9_upgrade(old_metadata: dict, new_metadata: dict):
     alembic_main(["--raiseerr", "downgrade", "3354f2c466ec"])
 
     fake_guid = "7891011"
+    old_metadata = {
+        "foo": "bar",
+        "bizz": "buzz",
+        "_uploader_id": "uploader",
+        "_filename": "hello.txt",
+        "_bucket": "mybucket",
+        "_file_extension": ".txt",
+    }
+    new_metadata = {"foo": "bar", "bizz": "buzz"}
     authz_data = {"version": 0, "_resource_paths": ["/programs/DEV"]}
 
     async with db.with_bind(DB_DSN):
@@ -294,7 +281,7 @@ async def test_6819874e85b9_upgrade(old_metadata: dict, new_metadata: dict):
             row = {k: v for k, v in data[0].items()}
             assert row == {"guid": fake_guid, "data": old_metadata, "authz": authz_data}
 
-            # run "add_authz_column" migration
+            # run "remove_deprecated_metadata" migration
             alembic_main(["--raiseerr", "upgrade", "6819874e85b9"])
 
             # check that the migration removed the deprecated keys
@@ -305,7 +292,6 @@ async def test_6819874e85b9_upgrade(old_metadata: dict, new_metadata: dict):
             )
             assert len(data) == 1
             row = {k: v for k, v in data[0].items()}
-
             assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
         finally:
