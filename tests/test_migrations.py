@@ -241,10 +241,8 @@ async def test_4d93784a25e5_upgrade(
 @pytest.mark.asyncio
 async def test_6819874e85b9_upgrade():
     """
-    We can't create metadata by using the `client` fixture because of two reasons:
-    1) Calling the API when the db is in the downgraded state will give
-       UndefinedColumnErrors (metadata.authz) because the db and the data model are out of sync
-    2) this issue: https://github.com/encode/starlette/issues/440
+    We can't create metadata by using the `client` fixture because of this issue:
+    https://github.com/encode/starlette/issues/440
     so inserting directly into the DB instead.
     """
 
