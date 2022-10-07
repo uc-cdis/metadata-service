@@ -453,7 +453,7 @@ paths:
         If `merge` is True, then any aliases that are not in the new data will be
 
         kept.'
-      operationId: update_metadata_alias_metadata__guid__aliases_put
+      operationId: update_metadata_aliases_metadata__guid__aliases_put
       parameters:
       - in: path
         name: guid
@@ -489,7 +489,7 @@ paths:
       security:
       - HTTPBasic: []
       - HTTPBearer: []
-      summary: Update Metadata Alias
+      summary: Update Metadata Aliases
       tags:
       - Aliases
   /metadata/{guid}/aliases/{alias}:
@@ -794,6 +794,367 @@ paths:
       summary: Get Object Latest
       tags:
       - Object
+  /semi-structured/{guid}:
+    delete:
+      description: Delete the record with the specified GUID or alias permanently.
+        If possible, AVOID deletion as it reduces reproducibility of research using
+        this data.
+      operationId: delete_semi_structured_data_semi_structured__guid__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete Semi Structured Data
+      tags:
+      - Semi-Structured
+    get:
+      description: Get the semi-structured data record associated with the specified
+        GUID or alias.
+      operationId: get_semi_structured_data_semi_structured__guid__get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Semi Structured Data
+      tags:
+      - Semi-Structured
+    post:
+      description: Create a brand new record with the specified GUID or alias.
+      operationId: create_semi_structured_data_semi_structured__guid__post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Create Semi Structured Data
+      tags:
+      - Semi-Structured
+    put:
+      description: Create new version of existing record with specified GUID or alias;
+        if no existing record, then create brand new record. Either way, return the
+        final object created which may or may not have the same GUID specified above.
+      operationId: update_semi_structured_data_semi_structured__guid__put
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: Data
+              type: object
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Update Semi Structured Data
+      tags:
+      - Semi-Structured
+  /semi-structured/{guid}/aliases:
+    delete:
+      description: Delete all metadata_aliases of the GUID.
+      operationId: delete_all_metadata_aliases_semi_structured__guid__aliases_delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete All Metadata Aliases
+      tags:
+      - Aliases
+    get:
+      description: Get the aliases for the provided GUID
+      operationId: get_metadata_aliases_semi_structured__guid__aliases_get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Metadata Aliases
+      tags:
+      - Query
+    post:
+      description: Create metadata aliases for the GUID.
+      operationId: create_metadata_aliases_semi_structured__guid__aliases_post
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AliasObjInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Create Metadata Aliases
+      tags:
+      - Aliases
+    put:
+      description: 'Update the metadata aliases of the GUID.
+
+
+        If `merge` is True, then any aliases that are not in the new data will be
+
+        kept.'
+      operationId: update_metadata_aliases_semi_structured__guid__aliases_put
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      - in: query
+        name: merge
+        required: false
+        schema:
+          default: false
+          title: Merge
+          type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AliasObjInput'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Update Metadata Aliases
+      tags:
+      - Aliases
+  /semi-structured/{guid}/aliases/{alias}:
+    delete:
+      description: Delete the specified metadata_alias of the GUID.
+      operationId: delete_metadata_alias_semi_structured__guid__aliases__alias__delete
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      - in: path
+        name: alias
+        required: true
+        schema:
+          title: Alias
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      security:
+      - HTTPBasic: []
+      - HTTPBearer: []
+      summary: Delete Metadata Alias
+      tags:
+      - Aliases
+  /semi-structured/{guid}/latest:
+    get:
+      description: Get latest version of uniquely identified semi-structured data.
+      operationId: get_semi_structured_data_latest_semi_structured__guid__latest_get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Semi Structured Data Latest
+      tags:
+      - Semi-Structured
+  /semi-structured/{guid}/versions:
+    get:
+      description: Get all versions of uniquely identified semi-structured data.
+      operationId: get_semi_structured_data_versions_semi_structured__guid__versions_get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      - description: Switch to returning a list of GUIDs (false), or GUIDs mapping
+          to their metadata (true).
+        in: query
+        name: data
+        required: false
+        schema:
+          default: false
+          description: Switch to returning a list of GUIDs (false), or GUIDs mapping
+            to their metadata (true).
+          title: Data
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Semi Structured Data Versions
+      tags:
+      - Semi-Structured
   /version:
     get:
       description: ''

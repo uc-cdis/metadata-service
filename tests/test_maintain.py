@@ -41,6 +41,18 @@ def test_create_forbidden_guid(client, forbidden_id):
     assert resp.json().get("detail")
 
 
+@pytest.mark.parametrize("key", ["test_create", "dg.1234/test_create"])
+def test_overwrite_semi_structured_data(client, key):
+    data = dict(a=1, b=2)
+    client.post(f"/semi-structured/{key}", json=data).raise_for_status()
+    try:
+        resp = client.post(f"/metadata/{key}?overwrite=true", json=data)
+        assert resp.status_code == 400
+
+    finally:
+        client.delete(f"/semi-structured/{key}").raise_for_status()
+
+
 def test_batch_create(client):
     data = dict(a=1, b=2)
     try:
@@ -122,24 +134,78 @@ def test_batch_create_forbidden_guid(client, forbidden_id):
             client.delete(f"/metadata/tbc_{i}")
 
 
+def test_batch_create_semi_structured_data(client):
+    data = dict(a=1, b=2)
+    semi_structured_guid = "foobar"
+    client.post(
+        f"/semi-structured/{semi_structured_guid}", json=data
+    ).raise_for_status()
+    try:
+        batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64)]
+        batch_data.append({"guid": semi_structured_guid, "data": data})
+        try:
+            resp = client.post("/metadata", json=batch_data)
+            resp.raise_for_status()
+            assert len(resp.json()["created"]) == 64
+            assert len(resp.json()["updated"]) == 0
+            assert len(resp.json()["conflict"]) == 0
+            assert len(resp.json()["bad_input"]) == 1
+
+            batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(32, 96)]
+            batch_data.append({"guid": semi_structured_guid, "data": data})
+            resp = client.post("/metadata", json=batch_data)
+            resp.raise_for_status()
+            assert len(resp.json()["created"]) == 32
+            assert len(resp.json()["updated"]) == 32
+            assert len(resp.json()["conflict"]) == 0
+            assert len(resp.json()["bad_input"]) == 1
+
+            batch_data = [dict(guid=f"tbc_{i}", data=data) for i in range(64, 128)]
+            batch_data.append({"guid": semi_structured_guid, "data": data})
+            resp = client.post(
+                "/metadata?overwrite=false",
+                json=batch_data,
+            )
+            resp.raise_for_status()
+            assert len(resp.json()["created"]) == 32
+            assert len(resp.json()["updated"]) == 0
+            assert len(resp.json()["conflict"]) == 33
+            assert len(resp.json()["bad_input"]) == 0
+
+        finally:
+            for i in range(128):
+                client.delete(f"/metadata/tbc_{i}")
+    finally:
+        client.delete(f"/semi-structured/{semi_structured_guid}")
+
+
 @pytest.mark.parametrize("key", ["test_update", "dg.1234/test_update"])
 def test_update(client, key):
     data = dict(a=1, b=2)
-    client.post("/metadata/" + key, json={}).raise_for_status()
+    client.put(f"/metadata/{key}", json={}).raise_for_status()
     try:
-        resp = client.put("/metadata/" + key, json=data)
+        resp = client.put(f"/metadata/{key}", json=data)
         resp.raise_for_status()
         assert resp.json() == data
 
-        resp = client.get("/metadata/" + key)
+        resp = client.get(f"/metadata/{key}")
         resp.raise_for_status()
         assert resp.json() == data
-
-        resp = client.put("/metadata/{}_not_existing".format(key), json=data)
-        assert resp.status_code == 404
 
     finally:
-        client.delete("/metadata/" + key)
+        client.delete(f"/metadata/{key}")
+
+
+@pytest.mark.parametrize("key", ["test_update", "dg.1234/test_update"])
+def test_update_semi_structured_data(client, key):
+    data = dict(a=1, b=2)
+    client.post(f"/semi-structured/{key}", json={}).raise_for_status()
+    try:
+        resp = client.put(f"/metadata/{key}", json=data)
+        assert resp.status_code == 400
+
+    finally:
+        client.delete(f"/semi-structured/{key}")
 
 
 @pytest.mark.parametrize("merge", [True, False])
@@ -173,3 +239,14 @@ def test_delete(client, key):
     client.delete("/metadata/" + key).raise_for_status()
     resp = client.delete("/metadata/" + key)
     assert resp.status_code == 404
+
+
+@pytest.mark.parametrize("key", ["test_delete", "dg.1234/test_delete"])
+def test_delete_semi_structured_data(client, key):
+    client.post(f"/semi-structured/{key}", json={}).raise_for_status()
+    try:
+        resp = client.delete(f"/metadata/{key}")
+        assert resp.status_code == 404
+
+    finally:
+        client.delete(f"/semi-structured/{key}").raise_for_status()

@@ -104,6 +104,7 @@ async def search_metadata(
 
 
 @mod.get("/metadata/{guid:path}/aliases")
+@mod.get("/semi-structured/{guid:path}/aliases")
 async def get_metadata_aliases(
     guid: str,
 ) -> JSONResponse:

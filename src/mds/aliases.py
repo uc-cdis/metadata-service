@@ -6,6 +6,9 @@ It is always more efficient to use GUIDs as primary method
 for naming blobs. However, in cases where you want multiple identifiers
 to point to the same blob, aliases allow that without duplicating the
 actual blob.
+
+Note: Must ensure that the /semi-structured endpoints here load before those in semi_structured.py
+I think it happens now because aliases.py is lexicographically sorted before semi_structured.py
 """
 import json
 import re
@@ -47,6 +50,7 @@ class AliasObjInput(BaseModel):
 
 
 @mod.post("/metadata/{guid:path}/aliases")
+@mod.post("/semi-structured/{guid:path}/aliases")
 async def create_metadata_aliases(
     guid: str,
     body: AliasObjInput,
@@ -63,11 +67,21 @@ async def create_metadata_aliases(
     input_body_aliases = body.aliases or []
     aliases = list(set(input_body_aliases))
 
-    metadata_aliases = await MetadataAlias.query.where(
+    existing_metadata_guids = await Metadata.query.where(
+        Metadata.guid.in_(aliases)
+    ).gino.all()
+
+    if existing_metadata_guids:
+        raise HTTPException(
+            HTTP_409_CONFLICT,
+            f"GUIDs with following names already exist: {[metadata.guid for metadata in existing_metadata_guids]}.",
+        )
+
+    existing_metadata_aliases = await MetadataAlias.query.where(
         MetadataAlias.guid == guid
     ).gino.all()
 
-    if metadata_aliases:
+    if existing_metadata_aliases:
         raise HTTPException(
             HTTP_409_CONFLICT,
             f"Aliases already exist for {guid}. " "Use PUT to overwrite.",
@@ -96,7 +110,8 @@ async def create_metadata_aliases(
 
 
 @mod.put("/metadata/{guid:path}/aliases")
-async def update_metadata_alias(
+@mod.put("/semi-structured/{guid:path}/aliases")
+async def update_metadata_aliases(
     guid: str,
     body: AliasObjInput,
     request: Request,
@@ -118,6 +133,16 @@ async def update_metadata_alias(
     input_body_aliases = body.aliases or []
     requested_aliases = set(input_body_aliases)
     logger.debug(f"requested_aliases: {requested_aliases}")
+
+    existing_metadata_guids = await Metadata.query.where(
+        Metadata.guid.in_(requested_aliases)
+    ).gino.all()
+
+    if existing_metadata_guids:
+        raise HTTPException(
+            HTTP_409_CONFLICT,
+            f"GUIDs with following names already exist: {[metadata.guid for metadata in existing_metadata_guids]}.",
+        )
 
     existing_metadata_aliases = await MetadataAlias.query.where(
         MetadataAlias.guid == guid
@@ -162,6 +187,7 @@ async def update_metadata_alias(
 
 
 @mod.delete("/metadata/{guid:path}/aliases/{alias:path}")
+@mod.delete("/semi-structured/{guid:path}/aliases/{alias:path}")
 async def delete_metadata_alias(
     guid: str,
     alias: str,
@@ -191,6 +217,7 @@ async def delete_metadata_alias(
 
 
 @mod.delete("/metadata/{guid:path}/aliases")
+@mod.delete("/semi-structured/{guid:path}/aliases")
 async def delete_all_metadata_aliases(
     guid: str,
     request: Request,

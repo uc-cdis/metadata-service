@@ -38,9 +38,13 @@ async def batch_create_metadata(
             data = bindparam("data")
             stmt = await conn.prepare(
                 insert(Metadata)
-                .values(guid=bindparam("guid"), data=data, authz=authz)
+                .values(
+                    guid=bindparam("guid"), data=data, authz=authz, created_date=None
+                )
                 .on_conflict_do_update(
-                    index_elements=[Metadata.guid], set_=dict(data=data)
+                    index_elements=[Metadata.guid],
+                    set_=dict(data=data),
+                    where=(Metadata.created_date == None),
                 )
                 .returning(db.text("xmax"))
             )
@@ -49,12 +53,17 @@ async def batch_create_metadata(
                     bad_input.append(data["guid"])
                 elif await stmt.scalar(data) == 0:
                     created.append(data["guid"])
+                elif await stmt.scalar(data) == None:
+                    bad_input.append(data["guid"])
                 else:
                     updated.append(data["guid"])
         else:
             stmt = await conn.prepare(
                 insert(Metadata).values(
-                    guid=bindparam("guid"), data=bindparam("data"), authz=authz
+                    guid=bindparam("guid"),
+                    data=bindparam("data"),
+                    authz=authz,
+                    created_date=None,
                 )
             )
             for data in data_list:
@@ -83,23 +92,32 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
     # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
     if guid in FORBIDDEN_IDS:
         raise HTTPException(
-            HTTP_400_BAD_REQUEST, "GUID cannot have value: {FORBIDDEN_IDS}"
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
         )
 
     if overwrite:
         rv = await db.first(
             insert(Metadata)
-            .values(guid=guid, data=data, authz=authz)
-            .on_conflict_do_update(index_elements=[Metadata.guid], set_=dict(data=data))
+            .values(guid=guid, data=data, authz=authz, created_date=None)
+            .on_conflict_do_update(
+                index_elements=[Metadata.guid],
+                set_=dict(data=data),
+                where=(Metadata.created_date == None),
+            )
             .returning(Metadata.data, db.text("xmax"))
         )
+        if rv == None:
+            raise HTTPException(
+                HTTP_400_BAD_REQUEST,
+                f"Cannot overwrite {guid}, which corresponds to existing semi-structured data record. Use /semi-structured endpoint instead",
+            )
         if rv["xmax"] != 0:
             created = False
     else:
         try:
             rv = (
                 await Metadata.insert()
-                .values(guid=guid, data=data, authz=authz)
+                .values(guid=guid, data=data, authz=authz, created_date=None)
                 .returning(*Metadata)
                 .gino.first()
             )
@@ -120,17 +138,17 @@ async def update_metadata(guid, data: dict, merge: bool = False):
     is also known as the shallow merge. The metadata service currently doesn't support
     deep merge.
     """
-    # TODO PUT should create if it doesn't exist...
     metadata = (
         await Metadata.update.values(data=(Metadata.data + data) if merge else data)
         .where(Metadata.guid == guid)
+        .where(Metadata.created_date == None)  # exclude semi-structured data record
         .returning(*Metadata)
         .gino.first()
     )
     if metadata:
         return metadata.data
     else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+        return await create_metadata(guid, data, overwrite=True)
 
 
 @mod.delete("/metadata/{guid:path}")
@@ -138,6 +156,7 @@ async def delete_metadata(guid):
     """Delete the metadata of the GUID."""
     metadata = (
         await Metadata.delete.where(Metadata.guid == guid)
+        .where(Metadata.created_date == None)  # exclude semi-structured data record
         .returning(*Metadata)
         .gino.first()
     )

@@ -463,7 +463,11 @@ async def delete_object(
         # Recreate data in metadata table in case of any exception
         if metadata_obj:
             await Metadata.create(
-                guid=metadata_obj.guid, data=metadata_obj.data, authz=metadata_obj.authz
+                guid=metadata_obj.guid,
+                baseid=metadata_obj.baseid,
+                data=metadata_obj.data,
+                created_date=metadata_obj.created_date,
+                authz=metadata_obj.authz,
             )
         status_code = (
             err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
@@ -696,7 +700,7 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
     try:
         rv = (
             await Metadata.insert()
-            .values(guid=blank_guid, data=metadata, authz=authz)
+            .values(guid=blank_guid, data=metadata, authz=authz, created_date=None)
             .returning(*Metadata)
             .gino.first()
         )

@@ -116,7 +116,13 @@ async def test_4d93784a25e5_downgrade(
                 db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
             )
             row = {k: v for k, v in data[0].items()}
-            assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
+            assert row == {
+                "guid": fake_guid,
+                "data": new_metadata,
+                "authz": authz_data,
+                "baseid": None,
+                "created_date": None,
+            }
 
             # downgrade to before "add_authz_column" migration
             alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])

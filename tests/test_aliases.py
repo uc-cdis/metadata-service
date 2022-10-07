@@ -234,6 +234,56 @@ def test_update_already_created_aliases(guid, aliases, updates, merge, client):
 
 
 @pytest.mark.parametrize(
+    "guid1,guid2,aliases",
+    [
+        (
+            "test_get_aliases",
+            "dg.1234/test_get_aliases",
+            ["test_get_aliases", "alias_a"],
+        ),
+        (
+            "test_get_aliases",
+            "dg.1234/test_get_aliases",
+            ["dg.1234/test_get_aliases", "alias_b"],
+        ),
+    ],
+)
+def test_alias_matches_existing_guid(guid1, guid2, aliases, client):
+    """
+    Ensure non-successful response when trying to POST/PUT an alias which matches an existing guid
+    """
+    data = dict(a=1, b=2)
+    client.post(f"/metadata/{guid1}", json=data).raise_for_status()
+    try:
+        client.post(f"/metadata/{guid2}", json=data).raise_for_status()
+        try:
+            response = client.post(
+                f"/metadata/{guid1}/aliases", json={"aliases": aliases}
+            )
+            assert response.status_code == 409
+
+            response = client.post(
+                f"/metadata/{guid2}/aliases", json={"aliases": aliases}
+            )
+            assert response.status_code == 409
+
+            response = client.put(
+                f"/metadata/{guid1}/aliases", json={"aliases": aliases}
+            )
+            assert response.status_code == 409
+
+            response = client.put(
+                f"/metadata/{guid2}/aliases", json={"aliases": aliases}
+            )
+            assert response.status_code == 409
+
+        finally:
+            client.delete(f"/metadata/{guid2}").raise_for_status()
+    finally:
+        client.delete(f"/metadata/{guid1}").raise_for_status()
+
+
+@pytest.mark.parametrize(
     "guid,aliases",
     [
         ("test_get_aliases", ["alias_a"]),
