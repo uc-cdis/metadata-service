@@ -632,3 +632,215 @@ paths:
               schema: {}
           description: Successful Response
       summary: Get Version
+  /aggregate/info/{what}:
+    get:
+      description: "Returns status and configuration information about aggregate metadata\
+        \ service. Current support only 1 information type:\
+        \ **schema**"
+      operationId: get_aggregate_info
+      parameters:
+      - in: path
+        required: true
+        schema:
+          title: What
+          type: string
+        name: what
+        description: type of information to return
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema: {}
+      summary: Get Config Information
+      tags:
+      - Aggregate
+  /aggregate/commons:
+    get:
+      description: "Returns a list of all commons with data in the aggregate metadata-service"
+      operationId: get_aggregate_commons
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    commons:
+                      type: array
+                      items:
+                        type: string
+                  example:
+                    - commons: ["commonsA", "commonsB"]
+      summary: Get Commons
+      tags:
+      - Aggregate
+  /aggregate/tags:
+    get:
+      description: "Returns aggregate category, name and counts across all commons"
+      operationId: get_aggregate_tags
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  example:
+                    - {
+                      "Data Type": {
+                        "total": 275,
+                        "names": [
+                          {
+                            "Genotype": 103,
+                            "Clinical Phenotype": 100,
+                            "DCC Harmonized": 24,
+                            "WGS": 20,
+                            "SNP/CNV Genotypes (NGS)": 6,
+                            "RNA-Seq": 5,
+                            "WXS": 5,
+                            "Targeted-Capture": 3,
+                            "miRNA-Seq": 3,
+                            "CNV Genotypes": 2
+                          }
+                        ]
+                      }
+                     }
+      summary: Get tag counts information
+      tags:
+      - Aggregate
+  /aggregate/metadata:
+    get:
+      description: "Returns a list of all commons with data in the aggregate metadata-service"
+      operationId: get_aggregate_metadata
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          title: limit
+          type: integer
+          default: 20
+      - in: query
+        name: offset
+        schema:
+          title: offset
+          type: integer
+          default: 0
+        description: "Return results at this given offset"
+      - in: query
+        name: flatten
+        schema:
+          title: flatten
+          type: boolean
+          default: false
+        description: "Return the results without grouping items by commons"
+      - in: query
+        name: pagination
+        schema:
+          title: pagination
+          type: boolean
+          default: false
+        description: "If true will return a pagination object in the response"
+      - in: query
+        name: counts
+        schema:
+          title: counts
+          type: string
+          default: ""
+        description: "Return count of a field instead of the value if field is an array\
+          \ otherwise field is unchanged. If field is null will set field to 0.\
+          \ Multiple fields can be compressed by comma separating the field names:\
+          \ _files,authors"
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    - {
+                      "commonA" : [ { id2: { name: "bear" } } , { id3: { name: "cat" } } ],
+                      "commonB" : [ { id200: { name: "shark" } } , { id312: { name: "bass" }} ]
+                      }
+      summary: Get metadata records from aggregate metadata
+      tags:
+      - Aggregate
+  /aggregate/metadata/{name}:
+    get:
+      parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          title: Name
+          type: string
+          default: false
+      description: "Returns an array containing all the metadata entries for a single commons. There are no limit/offset parameters."
+      operationId: get_aggregate_metadata_for_commons
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    - [ { id2: { name: "bear" } } , { id3: { name: "cat" } }]
+      summary: Get all metadata records from a commons by name
+      tags:
+      - Aggregate
+  /aggregate/metadata/{name}/info:
+    get:
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            title: Name
+            type: string
+            default: false
+      description: "Returns an object containing additional information about a commons"
+      operationId: get_aggregate_metadata_commons_info
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    - { commons_url: "gen3.datacommons.io" }
+      summary: Get additional named commons information
+      tags:
+      - Aggregate
+  /aggregate/metadata/guid/{guid}:
+    get:
+      parameters:
+        - in: path
+          name: guid
+          required: true
+          schema:
+            title: Guid
+            type: string
+            default: false
+      description: "Returns a metadata record by GUID"
+      operationId: get_aggregate_metadata_guid
+      responses:
+        '200':
+            description: Successful Response
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: true
+                  example:
+                    - { id2: { name: "bear" } }
+      summary: Get metadata entry by guid
+      tags:
+      - Aggregate
