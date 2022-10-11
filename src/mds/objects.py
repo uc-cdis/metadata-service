@@ -153,7 +153,7 @@ async def create_object(
         "upload_url": signed_upload_url,
         "authz": authz,
         "guid": blank_guid,
-        "aliases": aliases,
+        "aliases": sorted(aliases),
         "metadata": metadata,
     }
 
@@ -242,7 +242,7 @@ async def create_object_for_id(
 
     response = {
         "guid": new_version_did,
-        "aliases": aliases,
+        "aliases": sorted(aliases),
         "metadata": metadata,
         "upload_url": signed_upload_url,
     }

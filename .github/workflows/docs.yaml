@@ -28,7 +28,7 @@ jobs:
         pip install poetry
         pip list
         which poetry
-        poetry install -vv --no-root --no-interaction
+        poetry install -vv --no-interaction
         poetry show -vv
     - name: Build docs
       run: poetry run python run.py openapi
