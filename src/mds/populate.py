@@ -245,7 +245,7 @@ async def filter_entries(
         "select_field": {
             "field_name" : "commons" ,
             "field_value" : "Proteomic Data Commons"
-        }:q
+        }
         where only the records with the commons field === "Proteomic Data Commons" are added.
         Note the function assumes the field exists in all of the entries in the mds_arr parameter
     """
