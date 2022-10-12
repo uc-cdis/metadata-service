@@ -8,18 +8,13 @@ mod = APIRouter()
 
 @mod.get("/aggregate/commons")
 async def get_commons():
-    """
-    Returns a list of all registered commons
-    :return:
-    """
+    """Returns a list of all registered commons"""
     return await datastore.get_commons()
 
 
 @mod.get("/aggregate/info/{what}")
 async def get_commons(what: str):
-    """
-    Returns information from the aggregate metadata service.
-    """
+    """Returns information from the aggregate metadata service."""
     res = await datastore.get_commons_attribute(what)
     if res:
         return res
@@ -158,4 +153,4 @@ async def metadata_name_guid(guid: str):
 
 def init_app(app):
     if config.USE_AGG_MDS:
-        app.include_router(mod, tags=["Query"])
+        app.include_router(mod, tags=["Aggregate"])
