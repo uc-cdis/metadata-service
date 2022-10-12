@@ -47,11 +47,14 @@ def string_to_array(s: str) -> Optional[List[str]]:
 
 def array_to_string(arr: Optional[list]) -> Optional[str]:
     if arr is None:
+        logger.error(f"array is None")
         return None
     return "".join(arr)
 
 
 def string_to_integer(s: str) -> int:
+    if not s.isnumeric():
+        logger.error(f"{s} does not represent a number")
     return int(s) if s.isnumeric() else None
 
 
@@ -59,6 +62,7 @@ def string_to_number(s: str) -> Optional[float]:
     try:
         return float(s)
     except ValueError:
+        logger.error(f"{s} failed to convert to a float")
         return None
 
 
@@ -66,6 +70,7 @@ def string_to_dict(s: str) -> Optional[Dict[Any, Any]]:
     try:
         return json.loads(s)
     except json.JSONDecodeError:
+        logger.error(f"{s} failed to convert to JSON ")
         return None
 
 
