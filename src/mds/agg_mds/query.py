@@ -47,7 +47,8 @@ async def metadata(
         False, description="If true will return a pagination object in the response"
     ),
 ):
-    """
+    """Returns metadata records
+
     The pagination option adds a pagination object to the response:
     {
       "commonA" : {
@@ -98,9 +99,7 @@ async def metadata(
 
 @mod.get("/aggregate/metadata/{name}")
 async def metadata_name(name: str):
-    """
-    Returns the all the metadata from the named commons.
-    """
+    """Returns the all the metadata from the named commons."""
     res = await datastore.get_all_named_commons_metadata(name)
     if res:
         return res

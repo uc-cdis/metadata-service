@@ -150,7 +150,7 @@ class RemoteMetadataAdapter(ABC):
         }
 
         :param item: dictionary to map fields to
-        :param mappings:
+        :param mappings: dictionary describing fields to add
         :return:
         """
 

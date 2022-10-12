@@ -410,7 +410,6 @@ async def test_populate_main():
 @respx.mock
 @pytest.mark.asyncio
 async def test_populate_main_fail():
-
     patch("mds.config.USE_AGG_MDS", True).start()
     patch.object(datastore, "init", AsyncMock()).start()
     patch.object(datastore, "drop_all_temp_indexes", AsyncMock()).start()

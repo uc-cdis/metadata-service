@@ -7,6 +7,8 @@ from mds.agg_mds.adapters import (
     strip_email,
     strip_html,
     add_icpsr_source_url,
+    FieldFilters,
+    get_json_path_value,
 )
 from tenacity import RetryError, wait_none
 import httpx
@@ -16,6 +18,18 @@ def test_filters_with_bad_entries():
     assert strip_email(100) == 100
     assert strip_html(99) == 99
     assert add_icpsr_source_url(77) == 77
+
+
+def test_non_existing_filters():
+    assert FieldFilters().execute("nofilter", "passthru") == "passthru"
+
+
+def test_json_path():
+    assert get_json_path_value(None, {}) is None
+    assert get_json_path_value("shark", {"shark": ["great", "white"]}) == [
+        "great",
+        "white",
+    ]
 
 
 @respx.mock
@@ -3080,7 +3094,7 @@ def test_get_metadata_mps():
         "authz": "",
         "sites": "",
         "summary": "path:description",
-        "study_url": "path:url",
+        "study_url": {"path": "url", "default": ""},
         "location": "path:data_group",
         "subjects": "",
         "__manifest": "",
@@ -3089,7 +3103,7 @@ def test_get_metadata_mps():
         "institutions": "path:data_group",
         "year_awarded": "",
         "investigators": "path:data_group",
-        "project_title": "path:title",
+        "project_title": {"path": "title", "default": ""},
         "protocol_name": "",
         "study_summary": "",
         "_file_manifest": "",
