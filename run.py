@@ -34,8 +34,6 @@ def _get_schema_with_clean_descriptions():
     of the docstring. It does so by splitting on the first well-defined part of
     the Google-style docstring, the string "Args", and returning only everything before that.
     """
-    mds.config.USE_AGG_MDS = True  # so the aggregate MDS docs are added
-
     raw_schema = get_app().openapi()
     output_schema = {}
     output_schema["openapi"] = raw_schema.get("openapi", {})
