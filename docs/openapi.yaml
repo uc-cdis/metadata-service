@@ -108,6 +108,238 @@ paths:
               schema: {}
           description: Successful Response
       summary: Get Status
+  /aggregate/commons:
+    get:
+      description: "Returns a list of all commons with data in the aggregate metadata-service\n\
+        \nExample:\n\n    { commons: [\"commonsA\", \"commonsB\" ] }"
+      operationId: get_commons_aggregate_commons_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Commons
+      tags:
+      - Aggregate
+  /aggregate/info/{what}:
+    get:
+      description: "Returns status and configuration information about aggregate metadata\
+        \ service.\n\nReturn configuration information. Currently supports only 1\
+        \ information type:\n**schema**\n\nExample:\n\n    {\n      schema: {\n  \
+        \          ...\n            ...\n            }\n    }"
+      operationId: get_commons_info_aggregate_info__what__get
+      parameters:
+      - in: path
+        name: what
+        required: true
+        schema:
+          title: What
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Commons Info
+      tags:
+      - Aggregate
+  /aggregate/metadata:
+    get:
+      description: "Returns metadata records\n\nReturns medata records namespaced\
+        \ by commons as a JSON object.\nExample without pagination:\n\n    {\n   \
+        \   \"commonA\" : {\n          ... Metadata\n      },\n       \"commonB\"\
+        \ : {\n          ... Metadata\n      }\n      ...\n    }\n\nThe pagination\
+        \ option adds a pagination object to the response:\n\n    {\n        results:\
+        \ {\n          \"commonA\" : {\n              ... Metadata\n          },\n\
+        \           \"commonB\" : {\n              ... Metadata\n          }\n   \
+        \       ...\n        },\n        \"pagination\": {\n            \"hits\":\
+        \ 64,\n            \"offset\": 0,\n            \"pageSize\": 20,\n       \
+        \     \"pages\": 4\n        }\n    }\n\nThe flatten option removes the commons'\
+        \ namespace so all results are a child or results:\n\n    results: {\n   \
+        \       ... Metadata from commons A\n          ... Metadata from commons B\n\
+        \      }\n      ...\n    },\n\n\nThe counts options when applied to an array\
+        \ or dictionary will replace\nthe field value with its length. If the field\
+        \ values is None it will replace it with 0.\nAll other types will be unchanged."
+      operationId: get_aggregate_metadata_aggregate_metadata_get
+      parameters:
+      - description: 'Maximum number of records returned. (e.g. max: 2000)'
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 20
+          description: 'Maximum number of records returned. (e.g. max: 2000)'
+          title: Limit
+          type: integer
+      - description: Return results at this given offset.
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          description: Return results at this given offset.
+          title: Offset
+          type: integer
+      - description: 'Return count of a field instead of the value if field is an
+          array           otherwise field is unchanged. If field is **null** will
+          set field to **0**.           Multiple fields can be compressed by comma
+          separating the field names:           **files,authors**'
+        in: query
+        name: counts
+        required: false
+        schema:
+          default: ''
+          description: 'Return count of a field instead of the value if field is an
+            array           otherwise field is unchanged. If field is **null** will
+            set field to **0**.           Multiple fields can be compressed by comma
+            separating the field names:           **files,authors**'
+          title: Counts
+          type: string
+      - description: Return the results without grouping items by commons.
+        in: query
+        name: flatten
+        required: false
+        schema:
+          default: false
+          description: Return the results without grouping items by commons.
+          title: Flatten
+          type: boolean
+      - description: If true will return a pagination object in the response
+        in: query
+        name: pagination
+        required: false
+        schema:
+          default: false
+          description: If true will return a pagination object in the response
+          title: Pagination
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Aggregate Metadata
+      tags:
+      - Aggregate
+  /aggregate/metadata/guid/{guid}:
+    get:
+      description: "Returns a metadata record by GUID\n\nExample:\n\n     { id2: {\
+        \ name: \"bear\" } }"
+      operationId: get_aggregate_metadata_guid_aggregate_metadata_guid__guid__get
+      parameters:
+      - in: path
+        name: guid
+        required: true
+        schema:
+          title: Guid
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Aggregate Metadata Guid
+      tags:
+      - Aggregate
+  /aggregate/metadata/{name}:
+    get:
+      description: "et all metadata records from a commons by name\n\nReturns an array\
+        \ containing all the metadata entries for a single commons.\nThere are no\
+        \ limit/offset parameters.\n\nExample:\n\n    [ { id2: { name: \"bear\" }\
+        \ } , { id3: { name: \"cat\" } }]"
+      operationId: get_aggregate_metadata_for_commons_aggregate_metadata__name__get
+      parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          title: Name
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Aggregate Metadata For Commons
+      tags:
+      - Aggregate
+  /aggregate/metadata/{name}/info:
+    get:
+      description: "Returns information from the named commons.\n\nExample:\n\n  \
+        \  { commons_url: \"gen3.datacommons.io\" }"
+      operationId: get_aggregate_metadata_commons_info_aggregate_metadata__name__info_get
+      parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          title: Name
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Aggregate Metadata Commons Info
+      tags:
+      - Aggregate
+  /aggregate/tags:
+    get:
+      description: "Returns aggregate category, name and counts across all commons\n\
+        \nExample:\n\n        {\n          \"Data Type\": {\n            \"total\"\
+        : 275,\n            \"names\": [\n              {\n                \"Genotype\"\
+        : 103,\n                \"Clinical Phenotype\": 100,\n                \"DCC\
+        \ Harmonized\": 24,\n                \"WGS\": 20,\n                \"SNP/CNV\
+        \ Genotypes (NGS)\": 6,\n                \"RNA-Seq\": 5,\n               \
+        \ \"WXS\": 5,\n                \"Targeted-Capture\": 3,\n                \"\
+        miRNA-Seq\": 3,\n                \"CNV Genotypes\": 2\n              }\n \
+        \           ]\n          }\n        }"
+      operationId: get_aggregate_tags_aggregate_tags_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Aggregate Tags
+      tags:
+      - Aggregate
   /metadata:
     get:
       description: "Search the metadata.\n\nWithout filters, this will return all\
