@@ -873,9 +873,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
     """
 
     @retry(
-        stop=stop_after_attempt(5),
+        stop=stop_after_attempt(10),
         retry=retry_if_exception_type(httpx.TimeoutException),
-        wait=wait_random_exponential(multiplier=1, max=20),
+        wait=wait_random_exponential(multiplier=1, max=60),
         before_sleep=before_sleep_log(logger, logging.DEBUG),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
@@ -896,6 +896,8 @@ class Gen3Adapter(RemoteMetadataAdapter):
         offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
+        # extend httpx timeout
+        timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
         while moreData:
             try:
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
@@ -903,7 +905,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     url += f"&{filters}"
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
-                response = httpx.get(url)
+                response = httpx.get(url, timeout=timeout)
                 response.raise_for_status()
 
                 data = response.json()
