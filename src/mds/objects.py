@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from enum import Enum
+import json
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
@@ -32,6 +33,9 @@ mod = APIRouter()
 # an Authorization header. Instead, we want to return a 401 to signify that we did
 # not recieve valid credentials
 bearer = HTTPBearer(auto_error=False)
+
+# Forbidden IDs
+FORBIDDEN_IDS = ["upload"]
 
 
 class FileUploadStatus(str, Enum):
@@ -72,7 +76,7 @@ class CreateObjForIdInput(BaseModel):
     metadata: dict = None
 
 
-@mod.post("/objects")
+@mod.post("/objects/upload")
 async def create_object(
     body: CreateObjInput,
     request: Request,
@@ -121,6 +125,15 @@ async def create_object(
             f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
         )
 
+    # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable aliases")
+    if any(alias in FORBIDDEN_IDS for alias in aliases):
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
+        )
+
     metadata = metadata or {}
 
     # get user id from token claims
@@ -130,6 +143,14 @@ async def create_object(
     blank_guid, signed_upload_url = await _create_blank_record_and_url(
         file_name, authz, auth_header, request
     )
+    # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+    # This will help avoid conflicts between
+    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+    logger.debug("checking for allowable GUIDs")
+    if blank_guid in FORBIDDEN_IDS:
+        raise HTTPException(
+            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
+        )
 
     if aliases:
         await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
@@ -137,10 +158,11 @@ async def create_object(
     metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
 
     response = {
-        "guid": blank_guid,
-        "aliases": aliases,
-        "metadata": metadata,
         "upload_url": signed_upload_url,
+        "authz": authz,
+        "guid": blank_guid,
+        "aliases": sorted(aliases),
+        "metadata": metadata,
     }
 
     return JSONResponse(response, HTTP_201_CREATED)
@@ -236,7 +258,7 @@ async def create_object_for_id(
 
     response = {
         "guid": new_version_did,
-        "aliases": aliases,
+        "aliases": sorted(aliases),
         "metadata": metadata,
         "upload_url": signed_upload_url,
     }
@@ -407,9 +429,10 @@ async def delete_object(
     guid: str, request: Request, token: HTTPAuthorizationCredentials = Security(bearer)
 ) -> JSONResponse:
     """
-    Delete the metadata for the specified object. Remove the object from
-    existing bucket location(s) by proxying to fence DELETE /data/file_id.
-    Uses the response status code from fence to determine whether user has
+    Delete the metadata for the specified object and also delete the record from indexd.
+    [Optional] Remove the object from existing bucket location(s) by proxying to
+    fence DELETE /data/file_id by using an additional query parameter `delete_file_locations`.
+    Uses the response status code from fence/indexd to determine whether user has
     permission to delete metadata.
 
     Args:
@@ -417,32 +440,61 @@ async def delete_object(
         request (Request): starlette request (which contains reference to FastAPI app)
     Returns:
         204: if record and metadata are deleted
-        403: if fence returns a 403 unauthorized response
-        500: if fence does not return 204 or 403 or there is an error deleting metadata
+        403: if fence/indexd returns a 403 unauthorized response
+        500: if fence/indexd does not return 204 or 403 or there is an error deleting metadata
     """
+    # Attempt to get the row, then attempt delete the row from Metadata table
+    metadata_obj = await (
+        Metadata.delete.where(Metadata.guid == guid).returning(*Metadata).gino.first()
+    )
+
+    delete_file_locations = False
+    if "delete_file_locations" in request.query_params:
+        if request.query_params["delete_file_locations"]:
+            raise HTTPException(
+                HTTP_400_BAD_REQUEST,
+                f"Query param `delete_file_locations` should not contain any value",
+            )
+        delete_file_locations = True
+    svc_name = "fence" if "delete_file_locations" in request.query_params else "indexd"
     try:
-        fence_endpoint = urljoin(config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}")
         auth_header = str(request.headers.get("Authorization", ""))
         headers = {"Authorization": auth_header}
-        fence_response = await request.app.async_client.delete(
-            fence_endpoint, headers=headers
-        )
-        fence_response.raise_for_status()
-        await (
-            Metadata.delete.where(Metadata.guid == guid)
-            .returning(*Metadata)
-            .gino.first()
-        )
-        return JSONResponse({}, HTTP_204_NO_CONTENT)
+        if delete_file_locations:
+            fence_endpoint = urljoin(
+                config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}"
+            )
+            response = await request.app.async_client.delete(
+                fence_endpoint, headers=headers
+            )
+        else:
+            rev = await get_indexd_revision(guid, request)
+            indexd_endpoint = urljoin(config.INDEXING_SERVICE_ENDPOINT, f"index/{guid}")
+            response = await request.app.async_client.delete(
+                indexd_endpoint, params={"rev": rev}, headers=headers
+            )
+        response.raise_for_status()
     except httpx.HTTPError as err:
         logger.debug(err)
-        if err.response:
-            raise HTTPException(
-                err.response.status_code, {"fence_response": err.response.text}
+        # Recreate data in metadata table in case of any exception
+        if metadata_obj:
+            await Metadata.create(
+                guid=metadata_obj.guid, data=metadata_obj.data, authz=metadata_obj.authz
             )
-        raise HTTPException(
-            HTTP_500_INTERNAL_SERVER_ERROR, "Error during request to fence"
+        status_code = (
+            err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
         )
+        raise HTTPException(status_code, f"Error during request to {svc_name}")
+
+    return JSONResponse({}, HTTP_204_NO_CONTENT)
+
+
+async def get_indexd_revision(guid, request):
+    endpoint = config.INDEXING_SERVICE_ENDPOINT.rstrip("/") + f"/{guid}"
+    response = await request.app.async_client.get(endpoint)
+    response.raise_for_status()
+    indexd_record = response.json()
+    return indexd_record.get("rev")
 
 
 async def _get_metadata(mds_key: str) -> dict:
@@ -652,8 +704,6 @@ async def _create_url_for_blank_record(guid: str, auth_header: str, request: Req
 async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: str):
     # add default metadata to db
     additional_object_metadata = {
-        "_resource_paths": authz.get("resource_paths", []),
-        "_uploader_id": uploader,
         "_upload_status": FileUploadStatus.NOT_STARTED,
     }
     logger.debug(f"attempting to update guid {blank_guid} with metadata: {metadata}")
@@ -662,7 +712,7 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
     try:
         rv = (
             await Metadata.insert()
-            .values(guid=blank_guid, data=metadata)
+            .values(guid=blank_guid, data=metadata, authz=authz)
             .returning(*Metadata)
             .gino.first()
         )

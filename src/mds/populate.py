@@ -1,7 +1,6 @@
 import asyncio
 from argparse import Namespace
 from typing import Any, Dict, List
-from collections import Counter
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
 from mds.agg_mds.commons import MDSInstance, AdapterMDSInstance, Commons, parse_config
@@ -71,10 +70,13 @@ async def populate_metadata(name: str, common, results):
         entry[common.study_data_field]["commons_name"] = name
 
         # add to tags
-        for t in entry[common.study_data_field]["tags"]:
+        for t in entry[common.study_data_field].get("tags", {}):
+            if "category" not in t:
+                continue
             if t["category"] not in tags:
                 tags[t["category"]] = set()
-            tags[t["category"]].add(t["name"])
+            if "name" in t:
+                tags[t["category"]].add(t["name"])
 
     # process tags set to list
     for k, v in tags.items():
@@ -125,6 +127,7 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
             common.adapter,
             common.mds_url,
             common.filters,
+            common.config,
             common.field_mappings,
             common.per_item_values,
             common.keep_original_fields,

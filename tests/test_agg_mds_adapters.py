@@ -1,3 +1,4 @@
+from more_itertools import side_effect
 import respx
 import json
 from mds.agg_mds.adapters import get_metadata, get_json_path_value
@@ -39,16 +40,16 @@ def test_get_metadata_icpsr():
         "tags": [],
         "authz": "",
         "sites": "",
-        "summary": {"path": "description", "filters": ["strip_html"]},
+        "study_description_summary": {"path": "description", "filters": ["strip_html"]},
         "study_url": {"path": "ipcsr_study_id", "filters": ["add_icpsr_source_url"]},
         "location": "path:coverage[0]",
         "subjects": "",
         "__manifest": "",
-        "study_name": "",
+        "study_name_title": "",
         "study_type": "",
         "institutions": "path:contributor",
         "year_awarded": "",
-        "investigators": "path:creator",
+        "investigators_name": "path:creator",
         "project_title": "path:title",
         "protocol_name": "",
         "study_summary": "",
@@ -81,19 +82,33 @@ def test_get_metadata_icpsr():
     }
 
     respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
-        status_code=200,
-        content=xml_response,
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=xml_response,
+        )
     )
 
-    assert get_metadata("icpsr", "http://test/ok", filters=None) == {}
+    assert get_metadata("icpsr", "http://test/ok", filters=None, config=None) == {}
 
-    assert get_metadata("icpsr", mds_url=None, filters={"study_ids": [6425]}) == {}
+    assert (
+        get_metadata("icpsr", "http://test/ok", filters=None, config={"batchSize": 256})
+        == {}
+    )
+
+    assert (
+        get_metadata("icpsr", mds_url=None, filters={"study_ids": [6425]}, config=None)
+        == {}
+    )
 
     respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425",
-        status_code=200,
-        content=xml_response,
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=6425"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=xml_response,
+        )
     )
 
     assert get_metadata(
@@ -119,16 +134,16 @@ def test_get_metadata_icpsr():
                 "tags": [],
                 "authz": "",
                 "sites": "",
-                "summary": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
+                "study_description_summary": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
                 "location": "1",
                 "study_url": "https://www.icpsr.umich.edu/web/NAHDAP/studies/6425",
                 "subjects": "",
                 "__manifest": "",
-                "study_name": "",
+                "study_name_title": "",
                 "study_type": "",
                 "institutions": "Inter-university Consortium for Political and Social Research [distributor]",
                 "year_awarded": "",
-                "investigators": "United States. Bureau of the Census",
+                "investigators_name": "United States. Bureau of the Census",
                 "project_title": "103rd Congressional District Geographic Entity File, 1990: [United States]",
                 "protocol_name": "",
                 "study_summary": "",
@@ -180,8 +195,8 @@ def test_get_metadata_icpsr():
         "http://test/ok",
         filters={"study_ids": [6425]},
         mappings=field_mappings,
-        keepOriginalFields=True,
         perItemValues=item_values,
+        keepOriginalFields=True,
     ) == {
         "10.3886/ICPSR06425.v1": {
             "_guid_type": "discovery_metadata",
@@ -199,7 +214,7 @@ def test_get_metadata_icpsr():
                 "tags": [],
                 "authz": "",
                 "sites": "",
-                "summary": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
+                "study_description_summary": "These data describe the geographic relationships of the 103rd congressional districts to selected governmental and statistical geographic entities for the entire United States, American Samoa, Guam, Puerto Rico, and the Virgin Islands. Each record represents a census geographic tabulation unit (GTUB), a unique combination of geographic codes expressing specific geographic relationships. This file provides the following information: state, congressional district, county and county subdivision, place, American Indian/Alaska Native area, urbanized area, urban/rural descriptor, and Metropolitan Statistical Area/Primary Metropolitan Statistical Area (MSA/PMSA).",
                 "location": "1",
                 "study_url": "https://www.icpsr.umich.edu/web/NAHDAP/studies/6425",
                 "subjects": "",
@@ -211,11 +226,11 @@ def test_get_metadata_icpsr():
                         "object_id": "dg.XXXX/208f4c52-771e-409a-b810-4bcba3c03c51",
                     }
                 ],
-                "study_name": "",
+                "study_name_title": "",
                 "study_type": "",
                 "institutions": "Inter-university Consortium for Political and Social Research [distributor]",
                 "year_awarded": "",
-                "investigators": "United States. Bureau of the Census",
+                "investigators_name": "United States. Bureau of the Census",
                 "project_title": "103rd Congressional District Geographic Entity File, 1990: [United States]",
                 "protocol_name": "",
                 "study_summary": "",
@@ -251,9 +266,12 @@ def test_get_metadata_icpsr():
 
     # test bad XML response
     respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64257",
-        status_code=200,
-        content="<dsfsdfsd>",
+        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64257"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content="<dsfsdfsd>",
+        )
     )
 
     assert (
@@ -267,10 +285,11 @@ def test_get_metadata_icpsr():
         == {}
     )
 
-    respx.get(
-        "http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64",
-        status_code=404,
-        content={},
+    respx.get("http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64").mock(
+        return_value=httpx.Response(
+            status_code=404,
+            content={},
+        )
     )
 
     assert (
@@ -290,9 +309,9 @@ def test_get_metadata_icpsr():
         ISCPSRDublin.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror?verb=GetRecord&metadataPrefix=oai_dc&identifier=64",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror?verb=GetRecord&metadataPrefix=oai_dc&identifier=64"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata(
             "icpsr",
             "http://test/timeouterror/",
@@ -651,16 +670,16 @@ def test_get_metadata_clinicaltrials():
         "tags": [],
         "authz": "",
         "sites": "",
-        "summary": "path:BriefSummary",
+        "study_description_summary": "path:BriefSummary",
         "location": "",
         "subjects": "path:EnrollmentCount",
         "__manifest": "",
-        "study_name": "",
+        "study_name_title": "",
         "study_type": "",
         "study_url": {"path": "NCTId", "filters": ["add_clinical_trials_source_url"]},
         "institutions": "path:LeadSponsorName",
         "year_awarded": "",
-        "investigators": "path:OverallOfficial[0].OverallOfficialName",
+        "investigators_name": "path:OverallOfficial[0].OverallOfficialName",
         "protocol_name": "",
         "study_summary": "",
         "_file_manifest": "",
@@ -693,11 +712,8 @@ def test_get_metadata_clinicaltrials():
 
     item_values = {"NCT01874691": {"__manifest": {"filename": "foo.zip "}}}
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1",
-        status_code=200,
-        content=json.loads(json_response),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=1").mock(
+        return_value=httpx.Response(status_code=200, content=json_response)
     )
 
     assert get_metadata("clinicaltrials", "http://test/ok", filters=None) == {}
@@ -958,16 +974,16 @@ def test_get_metadata_clinicaltrials():
                 "tags": [],
                 "authz": "",
                 "sites": "",
-                "summary": "This study is to build a Chinese national registry and surveillance system for acute myocardial infarction(AMI) to obtain real-world information about current status of characteristics, risk factors, diagnosis, treatment and outcomes of Chinese AMI patients; And to propose scientific precaution strategies aimed to prevent effectively from the incidence of AMI; And to optimize the management and outcomes of AMI patients through implementation of guideline recommendations in clinical practice, and analysis and development of effective treatment strategies; And to create cost-effective assessment system.",
+                "study_description_summary": "This study is to build a Chinese national registry and surveillance system for acute myocardial infarction(AMI) to obtain real-world information about current status of characteristics, risk factors, diagnosis, treatment and outcomes of Chinese AMI patients; And to propose scientific precaution strategies aimed to prevent effectively from the incidence of AMI; And to optimize the management and outcomes of AMI patients through implementation of guideline recommendations in clinical practice, and analysis and development of effective treatment strategies; And to create cost-effective assessment system.",
                 "location": "Fuwai Hospital, Beijing, Beijing",
                 "subjects": "20000",
                 "__manifest": {"filename": "foo.zip "},
-                "study_name": "",
+                "study_name_title": "",
                 "study_type": "",
                 "study_url": "https://clinicaltrials.gov/ct2/show/NCT01874691",
                 "institutions": "Chinese Academy of Medical Sciences, Fuwai Hospital",
                 "year_awarded": "",
-                "investigators": "Yuejin Yang, MD.",
+                "investigators_name": "Yuejin Yang, MD.",
                 "protocol_name": "",
                 "study_summary": "",
                 "_file_manifest": "",
@@ -1171,18 +1187,18 @@ def test_get_metadata_clinicaltrials():
       }
     }"""
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3",
-        status_code=200,
-        content=json.loads(json_response1),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=1&max_rnk=3").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response1,
+        )
     )
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6",
-        status_code=200,
-        content=json.loads(json_response2),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response2,
+        )
     )
 
     get_metadata(
@@ -1194,11 +1210,11 @@ def test_get_metadata_clinicaltrials():
         keepOriginalFields=True,
     )
 
-    respx.get(
-        "http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6",
-        status_code=200,
-        content=json.loads(json_response2),
-        content_type="text/plain;charset=UTF-8",
+    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response2,
+        )
     )
 
     get_metadata(
@@ -1231,10 +1247,12 @@ def test_get_metadata_clinicaltrials():
     ## test missing fields
 
     respx.get(
-        "http://test/error404?expr=heart+attack+false&fmt=json&min_rnk=4&max_rnk=6",
-        status_code=404,
-        content={},
-        content_type="text/plain;charset=UTF-8",
+        "http://test/error404?expr=heart+attack+false&fmt=json&min_rnk=4&max_rnk=6"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=404,
+            content={},
+        )
     )
 
     assert (
@@ -1251,10 +1269,8 @@ def test_get_metadata_clinicaltrials():
     ## test bad responses
 
     respx.get(
-        "http://test/ok?expr=should+error+bad+field&fmt=json&min_rnk=1&max_rnk=1",
-        content=json.loads(json_response3),
-        content_type="text/plain;charset=UTF-8",
-    )
+        "http://test/ok?expr=should+error+bad+field&fmt=json&min_rnk=1&max_rnk=1"
+    ).mock(return_value=httpx.Response(status_code=200, content=json_response3))
 
     assert (
         get_metadata(
@@ -1274,9 +1290,9 @@ def test_get_metadata_clinicaltrials():
         ClinicalTrials.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1",
-            content=httpx.TimeoutException,
-        )
+            "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata(
             "clinicaltrials",
             "http://test/ok",
@@ -2038,15 +2054,15 @@ def test_get_metadata_pdaps():
         "tags": [],
         "authz": "",
         "sites": "",
-        "summary": "path:preview[0].description",
+        "study_description_summary": "path:preview[0].description",
         "location": "United States",
         "subjects": "",
         "__manifest": "",
-        "study_name": "",
+        "study_name_title": "",
         "study_type": "",
         "institutions": "Temple University",
         "year_awarded": "",
-        "investigators": "path:preview[0].created_by",
+        "investigators_name": "path:preview[0].created_by",
         "project_title": "path:preview[0].title",
         "protocol_name": "",
         "study_summary": "path:preview[0].description",
@@ -2093,11 +2109,14 @@ def test_get_metadata_pdaps():
 
     ## failed calls
 
-    respx.get(
+    respx.request(
+        "get",
         "http://test/ok/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-        status_code=200,
-        content=json.loads(json_response),
-        content_type="text/plain;charset=UTF-8",
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            content=json_response,
+        )
     )
 
     assert get_metadata("pdaps", "http://test/ok/", filters=None) == {}
@@ -2866,7 +2885,7 @@ def test_get_metadata_pdaps():
       "tags": [],
       "authz": "",
       "sites": "",
-      "summary": "\nUnintentional drug overdose is a leading cause of preventable death in the United States. Administering naloxone hydrochloride (“naloxone”) can reverse an opioid overdose and prevent these unintentional deaths. This dataset focuses on state laws that provide civil or criminal immunity to licensed healthcare providers or lay responders for opioid antagonist administration.</span></span></p>\r\n\n\nThis is a longitudinal dataset displaying laws from January 1, 2001 through July 1, 2017.</span></p>",
+      "study_description_summary": "\nUnintentional drug overdose is a leading cause of preventable death in the United States. Administering naloxone hydrochloride (“naloxone”) can reverse an opioid overdose and prevent these unintentional deaths. This dataset focuses on state laws that provide civil or criminal immunity to licensed healthcare providers or lay responders for opioid antagonist administration.</span></span></p>\r\n\n\nThis is a longitudinal dataset displaying laws from January 1, 2001 through July 1, 2017.</span></p>",
       "location": "United States",
       "subjects": "",
       "__manifest": [
@@ -2877,11 +2896,11 @@ def test_get_metadata_pdaps():
           "object_id": "dg.XXXX/208f4c52-771e-409a-b810-4bcba3c03c51"
         }
       ],
-      "study_name": "",
+      "study_name_title": "",
       "study_type": "",
       "institutions": "Temple University",
       "year_awarded": "",
-      "investigators": "elizabeth.platt@temple.edu",
+      "investigators_name": "elizabeth.platt@temple.edu",
       "project_title": "Naloxone Overdose Prevention Laws",
       "protocol_name": "",
       "study_summary": "\nUnintentional drug overdose is a leading cause of preventable death in the United States. Administering naloxone hydrochloride (“naloxone”) can reverse an opioid overdose and prevent these unintentional deaths. This dataset focuses on state laws that provide civil or criminal immunity to licensed healthcare providers or lay responders for opioid antagonist administration.</span></span></p>\r\n\n\nThis is a longitudinal dataset displaying laws from January 1, 2001 through July 1, 2017.</span></p>",
@@ -2917,11 +2936,14 @@ def test_get_metadata_pdaps():
 """
     )
 
-    respx.get(
+    respx.request(
+        "get",
         "http://test/err404/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-        status_code=404,
-        content={},
-        content_type="text/plain;charset=UTF-8",
+    ).mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json={},
+        )
     )
 
     get_metadata(
@@ -2948,9 +2970,9 @@ def test_get_metadata_pdaps():
         PDAPS.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror/siteitem/laws-regulating-administration-of-naloxone/get_by_dataset?site_key=56e805b9d6c9e75c1ac8cb12"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata(
             "pdaps",
             "http://test/timeouterror",
@@ -2959,6 +2981,266 @@ def test_get_metadata_pdaps():
             perItemValues=item_values,
             keepOriginalFields=True,
         )
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
+
+
+@respx.mock
+def test_get_metadata_mps():
+    json_response = {
+        "id": "23",
+        "name": "Motif-PS-Chipshop",
+        "data_group": "Taylor_MPS",
+        "study_types": "CC",
+        "start_date": "2015-09-30",
+        "description": "Motif polystyrene devices, using different flow setups. Human hepatocytes fresh isolated were used in. (3 cell model)",
+    }
+
+    field_mappings = {
+        "tags": [
+            {"name": "MPS", "category": "Commons"},
+            {"name": "Physiological", "category": "Data Type"},
+        ],
+        "authz": "",
+        "sites": "",
+        "summary": "path:description",
+        "study_url": "path:url",
+        "location": "path:data_group",
+        "subjects": "",
+        "__manifest": "",
+        "study_name": "path:name",
+        "study_type": "path:study_types",
+        "institutions": "path:data_group",
+        "year_awarded": "",
+        "investigators": "path:data_group",
+        "project_title": "path:title",
+        "protocol_name": "",
+        "study_summary": "",
+        "_file_manifest": "",
+        "dataset_1_type": "",
+        "dataset_2_type": "",
+        "dataset_3_type": "",
+        "dataset_4_type": "",
+        "dataset_5_type": "",
+        "project_number": "",
+        "dataset_1_title": "",
+        "dataset_2_title": "",
+        "dataset_3_title": "",
+        "dataset_4_title": "",
+        "dataset_5_title": "",
+        "administering_ic": "",
+        "advSearchFilters": [],
+        "dataset_category": "",
+        "research_program": "",
+        "research_question": "",
+        "study_description": "",
+        "clinical_trial_link": "",
+        "dataset_description": "",
+        "research_focus_area": "",
+        "dataset_1_description": "",
+        "dataset_2_description": "",
+        "dataset_3_description": "",
+        "dataset_4_description": "",
+        "dataset_5_description": "",
+        "data_availability": "",
+    }
+
+    assert get_metadata("mps", "http://test/ok", filters=None, config=None) == {}
+
+    assert (
+        get_metadata("mps", "http://test/ok", filters=None, config={"batchSize": 256})
+        == {}
+    )
+    assert (
+        get_metadata("mps", mds_url=None, filters={"study_ids": [23]}, config=None)
+        == {}
+    )
+
+    # Test remote client-side error handling
+    respx.get("http://test/err404/23/").mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json={},
+        )
+    )
+    assert (
+        get_metadata(
+            "mps",
+            "http://test/err404",
+            filters={"study_ids": [23]},
+            mappings=field_mappings,
+            keepOriginalFields=False,
+        )
+        == {}
+    )
+
+    # Test general exception handling
+    respx.get("http://test/textresponse/23/").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            text="hello!",
+        )
+    )
+    assert (
+        get_metadata(
+            "mps",
+            "http://test/textresponse",
+            filters={"study_ids": [23]},
+            mappings=field_mappings,
+            keepOriginalFields=False,
+        )
+        == {}
+    )
+
+    respx.get("http://test/ok/23/").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_response,
+        )
+    )
+
+    assert get_metadata(
+        "mps",
+        "http://test/ok",
+        filters={"study_ids": [23]},
+        mappings=field_mappings,
+        keepOriginalFields=False,
+    ) == {
+        "MPS_study_23": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [
+                    {"name": "MPS", "category": "Commons"},
+                    {"name": "Physiological", "category": "Data Type"},
+                ],
+                "authz": "",
+                "sites": "",
+                "summary": "Motif polystyrene devices, using different flow setups. Human hepatocytes fresh isolated were used in. (3 cell model)",
+                "study_url": "",
+                "location": "Taylor_MPS",
+                "subjects": "",
+                "__manifest": "",
+                "study_name": "Motif-PS-Chipshop",
+                "study_type": "CC",
+                "institutions": "Taylor_MPS",
+                "year_awarded": "",
+                "investigators": "Taylor_MPS",
+                "project_title": "",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "",
+            },
+        }
+    }
+
+    assert get_metadata(
+        "mps",
+        "http://test/ok",
+        filters={"study_ids": [23]},
+        mappings=field_mappings,
+        keepOriginalFields=True,
+    ) == {
+        "MPS_study_23": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [
+                    {"name": "MPS", "category": "Commons"},
+                    {"name": "Physiological", "category": "Data Type"},
+                ],
+                "authz": "",
+                "sites": "",
+                "summary": "Motif polystyrene devices, using different flow setups. Human hepatocytes fresh isolated were used in. (3 cell model)",
+                "study_url": "",
+                "location": "Taylor_MPS",
+                "subjects": "",
+                "__manifest": "",
+                "study_name": "Motif-PS-Chipshop",
+                "study_type": "CC",
+                "institutions": "Taylor_MPS",
+                "year_awarded": "",
+                "investigators": "Taylor_MPS",
+                "project_title": "",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "",
+                "id": "23",
+                "name": "Motif-PS-Chipshop",
+                "data_group": "Taylor_MPS",
+                "study_types": "CC",
+                "start_date": "2015-09-30",
+                "description": "Motif polystyrene devices, using different flow setups. Human hepatocytes fresh isolated were used in. (3 cell model)",
+            },
+        }
+    }
+    try:
+        from mds.agg_mds.adapters import MPSAdapter
+
+        MPSAdapter.getRemoteDataAsJson.retry.wait = wait_none()
+
+        respx.get("http://test/timeouterror/23/",).mock(
+            side_effect=httpx.TimeoutException,
+        )
+
+        get_metadata(
+            "mps",
+            "http://test/timeouterror",
+            filters={"study_ids": [23]},
+            mappings=field_mappings,
+            keepOriginalFields=True,
+        )
+
     except Exception as exc:
         assert isinstance(exc, RetryError) == True
 
@@ -2973,7 +3255,7 @@ def test_gen3_adapter():
                 "tags": [{"name": "Array", "category": "Data Type"}],
                 "source": "Ichan School of Medicine at Mount Sinai",
                 "funding": "",
-                "summary": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
+                "study_description_summary": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
                 "study_title": "Gene Networks Specific for Innate Immunity Define Post-traumatic Stress Disorder [Affymetrix]",
                 "subjects_count": 48,
                 "accession_number": "GSE63878",
@@ -2984,26 +3266,28 @@ def test_gen3_adapter():
     }
 
     field_mappings = {
-        "tags": "tags",
+        "tags": "path:tags",
         "_subjects_count": "path:subjects_count",
         "dbgap_accession_number": "path:study_id",
-        "study_description": "path:summary",
+        "study_description": "path:study_description_summary",
         "number_of_datafiles": "path:data_files_count",
         "investigator": "path:contributor",
     }
 
     respx.get(
-        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=200,
-        content=json_response,
-        content_type="text/plain;charset=UTF-8",
+        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_response,
+        )
     )
 
     expected = {
         "GSE63878": {
             "_guid_type": "discovery_metadata",
             "gen3_discovery": {
-                "tags": "tags",
+                "tags": [{"name": "Array", "category": "Data Type"}],
                 "_subjects_count": 48,
                 "dbgap_accession_number": "",
                 "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
@@ -3013,13 +3297,22 @@ def test_gen3_adapter():
         }
     }
 
-    assert get_metadata("gen3", "http://test/ok/", None, field_mappings) == expected
+    assert (
+        get_metadata(
+            "gen3",
+            "http://test/ok/",
+            None,
+            mappings=field_mappings,
+            keepOriginalFields=False,
+        )
+        == expected
+    )
 
     field_mappings = {
-        "tags": "tags",
+        "tags": [],
         "_subjects_count": "path:subjects_count",
         "dbgap_accession_number": "path:study_id",
-        "study_description": "path:summary",
+        "study_description": "path:study_description_summary",
         "number_of_datafiles": "path:data_files_count",
         "investigator": {"path": "contributor", "filters": ["strip_email"]},
     }
@@ -3028,7 +3321,7 @@ def test_gen3_adapter():
         "GSE63878": {
             "_guid_type": "discovery_metadata",
             "gen3_discovery": {
-                "tags": "tags",
+                "tags": [],
                 "_subjects_count": 48,
                 "dbgap_accession_number": "",
                 "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
@@ -3038,19 +3331,63 @@ def test_gen3_adapter():
         }
     }
 
-    get_metadata("gen3", "http://test/ok/", None, field_mappings) == expected
+    respx.get(
+        "http://test/ok/mds/metadata?data=True&_guid_type=discovery_metadata&limit=64&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_response,
+        )
+    )
+
+    get_metadata(
+        "gen3",
+        "http://test/ok/",
+        filters=None,
+        config={"batchSize": 64},
+        mappings=field_mappings,
+        keepOriginalFields=False,
+    ) == expected
+
+    expected = {
+        "GSE63878": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "_subjects_count": 48,
+                "dbgap_accession_number": "dg.333344.222",
+                "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
+                "number_of_datafiles": 0,
+                "investigator": "",
+            },
+        }
+    }
+
+    per_item_override = {"GSE63878": {"dbgap_accession_number": "dg.333344.222"}}
+
+    get_metadata(
+        "gen3",
+        "http://test/ok/",
+        None,
+        config={"batchSize": 64},
+        mappings=field_mappings,
+        keepOriginalFields=False,
+        perItemValues=per_item_override,
+    ) == expected
 
     respx.get(
-        "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-        status_code=404,
-        content=json_response,
-        content_type="text/plain;charset=UTF-8",
+        "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json=json_response,
+        )
     )
 
     assert get_metadata("gen3", "http://test/error/", None, field_mappings) == {}
 
     # test for no url passed into Gen3Adapter
-    assert get_metadata("gen3", None, None, field_mappings) == {}
+    assert get_metadata("gen3", None, None, None, field_mappings) == {}
 
     try:
         from mds.agg_mds.adapters import Gen3Adapter
@@ -3058,10 +3395,1055 @@ def test_gen3_adapter():
         Gen3Adapter.getRemoteDataAsJson.retry.wait = wait_none()
 
         respx.get(
-            "http://test/timeouterror/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0",
-            content=httpx.TimeoutException,
-        )
+            "http://test/timeouterror/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
+        ).mock(side_effect=httpx.TimeoutException)
+
         get_metadata("gen3", "http://test/timeouterror/", None, field_mappings)
+    except Exception as exc:
+        assert isinstance(exc, RetryError) == True
+
+
+@respx.mock
+def test_get_metadata_harvard_dataverse():
+    dataset_json_response = r"""{
+        "status": "OK",
+        "data": {
+            "id": 3820814,
+            "identifier": "DVN/5B8YM8",
+            "persistentUrl": "https://doi.org/10.7910/DVN/5B8YM8",
+            "protocol": "doi",
+            "authority": "10.7910",
+            "publisher": "Harvard Dataverse",
+            "publicationDate": "2020-04-29",
+            "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+            "metadataLanguage": "undefined",
+            "latestVersion": {
+                "id": 300092,
+                "datasetId": 3820814,
+                "datasetPersistentId": "doi:10.7910/DVN/5B8YM8",
+                "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+                "versionNumber": 24,
+                "versionMinorNumber": 0,
+                "versionState": "RELEASED",
+                "UNF": "UNF:6:9Ygehodl5cg7JYtrkTA6bw==",
+                "lastUpdateTime": "2022-05-17T19:14:19Z",
+                "releaseTime": "2022-05-17T19:14:19Z",
+                "createTime": "2022-01-03T23:24:51Z",
+                "license": {
+                    "name": "CC0 1.0",
+                    "uri": "http://creativecommons.org/publicdomain/zero/1.0"
+                },
+                "fileAccessRequest": false,
+                "metadataBlocks": {
+                    "citation": {
+                        "displayName": "Citation Metadata",
+                        "name": "citation",
+                        "fields": [
+                            {
+                                "typeName": "title",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "US Metropolitan Daily Cases with Basemap"
+                            },
+                            {
+                                "typeName": "author",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "authorName": {
+                                            "typeName": "authorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "authorAffiliation": {
+                                            "typeName": "authorAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "datasetContact",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "datasetContactName": {
+                                            "typeName": "datasetContactName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hanchen Yu"
+                                        },
+                                        "datasetContactAffiliation": {
+                                            "typeName": "datasetContactAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "datasetContactEmail": {
+                                            "typeName": "datasetContactEmail",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "hanchenyu@fas.harvard.edu"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "dsDescription",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "dsDescriptionValue": {
+                                            "typeName": "dsDescriptionValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico."
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "subject",
+                                "multiple": true,
+                                "typeClass": "controlledVocabulary",
+                                "value": [
+                                    "Earth and Environmental Sciences",
+                                    "Social Sciences"
+                                ]
+                            },
+                            {
+                                "typeName": "publication",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "publicationCitation": {
+                                            "typeName": "publicationCitation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... & Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "contributor",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Manager"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    },
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Collector"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "grantNumber",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "2027540"
+                                        }
+                                    },
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "1841403"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "depositor",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "China, Data Lab"
+                            },
+                            {
+                                "typeName": "dateOfDeposit",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "2020-04-29"
+                            }
+                        ]
+                    },
+                    "geospatial": {
+                        "displayName": "Geospatial Metadata",
+                        "name": "geospatial",
+                        "fields": []
+                    }
+                },
+                "files": [
+                    {
+                        "label": "us_metro_confirmed_cases_cdl.tab",
+                        "restricted": false,
+                        "version": 3,
+                        "datasetVersionId": 300092,
+                        "dataFile": {
+                            "id": 6297263,
+                            "persistentId": "",
+                            "pidURL": "",
+                            "filename": "us_metro_confirmed_cases_cdl.tab",
+                            "contentType": "text/tab-separated-values",
+                            "filesize": 3953412,
+                            "storageIdentifier": "s3://dvn-cloud:180d366a3da-80ca5c2acd1b",
+                            "originalFileFormat": "text/csv",
+                            "originalFormatLabel": "Comma Separated Values",
+                            "originalFileSize": 3961820,
+                            "originalFileName": "us_metro_confirmed_cases_cdl.csv",
+                            "UNF": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
+                            "rootDataFileId": -1,
+                            "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                            "checksum": {
+                                "type": "MD5",
+                                "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                            },
+                            "creationDate": "2022-05-17"
+                        }
+                    }
+                ]
+            }
+        }
+    }"""
+
+    dataset_json_different_keys_response = r"""{
+        "status": "OK",
+        "data": {
+            "id": 3820814,
+            "identifier": "DVN/5B8YM8",
+            "persistentUrl": "https://doi.org/10.7910/DVN/5B8YM8",
+            "protocol": "doi",
+            "authority": "10.7910",
+            "publisher": "Harvard Dataverse",
+            "publicationDate": "2020-04-29",
+            "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+            "metadataLanguage": "undefined",
+            "latest_version": {
+                "id": 300092,
+                "datasetId": 3820814,
+                "datasetPersistentId": "doi:10.7910/DVN/5B8YM8",
+                "storageIdentifier": "s3://10.7910/DVN/5B8YM8",
+                "versionNumber": 24,
+                "versionMinorNumber": 0,
+                "versionState": "RELEASED",
+                "UNF": "UNF:6:9Ygehodl5cg7JYtrkTA6bw==",
+                "lastUpdateTime": "2022-05-17T19:14:19Z",
+                "releaseTime": "2022-05-17T19:14:19Z",
+                "createTime": "2022-01-03T23:24:51Z",
+                "license": {
+                    "name": "CC0 1.0",
+                    "uri": "http://creativecommons.org/publicdomain/zero/1.0"
+                },
+                "fileAccessRequest": false,
+                "metadata_blocks": {
+                    "citation": {
+                        "displayName": "Citation Metadata",
+                        "name": "citation",
+                        "fields": [
+                            {
+                                "typeName": "title",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "US Metropolitan Daily Cases with Basemap"
+                            },
+                            {
+                                "typeName": "author",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "authorName": {
+                                            "typeName": "authorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "authorAffiliation": {
+                                            "typeName": "authorAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "datasetContact",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "datasetContactName": {
+                                            "typeName": "datasetContactName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hanchen Yu"
+                                        },
+                                        "datasetContactAffiliation": {
+                                            "typeName": "datasetContactAffiliation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "China Data Lab"
+                                        },
+                                        "datasetContactEmail": {
+                                            "typeName": "datasetContactEmail",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "hanchenyu@fas.harvard.edu"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "dsDescription",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "dsDescriptionValue": {
+                                            "typeName": "dsDescriptionValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico."
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "subject",
+                                "multiple": true,
+                                "typeClass": "controlledVocabulary",
+                                "value": [
+                                    "Earth and Environmental Sciences",
+                                    "Social Sciences"
+                                ]
+                            },
+                            {
+                                "typeName": "publication",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "publicationCitation": {
+                                            "typeName": "publicationCitation",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, T., Guan, W., Zhu, X., Shao, Y., ... & Bao, S. (2020). Building an Open Resources Repository for COVID-19 Research, Data and Information Management, 4(3), 130-147. doi: https://doi.org/10.2478/dim-2020-0012"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "contributor",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Manager"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    },
+                                    {
+                                        "contributorType": {
+                                            "typeName": "contributorType",
+                                            "multiple": false,
+                                            "typeClass": "controlledVocabulary",
+                                            "value": "Data Collector"
+                                        },
+                                        "contributorName": {
+                                            "typeName": "contributorName",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "Hu, Tao"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "grantNumber",
+                                "multiple": true,
+                                "typeClass": "compound",
+                                "value": [
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "2027540"
+                                        }
+                                    },
+                                    {
+                                        "grantNumberAgency": {
+                                            "typeName": "grantNumberAgency",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "NSF"
+                                        },
+                                        "grantNumberValue": {
+                                            "typeName": "grantNumberValue",
+                                            "multiple": false,
+                                            "typeClass": "primitive",
+                                            "value": "1841403"
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "typeName": "depositor",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "China, Data Lab"
+                            },
+                            {
+                                "typeName": "dateOfDeposit",
+                                "multiple": false,
+                                "typeClass": "primitive",
+                                "value": "2020-04-29"
+                            }
+                        ]
+                    },
+                    "geospatial": {
+                        "displayName": "Geospatial Metadata",
+                        "name": "geospatial",
+                        "fields": []
+                    }
+                },
+                "files": [
+                    {
+                        "label": "us_metro_confirmed_cases_cdl.tab",
+                        "restricted": false,
+                        "version": 3,
+                        "datasetVersionId": 300092,
+                        "dataFile": {
+                            "id": 6297263,
+                            "persistentId": "",
+                            "pidURL": "",
+                            "filename": "us_metro_confirmed_cases_cdl.tab",
+                            "contentType": "text/tab-separated-values",
+                            "filesize": 3953412,
+                            "storageIdentifier": "s3://dvn-cloud:180d366a3da-80ca5c2acd1b",
+                            "originalFileFormat": "text/csv",
+                            "originalFormatLabel": "Comma Separated Values",
+                            "originalFileSize": 3961820,
+                            "originalFileName": "us_metro_confirmed_cases_cdl.csv",
+                            "UNF": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
+                            "rootDataFileId": -1,
+                            "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                            "checksum": {
+                                "type": "MD5",
+                                "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                            },
+                            "creationDate": "2022-05-17"
+                        }
+                    }
+                ]
+            }
+        }
+    }"""
+
+    file_ddi_response = """<?xml version='1.0' encoding='UTF-8'?>
+    <codeBook xmlns="http://www.icpsr.umich.edu/DDI" version="2.0">
+        <stdyDscr>
+            <citation>
+                <titlStmt>
+                    <titl>US Metropolitan Daily Cases with Basemap</titl>
+                    <IDNo agency="doi">10.7910/DVN/5B8YM8</IDNo>
+                </titlStmt>
+                <rspStmt>
+                    <AuthEnty>China Data Lab</AuthEnty>
+                </rspStmt>
+                <biblCit>China Data Lab, 2020, "US Metropolitan Daily Cases with Basemap", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]</biblCit>
+            </citation>
+        </stdyDscr>
+        <fileDscr ID="f6297263">
+            <fileTxt>
+                <fileName>us_metro_confirmed_cases_cdl.tab</fileName>
+                <dimensns>
+                    <caseQnty>942</caseQnty>
+                    <varQnty>852</varQnty>
+                </dimensns>
+                <fileType>text/tab-separated-values</fileType>
+            </fileTxt>
+            <notes level="file" type="VDC:UNF" subject="Universal Numeric Fingerprint">UNF:6:w715RbMgdXAjmDiwdGNv+g==</notes>
+        </fileDscr>
+        <dataDscr>
+            <var ID="v28336577" name="POP90" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP90</labl>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="min">10089.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="max">1.6835336E7</sumStat>
+                <sumStat type="stdev">863685.1810810249</sumStat>
+                <sumStat type="mean">245006.8174097664</sumStat>
+                <sumStat type="medn">62229.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:rrZvx0sccW3/T39TpNZkww==</notes>
+            </var>
+            <var ID="v28336083" name="POP80" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP80</labl>
+                <sumStat type="medn">58890.0</sumStat>
+                <sumStat type="stdev">793757.747968027</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="mean">219736.50849256906</sumStat>
+                <sumStat type="min">1486.0</sumStat>
+                <sumStat type="max">1.6313732E7</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:/gE+Jgr2RolrwkeE+O0log==</notes>
+            </var>
+            <var ID="v28336475" name="POP70" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP70</labl>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="max">1.7009092E7</sumStat>
+                <sumStat type="mean">196906.501061571</sumStat>
+                <sumStat type="min">0.0</sumStat>
+                <sumStat type="medn">50533.5</sumStat>
+                <sumStat type="stdev">777648.8670546024</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:fhyMqy/xsabC5iK9w885Hw==</notes>
+            </var>
+            <var ID="v28336321" name="POP10" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP10</labl>
+                <sumStat type="mean">307071.45966029697</sumStat>
+                <sumStat type="stdev">1034155.0228777333</sumStat>
+                <sumStat type="min">12093.0</sumStat>
+                <sumStat type="max">1.8897109E7</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="medn">74765.5</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:4uEu5qWUDCdmXqi8flG1MQ==</notes>
+            </var>
+            <var ID="v28336509" name="POP00" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP00</labl>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="mean">278420.1868365179</sumStat>
+                <sumStat type="stdev">964415.2918384229</sumStat>
+                <sumStat type="max">1.832299E7</sumStat>
+                <sumStat type="min">13004.0</sumStat>
+                <sumStat type="medn">69472.5</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:tyCEHtT+8GdCOTpJpYvAJg==</notes>
+            </var>
+            <var ID="v28336299" name="Metropolitan" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">Metropolitan</labl>
+                <varFormat type="character"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:mphqnaLCTtmU+tpSoBgFHw==</notes>
+            </var>
+            <var ID="v28336477" name="Metro_ID" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">Metro_ID</labl>
+                <sumStat type="max">49780.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="stdev">11370.289276051668</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="min">10020.0</sumStat>
+                <sumStat type="medn">29800.0</sumStat>
+                <sumStat type="mean">29761.56050955417</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:m28+WicbC3+/UcbML38hgQ==</notes>
+            </var>
+            <var ID="v28336208" name="2022-04-11" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">2022-04-11</labl>
+                <sumStat type="stdev">270083.02026017866</sumStat>
+                <sumStat type="min">1757.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="mean">77844.43312101916</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="max">5205145.0</sumStat>
+                <sumStat type="medn">19037.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:FmvYl83snrKvDdkjUsZegg==</notes>
+            </var>
+            <var ID="v28336064" name="2022-04-10" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">2022-04-10</labl>
+                <sumStat type="mean">77797.73460721863</sumStat>
+                <sumStat type="stdev">269746.2378437367</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="min">1757.0</sumStat>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="medn">19006.5</sumStat>
+                <sumStat type="max">5191684.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:6d+rPXgszAck4Ad3bLkVlQ==</notes>
+            </var>
+        </dataDscr>
+    </codeBook>"""
+
+    file_single_variable_ddi_response = """<?xml version='1.0' encoding='UTF-8'?>
+    <codeBook xmlns="http://www.icpsr.umich.edu/DDI" version="2.0">
+        <stdyDscr>
+            <citation>
+                <titlStmt>
+                    <titl>US Metropolitan Daily Cases with Basemap</titl>
+                    <IDNo agency="doi">10.7910/DVN/5B8YM8</IDNo>
+                </titlStmt>
+                <rspStmt>
+                    <AuthEnty>China Data Lab</AuthEnty>
+                </rspStmt>
+                <biblCit>China Data Lab, 2020, "US Metropolitan Daily Cases with Basemap", https://doi.org/10.7910/DVN/5B8YM8, Harvard Dataverse, V24, UNF:6:9Ygehodl5cg7JYtrkTA6bw== [fileUNF]</biblCit>
+            </citation>
+        </stdyDscr>
+        <fileDscr ID="f6297263">
+            <fileTxt>
+                <fileName>us_metro_confirmed_cases_cdl.tab</fileName>
+                <dimensns>
+                    <caseQnty>942</caseQnty>
+                    <varQnty>852</varQnty>
+                </dimensns>
+                <fileType>text/tab-separated-values</fileType>
+            </fileTxt>
+            <notes level="file" type="VDC:UNF" subject="Universal Numeric Fingerprint">UNF:6:w715RbMgdXAjmDiwdGNv+g==</notes>
+        </fileDscr>
+        <dataDscr>
+            <var ID="v28336577" name="POP90" intrvl="discrete">
+                <location fileid="f6297263"/>
+                <labl level="variable">POP90</labl>
+                <sumStat type="mode">.</sumStat>
+                <sumStat type="min">10089.0</sumStat>
+                <sumStat type="vald">942.0</sumStat>
+                <sumStat type="invd">0.0</sumStat>
+                <sumStat type="max">1.6835336E7</sumStat>
+                <sumStat type="stdev">863685.1810810249</sumStat>
+                <sumStat type="mean">245006.8174097664</sumStat>
+                <sumStat type="medn">62229.0</sumStat>
+                <varFormat type="numeric"/>
+                <notes subject="Universal Numeric Fingerprint" level="variable" type="VDC:UNF">UNF:6:rrZvx0sccW3/T39TpNZkww==</notes>
+            </var>
+        </dataDscr>
+    </codeBook>"""
+
+    field_mappings = {
+        "tags": [],
+        "authz": "",
+        "sites": "",
+        "summary": "path:dsDescriptionValue",
+        "study_description_summary": "path:dsDescriptionValue",
+        "study_url": "path:url",
+        "location": "",
+        "subjects": "path:subject",
+        "__manifest": [],
+        "study_name": "path:title",
+        "study_name_title": "path:title",
+        "study_type": "",
+        "institutions": "path:datasetContactAffiliation",
+        "year_awarded": "",
+        "investigators": "path:datasetContactName",
+        "investigators_name": "path:datasetContactName",
+        "project_title": "",
+        "protocol_name": "",
+        "study_summary": "",
+        "_file_manifest": "",
+        "dataset_1_type": "",
+        "dataset_2_type": "",
+        "dataset_3_type": "",
+        "dataset_4_type": "",
+        "dataset_5_type": "",
+        "project_number": "",
+        "dataset_1_title": "",
+        "dataset_2_title": "",
+        "dataset_3_title": "",
+        "dataset_4_title": "",
+        "dataset_5_title": "",
+        "administering_ic": "",
+        "advSearchFilters": [],
+        "dataset_category": "",
+        "research_program": "",
+        "research_question": "",
+        "study_description": "",
+        "clinical_trial_link": "",
+        "dataset_description": "",
+        "research_focus_area": "",
+        "dataset_1_description": "",
+        "dataset_2_description": "",
+        "dataset_3_description": "",
+        "dataset_4_description": "",
+        "dataset_5_description": "",
+        "data_availability": "path:data_availability",
+    }
+
+    expected_response = {
+        "doi:10.7910/DVN/5B8YM8": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_description_summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_url": "https://doi.org/10.7910/DVN/5B8YM8",
+                "location": "",
+                "subjects": "Earth and Environmental Sciences, Social Sciences",
+                "__manifest": [],
+                "study_name": "US Metropolitan Daily Cases with Basemap",
+                "study_name_title": "US Metropolitan Daily Cases with Basemap",
+                "study_type": "",
+                "institutions": "China Data Lab",
+                "year_awarded": "",
+                "investigators": "Hanchen Yu",
+                "investigators_name": "Hanchen Yu",
+                "project_title": "",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "available",
+                "data_dictionary": {
+                    "us_metro_confirmed_cases_cdl.tab": [
+                        {
+                            "name": "POP90",
+                            "label": "POP90",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP80",
+                            "label": "POP80",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP70",
+                            "label": "POP70",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP10",
+                            "label": "POP10",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "POP00",
+                            "label": "POP00",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "Metropolitan",
+                            "label": "Metropolitan",
+                            "interval": "discrete",
+                            "type": "character",
+                        },
+                        {
+                            "name": "Metro_ID",
+                            "label": "Metro_ID",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "2022-04-11",
+                            "label": "2022-04-11",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                        {
+                            "name": "2022-04-10",
+                            "label": "2022-04-10",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        },
+                    ]
+                },
+            },
+        }
+    }
+
+    expected_single_variable_response = {
+        "doi:10.7910/DVN/5B8YM8": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_description_summary": "Updated to May 17, 2022. Metropolitan level daily cases. There are 926 metropolitans except for the areas in Perto Rico.",
+                "study_url": "https://doi.org/10.7910/DVN/5B8YM8",
+                "location": "",
+                "subjects": "Earth and Environmental Sciences, Social Sciences",
+                "__manifest": [],
+                "study_name": "US Metropolitan Daily Cases with Basemap",
+                "study_name_title": "US Metropolitan Daily Cases with Basemap",
+                "study_type": "",
+                "institutions": "China Data Lab",
+                "year_awarded": "",
+                "investigators": "Hanchen Yu",
+                "investigators_name": "Hanchen Yu",
+                "project_title": "",
+                "protocol_name": "",
+                "study_summary": "",
+                "_file_manifest": "",
+                "dataset_1_type": "",
+                "dataset_2_type": "",
+                "dataset_3_type": "",
+                "dataset_4_type": "",
+                "dataset_5_type": "",
+                "project_number": "",
+                "dataset_1_title": "",
+                "dataset_2_title": "",
+                "dataset_3_title": "",
+                "dataset_4_title": "",
+                "dataset_5_title": "",
+                "administering_ic": "",
+                "advSearchFilters": [],
+                "dataset_category": "",
+                "research_program": "",
+                "research_question": "",
+                "study_description": "",
+                "clinical_trial_link": "",
+                "dataset_description": "",
+                "research_focus_area": "",
+                "dataset_1_description": "",
+                "dataset_2_description": "",
+                "dataset_3_description": "",
+                "dataset_4_description": "",
+                "dataset_5_description": "",
+                "data_availability": "available",
+                "data_dictionary": {
+                    "us_metro_confirmed_cases_cdl.tab": [
+                        {
+                            "name": "POP90",
+                            "label": "POP90",
+                            "interval": "discrete",
+                            "type": "numeric",
+                        }
+                    ]
+                },
+            },
+        }
+    }
+
+    # failed calls
+    respx.get(
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=200, content=dataset_json_response))
+
+    respx.get("http://test/ok/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(status_code=200, content=file_ddi_response)
+    )
+
+    assert get_metadata("havard_dataverse", "http://test/ok", filters=None) == {}
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            None,
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+        )
+        == {}
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/ok",
+            filters=None,
+        )
+        == {}
+    )
+
+    # valid call
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/ok",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == expected_response
+    )
+
+    # valid single variable call
+    respx.get(
+        "http://test/single_variable/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=200, content=dataset_json_response))
+
+    respx.get("http://test/single_variable/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(
+            status_code=200, content=file_single_variable_ddi_response
+        )
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/single_variable",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == expected_single_variable_response
+    )
+
+    # invalid responses
+    respx.get(
+        "http://test/invalid_dataset_response/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=200, json={"status": "ok"}))
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/invalid_dataset_response",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == {}
+    )
+
+    respx.get(
+        "http://test/err404/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(return_value=httpx.Response(status_code=404, json={}))
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/err404",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == {}
+    )
+
+    # Incorrect keys expected in adapter class
+    respx.get(
+        "http://test/different_keys/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200, json=dataset_json_different_keys_response
+        )
+    )
+
+    assert (
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/different_keys",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
+        == {}
+    )
+
+    try:
+        from mds.agg_mds.adapters import HarvardDataverse
+
+        HarvardDataverse.getRemoteDataAsJson.retry.wait = wait_none()
+
+        respx.get(
+            "http://test/timeouterror/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+        ).mock(side_effect=httpx.TimeoutException)
+
+        get_metadata(
+            "harvard_dataverse",
+            "http://test/timeouterror",
+            filters={"persistent_ids": ["doi:10.7910/DVN/5B8YM8"]},
+            mappings=field_mappings,
+        )
     except Exception as exc:
         assert isinstance(exc, RetryError) == True
 
@@ -3076,22 +4458,25 @@ def test_missing_adapter():
 def test_json_path_expression():
     sample1 = {
         "study1": {
-            "summary": "This is a summary",
+            "study_description_summary": "This is a summary",
             "id": "2334.5.555ad",
             "contributors": ["Bilbo Baggins"],
             "datasets": ["results1.csv", "results2.csv", "results3.csv"],
         },
         "study3": {
-            "summary": "This is another summary",
+            "study_description_summary": "This is another summary",
             "id": "333.33222.ad",
             "datasets": ["results4.csv", "results5.csv", "results6.csv"],
         },
     }
 
-    assert get_json_path_value("study1.summary", sample1) == "This is a summary"
+    assert (
+        get_json_path_value("study1.study_description_summary", sample1)
+        == "This is a summary"
+    )
 
     # test non existent path
-    assert get_json_path_value("study2.summary", sample1) == ""
+    assert get_json_path_value("study2.study_description_summary", sample1) == ""
 
     # test bad path
     assert get_json_path_value(".contributors", sample1) == ""

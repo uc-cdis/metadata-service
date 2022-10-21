@@ -1,8 +1,9 @@
 from fastapi import HTTPException, Query, APIRouter
 from starlette.requests import Request
-from starlette.status import HTTP_404_NOT_FOUND
+from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
+from starlette.responses import JSONResponse
 
-from .models import db, Metadata
+from .models import db, Metadata, MetadataAlias
 
 mod = APIRouter()
 
@@ -57,6 +58,14 @@ async def search_metadata(
         {"a": {"b": {"d": 5}}}
         {"a": {"b": {"c": "333", "d": 4}}}
 
+    To query all rows with a given key, regardless of value, use the "*" wildcard. For example:
+
+        GET /metadata?a=* or GET /metadata?a.b=*
+
+    Note that only a single asterisk is supported, not true wildcarding. For
+    example: `?a=1.*` will only match the exact string `"1.*"`.
+
+    To query rows with a value of `"*"` exactly, escape the asterisk. For example: `?a=\*`.
     """
     limit = min(limit, 2000)
     queries = {}
@@ -66,9 +75,18 @@ async def search_metadata(
 
     def add_filter(query):
         for path, values in queries.items():
-            query = query.where(
-                db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-            )
+            if "*" in values:
+                # query all records with a value for this path
+                path = list(path.split("."))
+                field = path.pop()
+                query = query.where(Metadata.data[path].has_key(field))
+            else:
+                values = ["*" if v == "\*" else v for v in values]
+                query = query.where(
+                    db.or_(
+                        Metadata.data[list(path.split("."))].astext == v for v in values
+                    )
+                )
         return query.offset(offset).limit(limit)
 
     if data:
@@ -85,14 +103,48 @@ async def search_metadata(
         ]
 
 
+@mod.get("/metadata/{guid:path}/aliases")
+async def get_metadata_aliases(
+    guid: str,
+) -> JSONResponse:
+    """
+    Get the aliases for the provided GUID
+
+    Args:
+        guid (str): Metadata GUID
+    """
+    metadata_aliases = await MetadataAlias.query.where(
+        MetadataAlias.guid == guid
+    ).gino.all()
+
+    aliases = [metadata_alias.alias for metadata_alias in metadata_aliases]
+    return {"guid": guid, "aliases": sorted(aliases)}
+
+
 @mod.get("/metadata/{guid:path}")
 async def get_metadata(guid):
     """Get the metadata of the GUID."""
     metadata = await Metadata.get(guid)
-    if metadata:
-        return metadata.data
-    else:
-        raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+    if not metadata:
+        # check if it's an alias
+        alias = guid
+        metadata_alias = await MetadataAlias.query.where(
+            MetadataAlias.alias == alias
+        ).gino.first()
+
+        if not metadata_alias:
+            raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
+
+        # get metadata for guid based on alias
+        metadata = await Metadata.get(metadata_alias.guid)
+
+        if not metadata:
+            message = f"Alias record exists but GUID not found: {guid}"
+            logging.error(message)
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, message)
+
+    return metadata.data
 
 
 def init_app(app):

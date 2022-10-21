@@ -13,10 +13,10 @@ jobs:
     - uses: actions/checkout@v2
       with:
         ref: ${{ github.head_ref }}
-    - name: Set up Python 3.7
+    - name: Set up Python 3.9
       uses: actions/setup-python@v1
       with:
-        python-version: 3.7
+        python-version: 3.9
     - uses: actions/cache@preview
       with:
         path: ~/.cache/pypoetry/virtualenvs
@@ -25,10 +25,13 @@ jobs:
           ${{ runner.os }}-poetry-
     - name: Install dependencies (allow "failures" and attempt to continue)
       run: |
-        curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python || true
-        $HOME/.poetry/bin/poetry install || true
+        pip install poetry
+        pip list
+        which poetry
+        poetry install -vv --no-interaction
+        poetry show -vv
     - name: Build docs
-      run: $HOME/.poetry/bin/poetry run python run.py openapi
+      run: poetry run python run.py openapi
 
     - uses: stefanzweifel/git-auto-commit-action@v4.1.2
       with:

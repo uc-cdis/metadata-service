@@ -109,11 +109,11 @@ class RemoteMetadataAdapter(ABC):
 
     @abstractmethod
     def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
-        """ needs to be implemented in derived class """
+        """needs to be implemented in derived class"""
 
     @abstractmethod
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
-        """ needs to be implemented in derived class """
+        """needs to be implemented in derived class"""
 
     @staticmethod
     def mapFields(item: dict, mappings: dict, global_filters=None) -> dict:
@@ -153,7 +153,7 @@ class RemoteMetadataAdapter(ABC):
                 for filter in filters:
                     field_value = FieldFilters.execute(filter, field_value)
 
-            elif "path:" in value:
+            elif isinstance(value, str) and "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
                 field_value = get_json_path_value(expression, item)
@@ -176,6 +176,102 @@ class RemoteMetadataAdapter(ABC):
     def getMetadata(self, **kwargs):
         json_data = self.getRemoteDataAsJson(**kwargs)
         return self.normalizeToGen3MDSFields(json_data, **kwargs)
+
+
+class MPSAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for MPS
+    boiler plate taken from IPSRDublin adapter and added MPS-specific needs
+
+    parameters: filters which currently should be study_ids=id,id,id...
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
+        """needs to be implemented in derived class"""
+        results = {"results": []}
+        if "filters" not in kwargs or kwargs["filters"] is None:
+            return results
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        study_ids = kwargs["filters"].get("study_ids", [])
+
+        if len(study_ids) > 0:
+            for id in study_ids:
+                try:
+                    # get url request put data into datadict
+                    url = f"{mds_url}/{id}/"
+                    response = httpx.get(url)
+                    response.raise_for_status()
+
+                    data_dict = response.json()
+                    results["results"].append(data_dict)
+
+                except httpx.TimeoutException as exc:
+                    logger.error(
+                        f"An timeout error occurred while requesting {exc.request.url}."
+                    )
+                    raise
+                except httpx.HTTPError as exc:
+                    logger.error(
+                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                    )
+                    break
+                except Exception as exc:
+                    logger.error(
+                        f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
+                    )
+                    break
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+        results = item
+        if mappings is not None:
+            # mapFields fxn: can use as is or can overwrite if need more specialized version
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+        # add MPS specific stuff if needed (eg turning list of investigators into one string)
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
+        """needs to be implemented in derived class"""
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+
+        results = {}
+        for item in data["results"]:  # iterate through studies
+            normalized_item = MPSAdapter.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields, globalFieldFilters
+            )
+            # TODO: is there a certain standard for identifiers or
+            # is it just some pattern that ensures uniqueness?
+            identifier = f"MPS_study_{item['id']}"
+
+            results[identifier] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
+
+        return results
 
 
 class ISCPSRDublin(RemoteMetadataAdapter):
@@ -246,8 +342,10 @@ class ISCPSRDublin(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["investigators"], list):
+        if isinstance(results.get("investigators"), list):
             results["investigators"] = ",".join(results["investigators"])
+        if isinstance(results.get("investigators_name"), list):
+            results["investigators_name"] = ",".join(results["investigators_name"])
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
@@ -500,8 +598,10 @@ class PDAPS(RemoteMetadataAdapter):
             else:
                 results = mapped_fields
 
-        if isinstance(results["investigators"], list):
+        if isinstance(results.get("investigators"), list):
             results["investigators"] = results["investigators"].join(", ")
+        if isinstance(results.get("investigators_name"), list):
+            results["investigators_name"] = results["investigators_name"].join(", ")
         return results
 
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
@@ -517,19 +617,193 @@ class PDAPS(RemoteMetadataAdapter):
 
         results = {}
         for item in data["results"]:
+            # some PDAPS studies doesn't have "display_id" but only "id"
+            # but we need "display_id" to populate "project_number" in MDS
+            if "id" in item:
+                item["display_id"] = item["id"]
             normalized_item = PDAPS.addGen3ExpectedFields(
                 item, mappings, keepOriginalFields, globalFieldFilters
             )
-            if "display_id" not in item:
+            if "display_id" in item:
+                results[item["display_id"]] = {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": normalized_item,
+                }
+            else:
                 continue
-            results[item["display_id"]] = {
+
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
+
+        return results
+
+
+class HarvardDataverse(RemoteMetadataAdapter):
+    """
+    Adapter class for Harvard Dataverse
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Tuple[Dict, str]:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url")
+        if mds_url is None:
+            return results
+
+        if "filters" not in kwargs or kwargs.get("filters") is None:
+            return results
+
+        persistent_ids = kwargs["filters"].get("persistent_ids", [])
+
+        for persistent_id in persistent_ids:
+            try:
+                dataset_url = (
+                    f"{mds_url}/datasets/:persistentId/?persistentId={persistent_id}"
+                )
+                response = httpx.get(dataset_url)
+                response.raise_for_status()
+
+                data = response.json()
+                if "data" not in data:
+                    raise ValueError("unknown response")
+
+                dataset_results = data["data"]["latestVersion"]
+                dataset_output = {
+                    "id": persistent_id,
+                    "url": data["data"]["persistentUrl"],
+                    "data_availability": "available"
+                    if dataset_results["versionState"] == "RELEASED"
+                    else "pending",
+                }
+                citation_fields = (
+                    dataset_results.get("metadataBlocks", {})
+                    .get("citation", {})
+                    .get("fields", [])
+                )
+                for field in citation_fields:
+                    if field["typeClass"] != "compound":
+                        dataset_output[field["typeName"]] = field["value"]
+                    else:
+                        for entry in field["value"]:
+                            for subfield, subfield_info in entry.items():
+                                if subfield in dataset_output:
+                                    dataset_output[subfield].append(
+                                        subfield_info["value"]
+                                    )
+                                else:
+                                    dataset_output[subfield] = [subfield_info["value"]]
+
+                dataset_output["files"] = []
+                dataset_files = dataset_results.get("files", [])
+                for file in dataset_files:
+                    data_file = file["dataFile"]
+                    data_file["data_dictionary"] = []
+
+                    ddi_url = (
+                        f"{mds_url}/access/datafile/{data_file['id']}/metadata/ddi"
+                    )
+                    ddi_response = httpx.get(ddi_url)
+                    if ddi_response.status_code == 200:
+                        ddi_entry = xmltodict.parse(ddi_response.text)
+                        vars = (
+                            ddi_entry.get("codeBook", {})
+                            .get("dataDscr", {})
+                            .get("var", [])
+                        )
+                        if isinstance(vars, dict):
+                            vars = [vars]
+                        for var_iter, var in enumerate(vars):
+                            data_file["data_dictionary"].append(
+                                {
+                                    "name": var.get("@name", f"var{var_iter+1}"),
+                                    "label": var.get("labl", {}).get("#text"),
+                                    "interval": var.get("@intrvl"),
+                                    "type": var.get("varFormat", {}).get("@type"),
+                                }
+                            )
+
+                    dataset_output["files"].append(data_file)
+
+                results["results"].append(dataset_output)
+
+            except httpx.TimeoutException as exc:
+                logger.error(f"An timeout error occurred while requesting {mds_url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                )
+                break  # need to break here as cannot be assured of leaving while loop
+            except ValueError as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                )
+                break
+            except Exception as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                )
+                break
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+        results = item
+        files = results.pop("files", [])
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        results["data_dictionary"] = {}
+        for i, file in enumerate(files):
+            results["data_dictionary"][file["filename"]] = file["data_dictionary"]
+
+        for field in ["summary", "study_description_summary"]:
+            if isinstance(results[field], list):
+                results[field] = " ".join(results[field])
+
+        for field in [
+            "subjects",
+            "investigators",
+            "investigators_name",
+            "institutions",
+        ]:
+            if isinstance(results[field], list):
+                results[field] = ", ".join(results[field])
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict:
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = self.addGen3ExpectedFields(
+                item, mappings, keepOriginalFields, globalFieldFilters
+            )
+            # TODO: Confirm the appropriate ID to use for each item
+            results[item["id"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
 
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
-            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
+            self.setPerItemValues(results, perItemValues)
 
         return results
 
@@ -551,11 +825,14 @@ class Gen3Adapter(RemoteMetadataAdapter):
         mds_url = kwargs.get("mds_url", None)
         if mds_url is None:
             return results
-        guid_type = kwargs.get("guid_type", "discovery_metadata")
-        field_name = kwargs.get("field_name", None)
-        field_value = kwargs.get("field_value", None)
-        batchSize = kwargs.get("batchSize", 1000)
-        maxItems = kwargs.get("maxItems", None)
+
+        config = kwargs.get("config", {})
+        guid_type = config.get("guid_type", "discovery_metadata")
+        field_name = config.get("field_name", None)
+        field_value = config.get("field_value", None)
+        batchSize = config.get("batchSize", 1000)
+        maxItems = config.get("maxItems", None)
+
         offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
@@ -626,7 +903,8 @@ class Gen3Adapter(RemoteMetadataAdapter):
         """
 
         mappings = kwargs.get("mappings", None)
-        study_field = kwargs.get("study_field", "gen3_discovery")
+        config = kwargs.get("config", {})
+        study_field = config.get("study_field", "gen3_discovery")
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
 
@@ -650,6 +928,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
 def gather_metadata(
     gather,
     mds_url,
+    config,
     filters,
     mappings,
     perItemValues,
@@ -657,9 +936,12 @@ def gather_metadata(
     globalFieldFilters,
 ):
     try:
-        json_data = gather.getRemoteDataAsJson(mds_url=mds_url, filters=filters)
+        json_data = gather.getRemoteDataAsJson(
+            mds_url=mds_url, filters=filters, config=config
+        )
         results = gather.normalizeToGen3MDSFields(
             json_data,
+            config=config,
             mappings=mappings,
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
@@ -677,7 +959,9 @@ adapters = {
     "icpsr": ISCPSRDublin,
     "clinicaltrials": ClinicalTrials,
     "pdaps": PDAPS,
+    "mps": MPSAdapter,
     "gen3": Gen3Adapter,
+    "harvard_dataverse": HarvardDataverse,
 }
 
 
@@ -685,11 +969,15 @@ def get_metadata(
     adapter_name,
     mds_url,
     filters,
+    config=None,
     mappings=None,
     perItemValues=None,
     keepOriginalFields=False,
     globalFieldFilters=None,
 ):
+    if config is None:
+        config = {}
+
     if globalFieldFilters is None:
         globalFieldFilters = []
 
@@ -707,6 +995,7 @@ def get_metadata(
         gather,
         mds_url=mds_url,
         filters=filters,
+        config=config,
         mappings=mappings,
         perItemValues=perItemValues,
         keepOriginalFields=keepOriginalFields,
