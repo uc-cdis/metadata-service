@@ -31,6 +31,8 @@ jobs:
         poetry install -vv --no-interaction
         poetry show -vv
     - name: Build docs
+      env:
+        USE_AGG_MDS: true # so the aggregate MDS docs are added
       run: poetry run python run.py openapi
 
     - uses: stefanzweifel/git-auto-commit-action@v4.1.2

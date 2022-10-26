@@ -13,8 +13,24 @@ async def init(hostname, port):
     await client.init(hostname, port)
 
 
-async def drop_all():
-    await client.drop_all()
+async def drop_all_non_temp_indexes():
+    await client.drop_all_non_temp_indexes()
+
+
+async def drop_all_temp_indexes():
+    await client.drop_all_temp_indexes()
+
+
+async def create_indexes(commons_mapping):
+    await client.create_indexes(commons_mapping)
+
+
+async def create_temp_indexes(commons_mapping):
+    await client.create_temp_indexes(commons_mapping)
+
+
+async def clone_temp_indexes_to_real_indexes():
+    await client.clone_temp_indexes_to_real_indexes()
 
 
 async def close():
@@ -32,8 +48,20 @@ async def update_metadata(*args):
     await client.update_metadata(*args)
 
 
+async def update_global_info(*args):
+    await client.update_global_info(*args)
+
+
+async def update_config_info(*args):
+    await client.update_config_info(*args)
+
+
 async def get_commons_metadata(*args):
     return await client.get_commons_metadata(*args)
+
+
+async def get_all_tags():
+    return await client.metadata_tags()
 
 
 async def get_all_named_commons_metadata(*args):
@@ -54,11 +82,3 @@ async def get_commons():
 
 async def get_all_metadata(*args):
     return await client.get_all_metadata(*args)
-
-
-async def get_aggregations(*args):
-    return await client.get_aggregations(*args)
-
-
-async def search(*args):
-    return await client.search(*args)

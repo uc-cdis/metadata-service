@@ -19,6 +19,8 @@ from mds import logger
 
 
 def strip_email(text: str):
+    if not isinstance(text, str):
+        return text
     rgx = r"[\w.+-]+@[\w-]+\.[\w.-]+"
     matches = re.findall(rgx, text)
     for cur_word in matches:
@@ -27,14 +29,20 @@ def strip_email(text: str):
 
 
 def strip_html(s: str):
+    if not isinstance(s, str):
+        return s
     return bleach.clean(s, tags=[], strip=True)
 
 
 def add_icpsr_source_url(study_id: str):
+    if not isinstance(study_id, str):
+        return study_id
     return f"https://www.icpsr.umich.edu/web/NAHDAP/studies/{study_id}"
 
 
 def add_clinical_trials_source_url(study_id: str):
+    if not isinstance(study_id, str):
+        return study_id
     return f"https://clinicaltrials.gov/ct2/show/{study_id}"
 
 
@@ -54,14 +62,20 @@ class FieldFilters:
         return FieldFilters.filters[name](value)
 
 
-def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
+def get_json_path_value(
+    expression: str,
+    item: dict,
+    has_default_value: bool = False,
+    default_value: str = "",
+) -> Union[str, List[Any]]:
     """
     Given a JSON Path expression and a dictionary, using the path expression
-    to find the value. If not found return an empty string
+    to find the value. If not found return and default value define return it, else
+    return None
     """
 
     if expression is None:
-        return ""
+        return default_value if has_default_value else None
 
     try:
         jsonpath_expr = parse(expression)
@@ -69,11 +83,11 @@ def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
         )
-        return ""
+        return default_value if has_default_value else None
 
     v = jsonpath_expr.find(item)
-    if len(v) == 0:  # nothing found use default value of empty string
-        return ""
+    if len(v) == 0:  # nothing found, deal with this
+        return default_value if has_default_value else None
 
     if len(v) == 1:  # convert array length 1 to a value
         return v[0].value
@@ -116,7 +130,7 @@ class RemoteMetadataAdapter(ABC):
         """needs to be implemented in derived class"""
 
     @staticmethod
-    def mapFields(item: dict, mappings: dict, global_filters=None) -> dict:
+    def mapFields(item: dict, mappings: dict, global_filters=None, schema=None) -> dict:
         """
         Given a MetaData entry as a dict, and dictionary describing fields to add
         and optionally where to map an item entry from.
@@ -132,12 +146,16 @@ class RemoteMetadataAdapter(ABC):
         field: {
             path: JSON Path
             filters: [process field filters]
+            default_value(optional): Any Value
         }
 
         :param item: dictionary to map fields to
-        :param mappings:
+        :param mappings: dictionary describing fields to add
         :return:
         """
+
+        if schema is None:
+            schema = {}
 
         if global_filters is None:
             global_filters = []
@@ -147,7 +165,23 @@ class RemoteMetadataAdapter(ABC):
         for key, value in mappings.items():
             if isinstance(value, dict):  # have a complex assignment
                 expression = value.get("path", None)
-                field_value = get_json_path_value(expression, item)
+
+                hasDefaultValue = False
+                default_value = None
+                # get adapter's default value if set
+                if "default" in value:
+                    hasDefaultValue = True
+                    default_value = value["default"]
+
+                # get schema default value if set
+                if hasDefaultValue is False:
+                    if key in schema and schema[key].default is not None:
+                        hasDefaultValue = True
+                        default_value = schema[key].default
+
+                field_value = get_json_path_value(
+                    expression, item, hasDefaultValue, default_value
+                )
 
                 filters = value.get("filters", [])
                 for filter in filters:
@@ -156,12 +190,34 @@ class RemoteMetadataAdapter(ABC):
             elif isinstance(value, str) and "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
-                field_value = get_json_path_value(expression, item)
+
+                hasDefaultValue = False
+                default_value = None
+                if key in schema:
+                    d = schema[key].default
+                    if d is not None:
+                        hasDefaultValue = True
+                        default_value = d
+
+                field_value = get_json_path_value(
+                    expression, item, hasDefaultValue, default_value
+                )
             else:
                 field_value = value
 
             for f in global_filters:
                 field_value = FieldFilters.execute(f, field_value)
+            if key in schema:
+                field_value = schema[key].normalize_value(field_value)
+            # set to default if conversion failed and a default value is available
+            if field_value is None:
+                if hasDefaultValue:
+                    field_value = default_value
+                else:
+                    logger.warn(
+                        f"{key} = None{', is not in the schema,' if key not in schema else ''} "
+                        f"and has no default value. Consider adding {key} to the schema"
+                    )
             results[key] = field_value
         return results
 
@@ -221,7 +277,7 @@ class MPSAdapter(RemoteMetadataAdapter):
                     raise
                 except httpx.HTTPError as exc:
                     logger.error(
-                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                        f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                     )
                     break
                 except Exception as exc:
@@ -313,7 +369,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     raise
                 except httpx.HTTPError as exc:
                     logger.error(
-                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                        f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                     )
                 except ValueError as exc:
                     logger.error(
@@ -331,11 +387,13 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         return id.replace("http://doi.org/", "").replace("dc:", "")
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -360,6 +418,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for record in data["results"]:
@@ -375,7 +434,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     else:
                         item[str.replace(key, "dc:", "")] = value
             normalized_item = ISCPSRDublin.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields, globalFieldFilters
+                item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
             results[item["identifier"]] = {
                 "_guid_type": "discovery_metadata",
@@ -464,24 +523,26 @@ class ClinicalTrials(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
                 )
                 break  # need to break here as cannot be assured of leaving while loop
             except ValueError as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
             except Exception as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
 
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
         """
         Map item fields to gen3 normalized fields
         using the mapping and adding the location
@@ -489,7 +550,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -517,13 +578,14 @@ class ClinicalTrials(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for item in data["results"]:
             item = item["Study"]
             item = flatten(item)
             normalized_item = ClinicalTrials.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields, globalFieldFilters
+                item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
             results[item["NCTId"]] = {
                 "_guid_type": "discovery_metadata",
@@ -577,13 +639,15 @@ class PDAPS(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                 )
 
         return results
 
     @staticmethod
-    def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters):
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
         """
         Maps the items fields into Gen3 resources fields
         if keepOriginalFields is False: only those fields will be included in the final entry
@@ -591,7 +655,7 @@ class PDAPS(RemoteMetadataAdapter):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -614,6 +678,7 @@ class PDAPS(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for item in data["results"]:
@@ -622,7 +687,7 @@ class PDAPS(RemoteMetadataAdapter):
             if "id" in item:
                 item["display_id"] = item["id"]
             normalized_item = PDAPS.addGen3ExpectedFields(
-                item, mappings, keepOriginalFields, globalFieldFilters
+                item, mappings, keepOriginalFields, globalFieldFilters, schema
             )
             if "display_id" in item:
                 results[item["display_id"]] = {
@@ -721,7 +786,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
                         for var_iter, var in enumerate(vars):
                             data_file["data_dictionary"].append(
                                 {
-                                    "name": var.get("@name", f"var{var_iter+1}"),
+                                    "name": var.get("@name", f"var{var_iter + 1}"),
                                     "label": var.get("labl", {}).get("#text"),
                                     "interval": var.get("@intrvl"),
                                     "type": var.get("varFormat", {}).get("@type"),
@@ -737,17 +802,17 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
                 )
                 break  # need to break here as cannot be assured of leaving while loop
             except ValueError as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
             except Exception as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
 
@@ -814,9 +879,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
     """
 
     @retry(
-        stop=stop_after_attempt(5),
+        stop=stop_after_attempt(10),
         retry=retry_if_exception_type(httpx.TimeoutException),
-        wait=wait_random_exponential(multiplier=1, max=20),
+        wait=wait_random_exponential(multiplier=1, max=60),
         before_sleep=before_sleep_log(logger, logging.DEBUG),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
@@ -826,20 +891,27 @@ class Gen3Adapter(RemoteMetadataAdapter):
         if mds_url is None:
             return results
 
+        if mds_url[-1] != "/":
+            mds_url += "/"
+
         config = kwargs.get("config", {})
         guid_type = config.get("guid_type", "discovery_metadata")
         field_name = config.get("field_name", None)
         field_value = config.get("field_value", None)
+        filters = config.get("filters", None)
         batchSize = config.get("batchSize", 1000)
         maxItems = config.get("maxItems", None)
 
         offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
+        # extend httpx timeout
+        # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
         while moreData:
-            url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
             try:
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
+                if filters:
+                    url += f"&{filters}"
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
                 response = httpx.get(url)
@@ -849,16 +921,16 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 results["results"].update(data)
                 numReturned = len(data)
 
-                if numReturned == 0 or numReturned < limit:
+                if numReturned == 0 or numReturned <= limit:
                     moreData = False
                 offset += numReturned
 
-            except httpx.TimeoutException as exc:
+            except httpx.TimeoutException:
                 logger.error(f"An timeout error occurred while requesting {url}.")
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Returning { len(results['results'])} results."
+                    f"An HTTP error {exc if exc is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results."
                 )
                 break
 
@@ -866,7 +938,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
     @staticmethod
     def addGen3ExpectedFields(
-        item, mappings, keepOriginalFields, globalFieldFilters
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
     ) -> Dict[str, Any]:
         """
         Given an item (metadata as a dict), map the item's keys into
@@ -881,7 +953,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         results = item
         if mappings is not None:
             mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters
+                item, mappings, globalFieldFilters, schema
             )
             if keepOriginalFields:
                 results.update(mapped_fields)
@@ -907,11 +979,19 @@ class Gen3Adapter(RemoteMetadataAdapter):
         study_field = config.get("study_field", "gen3_discovery")
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
 
         results = {}
         for guid, record in data["results"].items():
+            if study_field not in record:
+                logger.error(f"Study field not in record. Skipping")
+                continue
             item = Gen3Adapter.addGen3ExpectedFields(
-                record[study_field], mappings, keepOriginalFields, globalFieldFilters
+                record[study_field],
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
             )
             results[guid] = {
                 "_guid_type": "discovery_metadata",
@@ -925,6 +1005,82 @@ class Gen3Adapter(RemoteMetadataAdapter):
         return results
 
 
+class DRSIndexdAdapter(RemoteMetadataAdapter):
+    """
+    Pulls the DRS hostname from a ga4gh (indexd) server to cache
+    them to support local compact DRS resolution.
+    """
+
+    @staticmethod
+    def clean_dist_entry(s: str) -> str:
+        """
+        Cleans the string returning a proper DRS prefix
+        @param s: string to clean
+        @return: cleaned string
+        """
+        return s.replace("\\.", ".").replace(".*", "")
+
+    @staticmethod
+    def clean_http_url(s: str) -> str:
+        """
+        Cleans input string removing http(s) prefix and all trailing paths
+        @param s: string to clean
+        @return: cleaned string
+        """
+        return (
+            s.replace("/index", "")[::-1]
+            .replace("/", "", 1)[::-1]
+            .replace("http://", "")
+            .replace("https://", "")
+            .replace("/ga4gh/drs/v1/objects", "")
+        )
+
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        from datetime import datetime, timezone
+
+        results = {"results": {}}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        try:
+            response = httpx.get(f"{mds_url}/index/_dist")
+            response.raise_for_status()
+            data = response.json()
+            # process the entries and create a DRS cache
+            results = {
+                "info": {
+                    "created": datetime.now(timezone.utc).strftime(
+                        "%m/%d/%Y %H:%M:%S:%Z"
+                    )
+                },
+                "cache": {},
+            }
+            for entry in data:
+                if entry["type"] != "indexd":
+                    continue
+                host = DRSIndexdAdapter.clean_http_url(entry["host"])
+                name = entry.get("name", "")
+                for x in entry["hints"]:
+                    drs_prefix = DRSIndexdAdapter.clean_dist_entry(x)
+                    results["cache"][drs_prefix] = {
+                        "host": host,
+                        "name": name,
+                        "type": entry["type"],
+                    }
+
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}."
+            )
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        return data
+
+
 def gather_metadata(
     gather,
     mds_url,
@@ -934,6 +1090,7 @@ def gather_metadata(
     perItemValues,
     keepOriginalFields,
     globalFieldFilters,
+    schema,
 ):
     try:
         json_data = gather.getRemoteDataAsJson(
@@ -946,6 +1103,7 @@ def gather_metadata(
             perItemValues=perItemValues,
             keepOriginalFields=keepOriginalFields,
             globalFieldFilters=globalFieldFilters,
+            schema=schema,
         )
         return results
     except ValueError as exc:
@@ -961,6 +1119,7 @@ adapters = {
     "pdaps": PDAPS,
     "mps": MPSAdapter,
     "gen3": Gen3Adapter,
+    "drs_indexd": DRSIndexdAdapter,
     "harvard_dataverse": HarvardDataverse,
 }
 
@@ -974,6 +1133,7 @@ def get_metadata(
     perItemValues=None,
     keepOriginalFields=False,
     globalFieldFilters=None,
+    schema=None,
 ):
     if config is None:
         config = {}
@@ -1000,4 +1160,5 @@ def get_metadata(
         perItemValues=perItemValues,
         keepOriginalFields=keepOriginalFields,
         globalFieldFilters=globalFieldFilters,
+        schema=schema,
     )

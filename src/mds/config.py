@@ -59,6 +59,9 @@ DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)  # depre
 DB_RETRY_LIMIT = config("DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES)
 DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 
+# Elasticsearch
+ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)
+ES_RETRY_LIMIT = config("ES_RETRY_LIMIT", cast=int, default=5)
 # Authz string
 
 DEFAULT_AUTHZ_STR = config(
