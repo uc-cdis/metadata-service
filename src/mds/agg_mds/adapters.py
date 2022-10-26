@@ -210,8 +210,14 @@ class RemoteMetadataAdapter(ABC):
             if key in schema:
                 field_value = schema[key].normalize_value(field_value)
             # set to default if conversion failed and a default value is available
-            if field_value is None and hasDefaultValue:
-                field_value = default_value
+            if field_value is None:
+                if hasDefaultValue:
+                    field_value = default_value
+                else:
+                    logger.warn(
+                        f"{key} = None{', is not in the schema,' if key not in schema else ''} "
+                        f"and has no default value. Consider adding {key} to the schema"
+                    )
             results[key] = field_value
         return results
 
@@ -271,7 +277,7 @@ class MPSAdapter(RemoteMetadataAdapter):
                     raise
                 except httpx.HTTPError as exc:
                     logger.error(
-                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                        f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                     )
                     break
                 except Exception as exc:
@@ -780,7 +786,7 @@ class HarvardDataverse(RemoteMetadataAdapter):
                         for var_iter, var in enumerate(vars):
                             data_file["data_dictionary"].append(
                                 {
-                                    "name": var.get("@name", f"var{var_iter+1}"),
+                                    "name": var.get("@name", f"var{var_iter + 1}"),
                                     "label": var.get("labl", {}).get("#text"),
                                     "interval": var.get("@intrvl"),
                                     "type": var.get("varFormat", {}).get("@type"),
@@ -796,17 +802,17 @@ class HarvardDataverse(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning { len(results['results'])} results"
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
                 )
                 break  # need to break here as cannot be assured of leaving while loop
             except ValueError as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
             except Exception as exc:
                 logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning { len(results['results'])} results."
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
 
@@ -885,6 +891,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
         if mds_url is None:
             return results
 
+        if mds_url[-1] != "/":
+            mds_url += "/"
+
         config = kwargs.get("config", {})
         guid_type = config.get("guid_type", "discovery_metadata")
         field_name = config.get("field_name", None)
@@ -897,7 +906,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
         # extend httpx timeout
-        timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
+        # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
         while moreData:
             try:
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
@@ -905,7 +914,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     url += f"&{filters}"
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
-                response = httpx.get(url, timeout=timeout)
+                response = httpx.get(url)
                 response.raise_for_status()
 
                 data = response.json()
@@ -916,12 +925,12 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     moreData = False
                 offset += numReturned
 
-            except httpx.TimeoutException as exc:
+            except httpx.TimeoutException:
                 logger.error(f"An timeout error occurred while requesting {url}.")
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results."
+                    f"An HTTP error {exc if exc is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results."
                 )
                 break
 
