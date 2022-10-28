@@ -8,7 +8,6 @@ from mds.models import db
 
 
 def escape(str):
-    # escape single quotes for SQL statement
     return str.replace("'", "''")
 
 
@@ -253,12 +252,13 @@ async def test_6819874e85b9_upgrade():
     old_metadata = {
         "foo": "bar",
         "bizz": "buzz",
+        "special": "50% for",
         "_uploader_id": "uploader",
         "_filename": "hello.txt",
         "_bucket": "mybucket",
         "_file_extension": ".txt",
     }
-    new_metadata = {"foo": "bar", "bizz": "buzz"}
+    new_metadata = {"foo": "bar", "bizz": "buzz", "special": "50% for"}
     authz_data = {"version": 0, "_resource_paths": ["/programs/DEV"]}
 
     async with db.with_bind(DB_DSN):
