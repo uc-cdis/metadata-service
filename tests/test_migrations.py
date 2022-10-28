@@ -8,6 +8,7 @@ from mds.models import db
 
 
 def escape(str):
+    # escape single quotes for SQL statement
     return str.replace("'", "''")
 
 
