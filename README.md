@@ -17,6 +17,10 @@ The server is built with [FastAPI](https://fastapi.tiangolo.com/) and packaged w
 
 The documentation can be browsed in the [docs](docs) folder, and key documents are linked below.
 
+* [Detailed API Documentation](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml)
+* [Development and deployment](docs/dev.md)
+* [Aggregate Metadata Service](docs/agg_mds.md)
+
 The aggregated MDS APIs and scripts copy metadata from one or many metadata services into a single data store. This enables a metadata service to act as a central API for browsing Metadata using clients such as the Ecosystem browser.
 
 The aggregate metadata APIs and migrations are disabled by default unless `USE_AGG_MDS=true` is specified. The `AGG_MDS_NAMESPACE` should also be defined for shared Elasticserach environments so that a unique index is used per-instance.
