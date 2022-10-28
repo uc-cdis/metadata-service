@@ -19,8 +19,8 @@ depends_on = None
 
 
 def escape(str):
-    # escape % and single quotes for SQL statement
-    return str.replace("%", "%%").replace("'", "''")
+    # escape colon for sa.text() and single quotes for SQL statement
+    return str.replace(":", "\:").replace("'", "''")
 
 
 def upgrade():
@@ -47,7 +47,7 @@ def upgrade():
                 sql_statement = f"""UPDATE metadata
                                     SET data='{escape(json.dumps(data))}'
                                     WHERE guid='{guid}'"""
-                connection.execute(sql_statement)
+                connection.execute(sa.text(sql_statement))
         # Grab another batch of rows
         offset += limit
         query = f"SELECT guid, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset} "
