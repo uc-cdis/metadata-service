@@ -20,7 +20,7 @@ depends_on = None
 
 def escape(str):
     # escape colon for sa.text() and single quotes for SQL statement
-    return str.replace(":", "\:").replace("'", "''")
+    return str.replace(":", "\\:").replace("'", "''")
 
 
 def upgrade():
