@@ -19,8 +19,8 @@ depends_on = None
 
 
 def escape(str):
-    # escape single quotes for SQL statement
-    return str.replace("'", "''")
+    # escape % and single quotes for SQL statement
+    return str.replace("%", "%%").replace("'", "''")
 
 
 def upgrade():
