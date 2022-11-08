@@ -1,9 +1,35 @@
 from more_itertools import side_effect
 import respx
 import json
-from mds.agg_mds.adapters import get_metadata, get_json_path_value
+from mds.agg_mds.adapters import (
+    get_metadata,
+    get_json_path_value,
+    strip_email,
+    strip_html,
+    add_icpsr_source_url,
+    FieldFilters,
+    get_json_path_value,
+)
 from tenacity import RetryError, wait_none
 import httpx
+
+
+def test_filters_with_bad_entries():
+    assert strip_email(100) == 100
+    assert strip_html(99) == 99
+    assert add_icpsr_source_url(77) == 77
+
+
+def test_non_existing_filters():
+    assert FieldFilters().execute("nofilter", "passthru") == "passthru"
+
+
+def test_json_path():
+    assert get_json_path_value(None, {}) is None
+    assert get_json_path_value("shark", {"shark": ["great", "white"]}) == [
+        "great",
+        "white",
+    ]
 
 
 @respx.mock
@@ -321,6 +347,70 @@ def test_get_metadata_icpsr():
         )
     except Exception as exc:
         assert isinstance(exc, RetryError) == True
+
+
+@respx.mock
+def test_drs_indexd():
+    json_data = [
+        {
+            "hints": [".*dg\\.XXTS.*"],
+            "host": "https://mytest1.commons.io/",
+            "name": "DataSTAGE",
+            "type": "indexd",
+        },
+        {
+            "hints": [".*dg\\.TSXX.*"],
+            "host": "https://commons2.io/index/",
+            "name": "Environmental DC",
+            "type": "indexd",
+        },
+    ]
+
+    expected = {
+        "info": {"created": "07/07/2022 15:28:46:UTC"},
+        "cache": {
+            "dg.XXTS": {
+                "host": "mytest1.commons.io",
+                "name": "DataSTAGE",
+                "type": "indexd",
+            },
+            "dg.TSXX": {
+                "host": "commons2.io",
+                "name": "Environmental DC",
+                "type": "indexd",
+            },
+        },
+    }
+
+    respx.get("http://test/index/_dist").mock(
+        return_value=httpx.Response(
+            status_code=200,
+            json=json_data,
+        )
+    )
+
+    results = get_metadata(
+        "drs_indexd",
+        "http://test",
+        filters=None,
+    )
+
+    assert results["cache"] == expected["cache"]
+
+    respx.get("http://test/index/_dist").mock(
+        return_value=httpx.Response(
+            status_code=404,
+            json=None,
+        )
+    )
+
+    results = get_metadata(
+        "drs_indexd",
+        "http://test",
+        filters=None,
+    )
+
+    assert results == {"results": {}}
 
 
 @respx.mock
@@ -3004,7 +3094,7 @@ def test_get_metadata_mps():
         "authz": "",
         "sites": "",
         "summary": "path:description",
-        "study_url": "path:url",
+        "study_url": {"path": "url", "default": ""},
         "location": "path:data_group",
         "subjects": "",
         "__manifest": "",
@@ -3013,7 +3103,7 @@ def test_get_metadata_mps():
         "institutions": "path:data_group",
         "year_awarded": "",
         "investigators": "path:data_group",
-        "project_title": "path:title",
+        "project_title": {"path": "title", "default": ""},
         "protocol_name": "",
         "study_summary": "",
         "_file_manifest": "",
@@ -3289,7 +3379,7 @@ def test_gen3_adapter():
             "gen3_discovery": {
                 "tags": [{"name": "Array", "category": "Data Type"}],
                 "_subjects_count": 48,
-                "dbgap_accession_number": "",
+                "dbgap_accession_number": None,
                 "study_description": "The molecular factors involved in the development of Post-traumatic Stress Disorder (PTSD) remain poorly understood. Previous transcriptomic studies investigating the mechanisms of PTSD apply targeted approaches to identify individual genes under a cross-sectional framework lack a holistic view of the behaviours and properties of these genes at the system-level. Here we sought to apply an unsupervised gene-network-based approach to a prospective experimental design using whole-transcriptome RNA-Seq gene expression from peripheral blood leukocytes of U.S. Marines (N=188), obtained both pre- and post-deployment to conflict zones. We identified discrete groups of co-regulated genes (i.e., co-expression modules) and tested them for association to PTSD. We identified one module at both pre- and post-deployment containing putative causal signatures for PTSD development displaying an over-expression of genes enriched for functions of innate-immune response and interferon signalling (Type-I and Type-II). Importantly, these results were replicated in a second non-overlapping independent dataset of U.S. Marines (N=96), further outlining the role of innate immune and interferon signalling genes within co-expression modules to explain at least part of the causal pathophysiology for PTSD development. A second module, consequential of trauma exposure, contained PTSD resiliency signatures and an over-expression of genes involved in hemostasis and wound responsiveness suggesting that chronic levels of stress impair proper wound healing during/after exposure to the battlefield while highlighting the role of the hemostatic system as a clinical indicator of chronic-based stress. These findings provide novel insights for early preventative measures and advanced PTSD detection, which may lead to interventions that delay or perhaps abrogate the development of PTSD.\nWe used microarrays to characterize both prognostic and diagnostic molecular signatures associated to PTSD risk and PTSD status compared to control subjects.",
                 "number_of_datafiles": 0,
                 "investigator": "me.foo@smartsite.com",
@@ -3365,15 +3455,18 @@ def test_gen3_adapter():
 
     per_item_override = {"GSE63878": {"dbgap_accession_number": "dg.333344.222"}}
 
-    get_metadata(
-        "gen3",
-        "http://test/ok/",
-        None,
-        config={"batchSize": 64},
-        mappings=field_mappings,
-        keepOriginalFields=False,
-        perItemValues=per_item_override,
-    ) == expected
+    assert (
+        get_metadata(
+            "gen3",
+            "http://test/ok/",
+            None,
+            config={"batchSize": 64},
+            mappings=field_mappings,
+            keepOriginalFields=False,
+            perItemValues=per_item_override,
+        )
+        == expected
+    )
 
     respx.get(
         "http://test/error/mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
@@ -3400,7 +3493,7 @@ def test_gen3_adapter():
 
         get_metadata("gen3", "http://test/timeouterror/", None, field_mappings)
     except Exception as exc:
-        assert isinstance(exc, RetryError) == True
+        assert isinstance(exc, RetryError)
 
 
 @respx.mock
@@ -3642,10 +3735,10 @@ def test_get_metadata_harvard_dataverse():
                             "originalFileName": "us_metro_confirmed_cases_cdl.csv",
                             "UNF": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
                             "rootDataFileId": -1,
-                            "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                            "md5": "ef0d6777",
                             "checksum": {
                                 "type": "MD5",
-                                "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                                "value": "ef0d67774"
                             },
                             "creationDate": "2022-05-17"
                         }
@@ -3892,10 +3985,10 @@ def test_get_metadata_harvard_dataverse():
                             "originalFileName": "us_metro_confirmed_cases_cdl.csv",
                             "UNF": "UNF:6:w715RbMgdXAjmDiwdGNv+g==",
                             "rootDataFileId": -1,
-                            "md5": "ef0d67774caa8f1bcd7bcce4e8d62396",
+                            "md5": "ef0d6777",
                             "checksum": {
                                 "type": "MD5",
-                                "value": "ef0d67774caa8f1bcd7bcce4e8d62396"
+                                "value": "ef0d6777"
                             },
                             "creationDate": "2022-05-17"
                         }
@@ -4349,6 +4442,19 @@ def test_get_metadata_harvard_dataverse():
         == {}
     )
 
+    respx.get(
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+        "http://test/ok/datasets/:persistentId/?persistentId=doi:10.7910/DVN/5B8YM8"
+    ).mock(
+        return_value=httpx.Response(
+            status_code=200, json=json.loads(dataset_json_response)
+        )
+    )
+
+    respx.get("http://test/ok/access/datafile/6297263/metadata/ddi").mock(
+        return_value=httpx.Response(status_code=200, text=file_ddi_response)
+    )
+
     # valid call
     assert (
         get_metadata(
@@ -4445,7 +4551,7 @@ def test_get_metadata_harvard_dataverse():
             mappings=field_mappings,
         )
     except Exception as exc:
-        assert isinstance(exc, RetryError) == True
+        assert isinstance(exc, RetryError) is True
 
 
 def test_missing_adapter():
@@ -4476,10 +4582,10 @@ def test_json_path_expression():
     )
 
     # test non existent path
-    assert get_json_path_value("study2.study_description_summary", sample1) == ""
+    assert get_json_path_value("study2.study_description_summary", sample1) is None
 
     # test bad path
-    assert get_json_path_value(".contributors", sample1) == ""
+    assert get_json_path_value(".contributors", sample1) is None
 
     # test single array
     assert get_json_path_value("study1.contributors", sample1) == ["Bilbo Baggins"]

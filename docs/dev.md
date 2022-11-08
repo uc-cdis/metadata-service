@@ -4,6 +4,7 @@
 * [Development](#development)
 * [Run tests](#run-tests)
 * [Develop with Docker](#develop-with-docker)
+* [Work with Aggregate MDS](#work-with-aggregate-mds)
 * [Deployment](#deployment)
 
 ## Installation
@@ -87,6 +88,16 @@ Run tests:
 
 ```bash
 docker-compose exec app pytest --cov=src --cov=migrations/versions tests
+```
+
+## Work with Aggregate MDS
+testing populate:
+```bash
+python src/mds/populate.py --config <config file> --hostname localhost --port 9200
+```
+view the loaded data
+```bash
+http://localhost:8000/aggregate/metadata?limit=1000
 ```
 
 ## Deployment

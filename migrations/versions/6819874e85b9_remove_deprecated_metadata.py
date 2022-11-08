@@ -19,8 +19,8 @@ depends_on = None
 
 
 def escape(str):
-    # escape single quotes for SQL statement
-    return str.replace("'", "''")
+    # escape colon for sa.text() and single quotes for SQL statement
+    return str.replace(":", "\\:").replace("'", "''")
 
 
 def upgrade():
@@ -40,13 +40,14 @@ def upgrade():
         for r in results:
             guid, data = r[0], r[1]
             # scrub internal fields from metadata
-            for metadata_key in remove_metadata_keys:
-                if metadata_key in data.keys():
-                    data.pop(metadata_key)
-            sql_statement = f"""UPDATE metadata
-                                SET data='{escape(json.dumps(data))}'
-                                WHERE guid='{guid}'"""
-            connection.execute(sql_statement)
+            if data is not None:
+                for metadata_key in remove_metadata_keys:
+                    if metadata_key in data.keys():
+                        data.pop(metadata_key)
+                sql_statement = f"""UPDATE metadata
+                                    SET data='{escape(json.dumps(data))}'
+                                    WHERE guid='{guid}'"""
+                connection.execute(sa.text(sql_statement))
         # Grab another batch of rows
         offset += limit
         query = f"SELECT guid, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset} "
