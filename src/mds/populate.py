@@ -75,14 +75,13 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
         )
 
         # add to tags
-        if entry[common.study_data_field].get("tags", {}) is not None:
-            for t in entry[common.study_data_field].get("tags", {}):
-                if "category" not in t:
-                    continue
-                if t["category"] not in tags:
-                    tags[t["category"]] = set()
-                if "name" in t:
-                    tags[t["category"]].add(t["name"])
+        for t in entry[common.study_data_field].get("tags") or {}:
+            if "category" not in t:
+                continue
+            if t["category"] not in tags:
+                tags[t["category"]] = set()
+            if "name" in t:
+                tags[t["category"]].add(t["name"])
 
     # process tags set to list
     for k, v in tags.items():
