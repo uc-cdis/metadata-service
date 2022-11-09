@@ -1,6 +1,5 @@
 import collections.abc
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
 from jsonpath_ng import parse, JSONPathError
 import httpx
@@ -886,7 +885,6 @@ class Gen3Adapter(RemoteMetadataAdapter):
         before_sleep=before_sleep_log(logger, logging.DEBUG),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
-        start = datetime.now()
         results = {"results": {}}
 
         mds_url = kwargs.get("mds_url", None)
