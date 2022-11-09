@@ -887,7 +887,6 @@ class Gen3Adapter(RemoteMetadataAdapter):
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
         start = datetime.now()
-        logger.info("Retrying again")
         results = {"results": {}}
 
         mds_url = kwargs.get("mds_url", None)

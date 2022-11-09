@@ -73,7 +73,9 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
             if hasattr(common, "commons_name") and common.commons_name is not None
             else name
         )
-
+        logger.info(
+            f"{entry}\n\t common -- {common}\n\tfield -- {common.study_data_field}"
+        )
         # add to tags
         for t in entry[common.study_data_field].get("tags", {}):
             if "category" not in t:
