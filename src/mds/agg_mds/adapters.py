@@ -886,6 +886,8 @@ class Gen3Adapter(RemoteMetadataAdapter):
         before_sleep=before_sleep_log(logger, logging.DEBUG),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        start = datetime.now()
+        logger.info("Retrying again")
         results = {"results": {}}
 
         mds_url = kwargs.get("mds_url", None)
@@ -909,7 +911,6 @@ class Gen3Adapter(RemoteMetadataAdapter):
         # extend httpx timeout
         # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
         while moreData:
-            start = datetime.now()
             try:
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if filters:
