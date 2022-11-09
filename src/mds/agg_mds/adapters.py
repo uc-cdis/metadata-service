@@ -929,7 +929,6 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
             except httpx.TimeoutException:
                 logger.error(f"An timeout error occurred while requesting {url}.")
-                logger.info(f"Waited for {datetime.now()-start} seconds.")
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
