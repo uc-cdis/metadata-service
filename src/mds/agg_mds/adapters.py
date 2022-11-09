@@ -1,5 +1,6 @@
 import collections.abc
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
 from jsonpath_ng import parse, JSONPathError
 import httpx
@@ -908,6 +909,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         # extend httpx timeout
         # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
         while moreData:
+            start = datetime.now()
             try:
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if filters:
@@ -927,6 +929,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
 
             except httpx.TimeoutException:
                 logger.error(f"An timeout error occurred while requesting {url}.")
+                logger.info(f"Waited for {datetime.now()-start} seconds.")
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
