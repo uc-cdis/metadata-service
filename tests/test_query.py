@@ -31,25 +31,78 @@ def test_query_data(client):
 
 
 def test_query_offset(client):
+    """
+    Test that the query offset and limit works as expected for various limits
+    """
     try:
-        # for i in range(128):
-        #     client.post(f"/metadata/tqo_{i}", json=dict(x=1)).raise_for_status()
         client.post(
             "/metadata",
-            json=[dict(guid=f"tqo_{i}", data=dict(x=1)) for i in range(128)],
+            json=[dict(guid=f"tqo_{i}", data=dict(x=1)) for i in range(64)],
         ).raise_for_status()
         for step in [1, 5, 10]:
-            got = set()
+            got = []
             offset = 0
-            while len(got) < 128:
+            while len(got) < 64:
                 delta = client.get(f"/metadata?offset={offset}&limit={step}").json()
                 assert delta
                 offset += len(delta)
-                got.update(delta)
-            assert len(got) == 128
+                got += delta
+            assert len(got) == 64
+            assert len(set(got)) == 64
     finally:
-        for i in range(128):
+        for i in range(64):
             client.delete(f"/metadata/tqo_{i}")
+
+
+def test_query_offset_order(client):
+    """
+    Test that the query offset and limit returns the same order each time to ensure
+    consistency in paginating.
+    """
+    try:
+        client.post(
+            "/metadata",
+            json=[dict(guid=f"tqo_{i}", data=dict(x=1)) for i in range(64)],
+        ).raise_for_status()
+        for offset in [0, 1, 10, 64]:
+            for limit in [0, 1, 10, 64]:
+                a = client.get(f"/metadata?offset={offset}&limit={limit}").json()
+                b = client.get(f"/metadata?offset={offset}&limit={limit}").json()
+                c = client.get(f"/metadata?offset={offset}&limit={limit}").json()
+                assert a == b == c
+    finally:
+        for i in range(64):
+            client.delete(f"/metadata/tqo_{i}")
+
+
+def test_query_offset_with_filter(client):
+    """
+    Test that the query offset and limit works even when filtering/subsetting the records
+    by a specific field
+    """
+    try:
+        client.post(
+            "/metadata",
+            json=[dict(guid=f"x_2_{i}", data=dict(x=2)) for i in range(64)],
+        ).raise_for_status()
+        client.post(
+            "/metadata",
+            json=[dict(guid=f"x_1_{i}", data=dict(x=1)) for i in range(64)],
+        ).raise_for_status()
+        for step in [1, 5, 10]:
+            got = []
+            offset = 0
+            while len(got) < 64:
+                delta = client.get(f"/metadata?offset={offset}&limit={step}&x=1").json()
+                assert delta
+                offset += len(delta)
+                got += delta
+            assert len(got) == 64
+            assert len(set(got)) == 64
+    finally:
+        for i in range(64):
+            client.delete(f"/metadata/x_2_{i}")
+            client.delete(f"/metadata/x_1_{i}")
 
 
 @pytest.mark.skipif(

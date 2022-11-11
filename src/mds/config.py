@@ -70,6 +70,11 @@ DEFAULT_AUTHZ_STR = config(
     default='{"version": 0, "_resource_paths": ["/open"]}',
 )
 
+# Limits
+METADATA_QUERY_RESULTS_LIMIT = config(
+    "METADATA_QUERY_RESULTS_LIMIT", cast=int, default=2000
+)
+
 # Security
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])

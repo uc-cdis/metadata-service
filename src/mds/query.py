@@ -4,6 +4,7 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 from starlette.responses import JSONResponse
 
 from .models import db, Metadata, MetadataAlias
+from . import config
 
 mod = APIRouter()
 
@@ -67,7 +68,7 @@ async def search_metadata(
 
     To query rows with a value of `"*"` exactly, escape the asterisk. For example: `?a=\*`.
     """
-    limit = min(limit, 2000)
+    limit = min(limit, config.METADATA_QUERY_RESULTS_LIMIT)
     queries = {}
     for key, value in request.query_params.multi_items():
         if key not in {"data", "limit", "offset"}:
@@ -87,7 +88,22 @@ async def search_metadata(
                         Metadata.data[list(path.split("."))].astext == v for v in values
                     )
                 )
-        return query.offset(offset).limit(limit)
+
+        # TODO/FIXME: There's no updated date on the records, and without that
+        # this "pagination" is prone to produce inconsistent results if someone is
+        # trying to paginate using offset WHILE data is being added
+        #
+        # The only real way to try and reduce that risk
+        # is to order by updated date (so newly added stuff is
+        # at the end and new records don't end up in a page earlier on)
+        # This is how our indexing service handles this situation.
+        #
+        # But until we have an updated_date, we can't do that, so naively order by
+        # GUID for now and accept this inconsistency risk.
+        query = query.order_by(Metadata.guid)
+
+        query = query.offset(offset).limit(limit)
+        return query
 
     if data:
         return {
