@@ -881,7 +881,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
     @retry(
         stop=stop_after_attempt(10),
         retry=retry_if_exception_type(httpx.TimeoutException),
-        wait=wait_random_exponential(multiplier=1, max=60),
+        wait=wait_random_exponential(multiplier=1, max=20),
         before_sleep=before_sleep_log(logger, logging.DEBUG),
     )
     def getRemoteDataAsJson(self, **kwargs) -> Dict:
@@ -914,7 +914,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                     url += f"&{filters}"
                 if field_name is not None and field_value is not None:
                     url += f"&{guid_type}.{field_name}={field_value}"
-                response = httpx.get(url)
+                response = httpx.get(url, timeout=60)
                 response.raise_for_status()
 
                 data = response.json()
