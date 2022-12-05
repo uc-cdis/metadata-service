@@ -7,6 +7,7 @@ import xmltodict
 import bleach
 import logging
 import re
+from datetime import datetime
 from tenacity import (
     retry,
     RetryError,
@@ -905,10 +906,12 @@ class Gen3Adapter(RemoteMetadataAdapter):
         offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
+        start = None
         # extend httpx timeout
         # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
         while moreData:
             try:
+                start = datetime.now()
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if filters:
                     url += f"&{filters}"
@@ -926,7 +929,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 offset += numReturned
 
             except httpx.TimeoutException:
-                logger.error(f"An timeout error occurred while requesting {url}.")
+                logger.error(
+                    f"An timeout error occurred while requesting {url}. Waited for {datetime.now() - start} seconds"
+                )
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
