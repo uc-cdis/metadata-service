@@ -79,9 +79,7 @@ def get_json_path_value(
 
     try:
         jsonpath_expr = parse(expression)
-        logger.info(
-            f" This is the Json expr - {jsonpath_expr}, expression - {expression}"
-        )
+
     except JSONPathError as exc:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
@@ -1300,13 +1298,13 @@ class GDCAdapter(RemoteMetadataAdapter):
             ] = f"Genomic Data Commons study of {normalized_item['disease_type']} in {normalized_item['primary_site']}"
 
             tag_elements = ["disease_type", "primary_site"]
-            for tag in tag_elements:
-                normalized_item["tags"].append(
-                    {
-                        "name": normalized_item[tag][0] if normalized_item[tag] else "",
-                        "category": tag,
-                    }
-                )
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag][0] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in tag_elements
+            ]
 
             results[normalized_item["_unique_id"]] = {
                 "_guid_type": "discovery_metadata",
