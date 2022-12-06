@@ -1361,41 +1361,27 @@ class CIDCAdapter(RemoteMetadataAdapter):
         if mds_url is None:
             return results
 
-        if "filters" not in kwargs or kwargs["filters"] is None:
-            return results
-
-        batchSize = kwargs["filters"].get("size", 1000)
-        offset = 0
-        remaining = True
         data = []
 
-        while remaining:
-            try:
-                response = httpx.get(
-                    f"{mds_url}?expand=summary" f"&from={offset}&size={batchSize}"
-                )
-                response.raise_for_status()
+        try:
+            response = httpx.get(mds_url)
+            response.raise_for_status()
 
-                response_data = response.json()
-                data = response_data["data"]["hits"]
-                results["results"] += data
+            response_data = response.json()
+            data = response_data["collections"]
+            results["results"] = data
 
-                remaining = len(data) == batchSize
-                offset += batchSize
-
-            except httpx.TimeoutException as exc:
-                logger.error(f"An timeout error occurred while requesting {mds_url}.")
-                raise
-            except httpx.HTTPError as exc:
-                logger.error(
-                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
-                )
-                break  # need to break here as cannot be assured of leaving while loop
-            except Exception as exc:
-                logger.error(
-                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
-                )
-                break
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
 
         return results
 
@@ -1433,23 +1419,20 @@ class CIDCAdapter(RemoteMetadataAdapter):
 
         results = {}
         for item in data["results"]:
-            normalized_item = GDCAdapter.addGen3ExpectedFields(
+            normalized_item = CIDCAdapter.addGen3ExpectedFields(
                 item,
                 mappings,
                 keepOriginalFields,
                 globalFieldFilters,
                 schema,
             )
-            normalized_item[
-                "description"
-            ] = f"Genomic Data Commons study of {normalized_item['disease_type']} in {normalized_item['primary_site']}"
 
             normalized_item["tags"] = [
                 {
                     "name": normalized_item[tag][0] if normalized_item[tag] else "",
                     "category": tag,
                 }
-                for tag in ["disease_type", "primary_site"]
+                for tag in ["disease_type", "data_type", "primary_site"]
             ]
 
             results[normalized_item["_unique_id"]] = {
