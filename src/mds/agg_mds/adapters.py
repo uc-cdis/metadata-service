@@ -79,6 +79,9 @@ def get_json_path_value(
 
     try:
         jsonpath_expr = parse(expression)
+        logger.info(
+            f" This is the Json expr - {jsonpath_expr}, expression - {expression}"
+        )
     except JSONPathError as exc:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
@@ -1309,10 +1312,6 @@ class GDCAdapter(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
-
-        perItemValues = kwargs.get("perItemValues", None)
-        if perItemValues is not None:
-            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
 
         return results
 
