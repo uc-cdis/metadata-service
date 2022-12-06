@@ -46,12 +46,19 @@ def add_clinical_trials_source_url(study_id: str):
     return f"https://clinicaltrials.gov/ct2/show/{study_id}"
 
 
+def uppercase(s: str):
+    if not isinstance(s, str):
+        return s
+    return s.upper()
+
+
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
         "strip_email": strip_email,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
+        "uppercase": uppercase,
     }
 
     @classmethod
@@ -1297,13 +1304,152 @@ class GDCAdapter(RemoteMetadataAdapter):
                 "description"
             ] = f"Genomic Data Commons study of {normalized_item['disease_type']} in {normalized_item['primary_site']}"
 
-            tag_elements = ["disease_type", "primary_site"]
             normalized_item["tags"] = [
                 {
                     "name": normalized_item[tag][0] if normalized_item[tag] else "",
                     "category": tag,
                 }
-                for tag in tag_elements
+                for tag in ["disease_type", "primary_site"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class CIDCAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Cancer Imaging Data Commons
+
+        "CRDC Cancer Imaging Data Commons": {
+                        "mds_url": "https://api.imaging.datacommons.cancer.gov/v1/collections ",
+                        "commons_url": "https://portal.imaging.datacommons.cancer.gov/collections/",
+                        "adapter": "cidc",
+                        "filters": {},
+                        "keep_original_fields": false,
+                        "field_mappings": {
+                                "commons": "CRDC Cancer Imaging Data Commons",
+                                "_unique_id": "path:collection_id",
+                                "study_title": "path:collection_id",
+                                "accession_number": "path:collection_id",
+                                "short_name": {"path" :"collection_id", "filters": [ "uppercase" ]}
+                                "full_name": {"path" :"collection_id", "filters": [ "uppercase" ]}
+                                "dbgap_accession_number": {"path" :"collection_id", "filters": [ "uppercase" ]}
+                                "description": {"path" :"description", "filters": [ "strip_html" ]}
+                                "image_types": "path:image_types",
+                                "subjects_count" : "path:subject_count",
+                                "disease_type" : "path:cancer_type",
+                                "data_type" : "path:supporting_data",
+                                "tags": [],
+                                "primary_site": "path:location"
+                        }
+                }
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        if "filters" not in kwargs or kwargs["filters"] is None:
+            return results
+
+        batchSize = kwargs["filters"].get("size", 1000)
+        offset = 0
+        remaining = True
+        data = []
+
+        while remaining:
+            try:
+                response = httpx.get(
+                    f"{mds_url}?expand=summary" f"&from={offset}&size={batchSize}"
+                )
+                response.raise_for_status()
+
+                response_data = response.json()
+                data = response_data["data"]["hits"]
+                results["results"] += data
+
+                remaining = len(data) == batchSize
+                offset += batchSize
+
+            except httpx.TimeoutException as exc:
+                logger.error(f"An timeout error occurred while requesting {mds_url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+                )
+                break  # need to break here as cannot be assured of leaving while loop
+            except Exception as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+                )
+                break
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        logger.info(data)
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = GDCAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item[
+                "description"
+            ] = f"Genomic Data Commons study of {normalized_item['disease_type']} in {normalized_item['primary_site']}"
+
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag][0] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "primary_site"]
             ]
 
             results[normalized_item["_unique_id"]] = {
@@ -1356,6 +1502,7 @@ adapters = {
     "harvard_dataverse": HarvardDataverse,
     "icdc": ICDCAdapter,
     "gdc": GDCAdapter,
+    "cidc": CIDCAdapter,
 }
 
 
