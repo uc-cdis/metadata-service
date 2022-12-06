@@ -1325,7 +1325,7 @@ class CIDCAdapter(RemoteMetadataAdapter):
     Simple adapter for Cancer Imaging Data Commons
 
         "CRDC Cancer Imaging Data Commons": {
-                        "mds_url": "https://api.imaging.datacommons.cancer.gov/v1/collections ",
+                        "mds_url": "https://api.imaging.datacommons.cancer.gov/v1/collections",
                         "commons_url": "https://portal.imaging.datacommons.cancer.gov/collections/",
                         "adapter": "cidc",
                         "filters": {},
