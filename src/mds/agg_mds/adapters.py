@@ -1285,7 +1285,6 @@ class GDCAdapter(RemoteMetadataAdapter):
         :param data:
         :return:
         """
-        logger.info(data)
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
@@ -1411,7 +1410,6 @@ class CIDCAdapter(RemoteMetadataAdapter):
         :param data:
         :return:
         """
-        logger.info(data)
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
