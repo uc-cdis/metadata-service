@@ -1305,7 +1305,7 @@ class GDCAdapter(RemoteMetadataAdapter):
                     }
                 )
 
-            results[item["_unique_id"]] = {
+            results[normalized_item["_unique_id"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
