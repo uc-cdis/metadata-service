@@ -1233,7 +1233,7 @@ class GDCAdapter(RemoteMetadataAdapter):
 
                 response_data = response.json()
                 data = response_data["data"]["hits"]
-                results["results"].append(data)
+                results["results"] += data
 
                 remaining = len(data) == batchSize
                 offset += batchSize
