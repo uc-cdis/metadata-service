@@ -58,6 +58,13 @@ def prepare_cidc_description(desc: str):
     return desc
 
 
+def aggregate_pdc_file_count(record: list):
+    file_count = 0
+    for x in record:
+        file_count += x["files_count"]
+    return file_count
+
+
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
@@ -66,6 +73,7 @@ class FieldFilters:
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
         "uppercase": uppercase,
         "prepare_cidc_description": prepare_cidc_description,
+        "aggregate_pdc_file_count": aggregate_pdc_file_count,
     }
 
     @classmethod
@@ -1319,8 +1327,8 @@ class GDCAdapter(RemoteMetadataAdapter):
             ]
 
             results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
-                "guid_type": "discovery_metadata",
             }
 
         return results
@@ -1433,13 +1441,178 @@ class CIDCAdapter(RemoteMetadataAdapter):
                 globalFieldFilters,
                 schema,
             )
-            normalized_item["description"] = normalized_item["description"]
             normalized_item["tags"] = [
                 {
                     "name": normalized_item[tag] if normalized_item[tag] else "",
                     "category": tag,
                 }
                 for tag in ["disease_type", "data_type", "primary_site"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class PDCAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Proteomic Data Commons
+
+        "CRDC Cancer Imaging Data Commons": {
+                        "mds_url": "https://proteomic.datacommons.cancer.gov/graphql",
+                        "commons_url": "https://pdc.cancer.gov/pdc/",
+                        "adapter": "pdc",
+                        "filters": {},
+                        "keep_original_fields": false,
+                        "field_mappings": {
+                                "commons": "CRDC Proteomic Data Commons",
+                                "_unique_id": "path:pdc_study_id",
+                                "study_title": "path:pdc_study_id",
+                                "accession_number": "path:pdc_study_id",
+                                "short_name": "path:study_shortname,
+                                "full_name": "path:study_name,
+                                "disease_type" : "path:disease_type",
+                                "primary_site" : "path:primary_site",
+                                "analytical_fraction" : "path:analytical_fraction",
+                                "experiment_type" : "path:experiment_type",
+                                "cases_count" : "path:cases_count",
+                                "program_name" : "path:program_name",
+                                "project_name" : "path:project_name",
+                                "description": "",
+                                "files_count": {"path": "filesCount", "filter" : "aggregate_pdc_file_count"},
+                                "tags": [],
+                        }
+                }
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        subject_catalog_query = """{
+                            studyCatalog(acceptDUA: true) {
+                                pdc_study_id
+                            }
+                        }
+                        """
+        try:
+            response = httpx.post(mds_url, json={"query": subject_catalog_query})
+            response.raise_for_status()
+            response_data = response.json()
+            pid_list = [
+                record["pdc_study_id"]
+                for record in response_data["data"]["studyCatalog"]
+            ]
+            total = len(pid_list)
+
+            record_list = {}
+            for i in range(0, total, 5):
+                subject_query_string = (
+                    "{"
+                    + " ".join(
+                        [
+                            (
+                                f"{study_id} : "
+                                f'  study (pdc_study_id: "{study_id}" acceptDUA: true) {{'
+                                "    submitter_id_name"
+                                "    study_id"
+                                "    study_name"
+                                "    study_shortname"
+                                "    analytical_fraction"
+                                "    experiment_type"
+                                "    embargo_date"
+                                "    acquisition_type"
+                                "    cases_count"
+                                "    filesCount {"
+                                "      files_count"
+                                "    }"
+                                "    disease_type"
+                                "    analytical_fraction"
+                                "    program_name"
+                                "    program_id"
+                                "    project_name"
+                                "    project_id"
+                                "    project_submitter_id"
+                                "    primary_site"
+                                "    pdc_study_id"
+                                "  }"
+                            )
+                            for study_id in pid_list[i : i + 10]
+                        ]
+                    )
+                    + "}"
+                )
+                response = httpx.post(mds_url, json={"query": subject_query_string})
+                response.raise_for_status()
+                record_list.update(response.json()["data"])
+            results["results"] = [value[0] for _, value in record_list.items()]
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}."
+            )
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        logger.info(data)
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDCAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "primary_site"]
             ]
 
             results[normalized_item["_unique_id"]] = {
@@ -1493,6 +1666,7 @@ adapters = {
     "icdc": ICDCAdapter,
     "gdc": GDCAdapter,
     "cidc": CIDCAdapter,
+    "pdc": PDCAdapter,
 }
 
 
