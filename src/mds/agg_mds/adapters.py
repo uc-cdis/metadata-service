@@ -1319,8 +1319,8 @@ class GDCAdapter(RemoteMetadataAdapter):
             ]
 
             results[normalized_item["_unique_id"]] = {
-                "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
+                "guid_type": "discovery_metadata",
             }
 
         return results
@@ -1446,7 +1446,6 @@ class CIDCAdapter(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
-            logger.info(results[normalized_item["_unique_id"]].keys())
 
         return results
 
