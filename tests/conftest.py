@@ -163,7 +163,7 @@ def valid_upload_file_patcher(client, guid_mock, signed_url_mock):
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=200, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
     data_upload_guid_mock = respx.get(
@@ -171,7 +171,7 @@ def valid_upload_file_patcher(client, guid_mock, signed_url_mock):
     ).mock(
         return_value=httpx.Response(
             status_code=200,
-            json=data_upload_mocked_reponse | {"alias": "data_upload_guid"},
+            json=data_upload_mocked_reponse or {"alias": "data_upload_guid"},
         )
     )
 
@@ -180,7 +180,7 @@ def valid_upload_file_patcher(client, guid_mock, signed_url_mock):
     ).mock(
         return_value=httpx.Response(
             status_code=200,
-            json=data_upload_mocked_reponse | {"alias": "create_aliases"},
+            json=data_upload_mocked_reponse or {"alias": "create_aliases"},
         )
     )
 
