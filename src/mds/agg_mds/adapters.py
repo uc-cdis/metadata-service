@@ -52,6 +52,12 @@ def uppercase(s: str):
     return s.upper()
 
 
+def prepare_cidc_description(desc: str):
+    desc = re.sub("\t|\n", "", desc)
+    desc = re.sub("&nbsp;|&thinsp;", " ", desc)
+    return desc
+
+
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
@@ -59,6 +65,7 @@ class FieldFilters:
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
         "uppercase": uppercase,
+        "prepare_cidc_description": prepare_cidc_description,
     }
 
     @classmethod
@@ -1334,16 +1341,18 @@ class CIDCAdapter(RemoteMetadataAdapter):
                                 "_unique_id": "path:collection_id",
                                 "study_title": "path:collection_id",
                                 "accession_number": "path:collection_id",
-                                "short_name": {"path" :"collection_id", "filters": [ "uppercase" ]}
-                                "full_name": {"path" :"collection_id", "filters": [ "uppercase" ]}
-                                "dbgap_accession_number": {"path" :"collection_id", "filters": [ "uppercase" ]}
-                                "description": {"path" :"description", "filters": [ "strip_html" ]}
+                                "short_name": {"path" :"collection_id", "filters": [ "uppercase" ]},
+                                "full_name": {"path" :"collection_id", "filters": [ "uppercase" ]},
+                                "dbgap_accession_number": {"path" :"collection_id", "filters": [ "uppercase" ]},
+                                "description": {"path" :"description", "filters": [ "strip_html" , "prepare_cidc_description"]}
                                 "image_types": "path:image_types",
                                 "subjects_count" : "path:subject_count",
+                                "doi" : {"path" :"doi", "filters": [ "uppercase" ]},
+                                "species" : "path:subject_count",
                                 "disease_type" : "path:cancer_type",
                                 "data_type" : "path:supporting_data",
-                                "tags": [],
                                 "primary_site": "path:location"
+                                "tags": [],
                         }
                 }
     """
@@ -1424,10 +1433,10 @@ class CIDCAdapter(RemoteMetadataAdapter):
                 globalFieldFilters,
                 schema,
             )
-
+            normalized_item["description"] = normalized_item["description"]
             normalized_item["tags"] = [
                 {
-                    "name": normalized_item[tag][0] if normalized_item[tag] else "",
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
                     "category": tag,
                 }
                 for tag in ["disease_type", "data_type", "primary_site"]
