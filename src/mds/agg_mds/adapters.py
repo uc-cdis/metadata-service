@@ -1219,7 +1219,7 @@ class GDCAdapter(RemoteMetadataAdapter):
         while remaining:
             try:
                 response = httpx.get(
-                    f"{mds_url}?expand=summary" f"&from={offset}&size={batchSize}"
+                    f"{mds_url}?expand=summary&from={offset}&size={batchSize}"
                 )
                 response.raise_for_status()
 
@@ -1425,12 +1425,7 @@ class PDCAdapter(RemoteMetadataAdapter):
 
         batchSize = kwargs["filters"].get("size", 5)
 
-        subject_catalog_query = """{
-                            studyCatalog(acceptDUA: true) {
-                                pdc_study_id
-                            }
-                        }
-                        """
+        subject_catalog_query = "{studyCatalog(acceptDUA: true){pdc_study_id}}"
         try:
             response = httpx.post(mds_url, json={"query": subject_catalog_query})
             response.raise_for_status()

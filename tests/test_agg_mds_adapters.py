@@ -5654,3 +5654,693 @@ def test_get_metadata_icdc():
             },
         },
     }
+
+
+@respx.mock
+def test_get_metadata_gdc():
+    json_response = """{
+    "data": {
+      "hits": [
+        {
+          "id": "TARGET-NBL",
+          "summary": {
+            "file_count": 5358,
+            "case_count": 1132,
+            "file_size": 16831864288520
+          },
+          "primary_site": [
+            "Retroperitoneum and peritoneum",
+            "Lymph nodes"
+          ],
+          "dbgap_accession_number": "phs000467",
+          "project_id": "TARGET-NBL",
+          "disease_type": [
+            "Neuroepitheliomatous Neoplasms",
+            "Not Applicable"
+          ],
+          "name": "Neuroblastoma",
+          "releasable": true,
+          "state": "open",
+          "released": true
+        },
+        {
+          "id": "GENIE-GRCC",
+          "summary": {
+            "file_count": 1038,
+            "case_count": 1038,
+            "file_size": 2642030
+          },
+          "primary_site": [
+            "Other and ill-defined sites in lip, oral cavity and pharynx",
+            "Uterus, NOS"
+          ],
+          "name": "AACR Project GENIE - Contributed by Institut Gustave Roussy",
+          "releasable": true,
+          "state": "open",
+          "released": true
+        },
+        {
+          "id": "GENIE-DFCI",
+          "summary": {
+            "file_count": 28464,
+            "case_count": 14232,
+            "file_size": 410474608
+          },
+          "primary_site": [
+            "Nasal cavity and middle ear",
+            "Colon"
+          ],
+          "dbgap_accession_number": null,
+          "project_id": "GENIE-DFCI",
+          "disease_type": [
+            "Lymphatic Vessel Tumors",
+            "Granular Cell Tumors and Alveolar Soft Part Sarcomas"
+          ],
+          "name": "AACR Project GENIE - Contributed by Dana-Farber Cancer Institute",
+          "releasable": true,
+          "state": "open",
+          "released": true
+        }
+      ]
+}
+}
+"""
+    field_mappings = {
+        "commons": "CRDC Genomic Data Commons",
+        "short_name": "path:id",
+        "full_name": "path:name",
+        "disease_type": "path:disease_type",
+        "primary_site": "path:primary_site",
+        "_unique_id": "path:id",
+        "tags": [],
+        "project_id": "path:id",
+        "study_title": "path:id",
+        "accession_number": "path:id",
+        "description": "",
+        "funding": "",
+        "source": "",
+        "dbgap_accession_number": "path:dbgap_accession_number",
+        "_subjects_count": "path:summary.case_count",
+        "subjects_count": "path:summary.case_count",
+        "files_count": "path:summary.file_count",
+    }
+
+    respx.get("http://test/ok?expand=summary&from=0&size=1000").mock(
+        return_value=httpx.Response(status_code=200, content=json_response)
+    )
+    filters = {"size": 1000}
+    assert get_metadata(
+        "gdc", "http://test/ok", filters=filters, mappings=field_mappings
+    ) == {
+        "TARGET-NBL": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Genomic Data Commons",
+                "short_name": "TARGET-NBL",
+                "full_name": "Neuroblastoma",
+                "disease_type": ["Neuroepitheliomatous Neoplasms", "Not Applicable"],
+                "primary_site": ["Retroperitoneum and peritoneum", "Lymph nodes"],
+                "_unique_id": "TARGET-NBL",
+                "tags": [
+                    {
+                        "name": "Neuroepitheliomatous Neoplasms",
+                        "category": "disease_type",
+                    },
+                    {
+                        "name": "Retroperitoneum and peritoneum",
+                        "category": "primary_site",
+                    },
+                ],
+                "project_id": "TARGET-NBL",
+                "study_title": "TARGET-NBL",
+                "accession_number": "TARGET-NBL",
+                "description": "Genomic Data Commons study of ['Neuroepitheliomatous Neoplasms', 'Not Applicable'] in ['Retroperitoneum and peritoneum', 'Lymph nodes']",
+                "funding": "",
+                "source": "",
+                "dbgap_accession_number": "phs000467",
+                "_subjects_count": 1132,
+                "subjects_count": 1132,
+                "files_count": 5358,
+            },
+        },
+        "GENIE-GRCC": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Genomic Data Commons",
+                "short_name": "GENIE-GRCC",
+                "full_name": "AACR Project GENIE - Contributed by Institut Gustave Roussy",
+                "disease_type": None,
+                "primary_site": [
+                    "Other and ill-defined sites in lip, oral cavity and pharynx",
+                    "Uterus, NOS",
+                ],
+                "_unique_id": "GENIE-GRCC",
+                "tags": [
+                    {"name": "", "category": "disease_type"},
+                    {
+                        "name": "Other and ill-defined sites in lip, oral cavity and pharynx",
+                        "category": "primary_site",
+                    },
+                ],
+                "project_id": "GENIE-GRCC",
+                "study_title": "GENIE-GRCC",
+                "accession_number": "GENIE-GRCC",
+                "description": "Genomic Data Commons study of None in ['Other and ill-defined sites in lip, oral cavity and pharynx', 'Uterus, NOS']",
+                "funding": "",
+                "source": "",
+                "dbgap_accession_number": None,
+                "_subjects_count": 1038,
+                "subjects_count": 1038,
+                "files_count": 1038,
+            },
+        },
+        "GENIE-DFCI": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Genomic Data Commons",
+                "short_name": "GENIE-DFCI",
+                "full_name": "AACR Project GENIE - Contributed by Dana-Farber Cancer Institute",
+                "disease_type": [
+                    "Lymphatic Vessel Tumors",
+                    "Granular Cell Tumors and Alveolar Soft Part Sarcomas",
+                ],
+                "primary_site": ["Nasal cavity and middle ear", "Colon"],
+                "_unique_id": "GENIE-DFCI",
+                "tags": [
+                    {"name": "Lymphatic Vessel Tumors", "category": "disease_type"},
+                    {"name": "Nasal cavity and middle ear", "category": "primary_site"},
+                ],
+                "project_id": "GENIE-DFCI",
+                "study_title": "GENIE-DFCI",
+                "accession_number": "GENIE-DFCI",
+                "description": "Genomic Data Commons study of ['Lymphatic Vessel Tumors', 'Granular Cell Tumors and Alveolar Soft Part Sarcomas'] in ['Nasal cavity and middle ear', 'Colon']",
+                "funding": "",
+                "source": "",
+                "dbgap_accession_number": None,
+                "_subjects_count": 14232,
+                "subjects_count": 14232,
+                "files_count": 28464,
+            },
+        },
+    }
+
+
+@respx.mock
+def test_get_metadata_cidc():
+    json_response = r"""
+    {
+      "code": 200,
+      "collections": [
+        {
+          "cancer_type": "Prostate Cancer",
+          "collection_id": "tcga_prad",
+          "date_updated": "2022-10-10",
+          "description": "<div><strong>Note:&nbsp;This collection has special restrictions on its usage. See <a href=\"https: //wiki.cancerimagingarchive.net/x/c4hF\" target=\"_blank\">Data Usage Policies and Restrictions</a>.</strong></p>\n<div>\n\t&nbsp;</p>\n<div>\n\t<span>The <a href=\"http: //imaging.cancer.gov/\" target=\"_blank\"><u>Cancer Imaging Program (CIP)</u></a></span><span>&thinsp;</span><span> is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the <a href=\"http: //tcga-data.nci.nih.gov/\" target=\"_blank\">TCGA Data Portal</a>.&nbsp;Currently this image collection of prostate adenocarcinoma (PRAD) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.&nbsp;<br />\n\t</span></p>\n<div>\n\t&nbsp;</p>\n<div>\n\t<span>Please see the <span><a href=\"https: //wiki.cancerimagingarchive.net/x/tgpp\" target=\"_blank\">TCGA-PRAD</a></span> wiki page to learn more about the images and to obtain any supporting metadata for this collection.</span></p>",
+          "doi": "10.7937/k9/tcia.2016.yxoglm4y",
+          "image_types": "CT, MR, PT, SM",
+          "location": "Prostate",
+          "species": "Human",
+          "subject_count": 500,
+          "supporting_data": "Clinical, Genomics"
+        },
+        {
+          "cancer_type": "Bladder Endothelial Carcinoma",
+          "collection_id": "tcga_blca",
+          "date_updated": "2022-10-10",
+          "description": "<p>\n\tThe Cancer Genome Atlas-Bladder Endothelial Carcinoma (TCGA-BLCA) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP), with the cooperation of several of the TCGA tissue-contributing institutions, has archived a large portion of the radiological images of the genetically-analyzed BLCA cases.</p>\n<p>\n\tPlease see the <a href=\"https: //wiki.cancerimagingarchive.net/display/Public/TCGA-BLCA\" target=\"_blank\">TCGA-BLCA</a> wiki page to learn more about the images and to obtain any supporting metadata for this collection.</p>\n",
+          "doi": "10.7937/k9/tcia.2016.8lng8xdr",
+          "image_types": "CR, CT, DX, MR, PT, SM",
+          "location": "Bladder",
+          "species": "Human",
+          "subject_count": 412,
+          "supporting_data": "Clinical, Genomics"
+        },
+        {
+          "cancer_type": "Uterine Corpus Endometrial Carcinoma",
+          "collection_id": "tcga_ucec",
+          "date_updated": "2022-10-10",
+          "description": "<p>\n\tThe Cancer Genome Atlas-Uterine Corpus Endometrial Carcinoma (TCGA-UCEC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the genetically-analyzed UCEC cases.</p>\n<p>\n\tPlease see the <a href=\"https: //wiki.cancerimagingarchive.net/display/Public/TCGA-UCEC\" target=\"_blank\">TCGA-UCEC</a> wiki page to learn more about the images and to obtain any supporting metadata for this collection.</p>\n",
+          "doi": "10.7937/k9/tcia.2016.gkj0zwac",
+          "image_types": "CR, CT, MR, PT, SM",
+          "location": "Uterus",
+          "species": "Human",
+          "subject_count": 560,
+          "supporting_data": "Clinical, Genomics"
+        },
+        {
+          "cancer_type": "Head and Neck Squamous Cell Carcinoma",
+          "collection_id": "tcga_hnsc",
+          "date_updated": "2022-10-10",
+          "description": "<div>\n\t<span>The <a href=\"http: //imaging.cancer.gov/\" target=\"_blank\"><u>Cancer Imaging Program (CIP)</u></a></span><span>&thinsp;</span><span> is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the <a href=\"http: //tcga-data.nci.nih.gov/\" target=\"_blank\">TCGA Data Portal</a>.&nbsp;Currently this large PET/CT&nbsp;multi-sequence image collection of </span><span>head and neck squamous cell carcinoma (HNSC) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.&nbsp;</span></p>\n<div>\n\t&nbsp;</p>\n<div>\n\t<span>Please see the <a href=\"https: //wiki.cancerimagingarchive.net/display/Public/TCGA-HNSC\" target=\"_blank\"><span>TCGA -HNSC</span></a> wiki page to learn more about the images and to obtain any supporting metadata for this collection.</span></p>\n",
+          "doi": "10.7937/k9/tcia.2016.lxkq47ms",
+          "image_types": "SM",
+          "location": "Head-Neck",
+          "species": "Human",
+          "subject_count": 528,
+          "supporting_data": "Clinical, Genomics"
+        },
+        {
+          "cancer_type": "Lung Squamous Cell Carcinoma",
+          "collection_id": "tcga_lusc",
+          "date_updated": "2022-10-10",
+          "description": "<p>\n\tThe Cancer Genome Atlas-Lung Squamous Cell Carcinoma (TCGA-LUSC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the LUSC cases.</p>\n<p>\n\tPlease see the <a href=\"https: //wiki.cancerimagingarchive.net/display/Public/TCGA-LUSC\" target=\"_blank\">TCGA-LUSC</a> wiki page to learn more about the images and to obtain any supporting metadata for this collection.</p>\n",
+          "doi": "10.7937/k9/tcia.2016.tygkkfmq",
+          "image_types": "CT, NM, PT, SM",
+          "location": "Lung",
+          "species": "Human",
+          "subject_count": 504,
+          "supporting_data": "Clinical, Genomics"
+        }
+      ]
+    }
+    """
+    field_mappings = {
+        "commons": "CRDC Cancer Imaging Data Commons",
+        "_unique_id": "path:collection_id",
+        "study_title": "path:collection_id",
+        "accession_number": "path:collection_id",
+        "short_name": {"path": "collection_id", "filters": ["uppercase"]},
+        "full_name": {"path": "collection_id", "filters": ["uppercase"]},
+        "dbgap_accession_number": {"path": "collection_id", "filters": ["uppercase"]},
+        "description": {
+            "path": "description",
+            "filters": ["strip_html", "prepare_cidc_description"],
+        },
+        "image_types": "path:image_types",
+        "subjects_count": "path:subject_count",
+        "doi": {"path": "doi", "filters": ["uppercase"]},
+        "species": "path:species",
+        "disease_type": "path:cancer_type",
+        "data_type": "path:supporting_data",
+        "primary_site": "path:location",
+        "tags": [],
+    }
+
+    respx.get("http://test/ok").mock(
+        return_value=httpx.Response(status_code=200, content=json_response)
+    )
+    filters = {"size": 1000}
+    assert get_metadata(
+        "cidc", "http://test/ok", filters=filters, mappings=field_mappings
+    ) == {
+        "tcga_prad": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Cancer Imaging Data Commons",
+                "_unique_id": "tcga_prad",
+                "study_title": "tcga_prad",
+                "accession_number": "tcga_prad",
+                "short_name": "TCGA_PRAD",
+                "full_name": "TCGA_PRAD",
+                "dbgap_accession_number": "TCGA_PRAD",
+                "description": "Note: This collection has special restrictions on its usage. See Data Usage Policies and Restrictions. The Cancer Imaging Program (CIP)  is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the TCGA Data Portal. Currently this image collection of prostate adenocarcinoma (PRAD) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.  Please see the TCGA-PRAD wiki page to learn more about the images and to obtain any supporting metadata for this collection.",
+                "image_types": "CT, MR, PT, SM",
+                "subjects_count": 500,
+                "doi": "10.7937/K9/TCIA.2016.YXOGLM4Y",
+                "species": "Human",
+                "disease_type": "Prostate Cancer",
+                "data_type": "Clinical, Genomics",
+                "primary_site": "Prostate",
+                "tags": [
+                    {"name": "Prostate Cancer", "category": "disease_type"},
+                    {"name": "Clinical, Genomics", "category": "data_type"},
+                    {"name": "Prostate", "category": "primary_site"},
+                ],
+            },
+        },
+        "tcga_blca": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Cancer Imaging Data Commons",
+                "_unique_id": "tcga_blca",
+                "study_title": "tcga_blca",
+                "accession_number": "tcga_blca",
+                "short_name": "TCGA_BLCA",
+                "full_name": "TCGA_BLCA",
+                "dbgap_accession_number": "TCGA_BLCA",
+                "description": "The Cancer Genome Atlas-Bladder Endothelial Carcinoma (TCGA-BLCA) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP), with the cooperation of several of the TCGA tissue-contributing institutions, has archived a large portion of the radiological images of the genetically-analyzed BLCA cases.Please see the TCGA-BLCA wiki page to learn more about the images and to obtain any supporting metadata for this collection.",
+                "image_types": "CR, CT, DX, MR, PT, SM",
+                "subjects_count": 412,
+                "doi": "10.7937/K9/TCIA.2016.8LNG8XDR",
+                "species": "Human",
+                "disease_type": "Bladder Endothelial Carcinoma",
+                "data_type": "Clinical, Genomics",
+                "primary_site": "Bladder",
+                "tags": [
+                    {
+                        "name": "Bladder Endothelial Carcinoma",
+                        "category": "disease_type",
+                    },
+                    {"name": "Clinical, Genomics", "category": "data_type"},
+                    {"name": "Bladder", "category": "primary_site"},
+                ],
+            },
+        },
+        "tcga_ucec": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Cancer Imaging Data Commons",
+                "_unique_id": "tcga_ucec",
+                "study_title": "tcga_ucec",
+                "accession_number": "tcga_ucec",
+                "short_name": "TCGA_UCEC",
+                "full_name": "TCGA_UCEC",
+                "dbgap_accession_number": "TCGA_UCEC",
+                "description": "The Cancer Genome Atlas-Uterine Corpus Endometrial Carcinoma (TCGA-UCEC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the genetically-analyzed UCEC cases.Please see the TCGA-UCEC wiki page to learn more about the images and to obtain any supporting metadata for this collection.",
+                "image_types": "CR, CT, MR, PT, SM",
+                "subjects_count": 560,
+                "doi": "10.7937/K9/TCIA.2016.GKJ0ZWAC",
+                "species": "Human",
+                "disease_type": "Uterine Corpus Endometrial Carcinoma",
+                "data_type": "Clinical, Genomics",
+                "primary_site": "Uterus",
+                "tags": [
+                    {
+                        "name": "Uterine Corpus Endometrial Carcinoma",
+                        "category": "disease_type",
+                    },
+                    {"name": "Clinical, Genomics", "category": "data_type"},
+                    {"name": "Uterus", "category": "primary_site"},
+                ],
+            },
+        },
+        "tcga_hnsc": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Cancer Imaging Data Commons",
+                "_unique_id": "tcga_hnsc",
+                "study_title": "tcga_hnsc",
+                "accession_number": "tcga_hnsc",
+                "short_name": "TCGA_HNSC",
+                "full_name": "TCGA_HNSC",
+                "dbgap_accession_number": "TCGA_HNSC",
+                "description": "The Cancer Imaging Program (CIP)  is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the TCGA Data Portal. Currently this large PET/CT multi-sequence image collection of head and neck squamous cell carcinoma (HNSC) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.  Please see the TCGA -HNSC wiki page to learn more about the images and to obtain any supporting metadata for this collection.",
+                "image_types": "SM",
+                "subjects_count": 528,
+                "doi": "10.7937/K9/TCIA.2016.LXKQ47MS",
+                "species": "Human",
+                "disease_type": "Head and Neck Squamous Cell Carcinoma",
+                "data_type": "Clinical, Genomics",
+                "primary_site": "Head-Neck",
+                "tags": [
+                    {
+                        "name": "Head and Neck Squamous Cell Carcinoma",
+                        "category": "disease_type",
+                    },
+                    {"name": "Clinical, Genomics", "category": "data_type"},
+                    {"name": "Head-Neck", "category": "primary_site"},
+                ],
+            },
+        },
+        "tcga_lusc": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Cancer Imaging Data Commons",
+                "_unique_id": "tcga_lusc",
+                "study_title": "tcga_lusc",
+                "accession_number": "tcga_lusc",
+                "short_name": "TCGA_LUSC",
+                "full_name": "TCGA_LUSC",
+                "dbgap_accession_number": "TCGA_LUSC",
+                "description": "The Cancer Genome Atlas-Lung Squamous Cell Carcinoma (TCGA-LUSC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the LUSC cases.Please see the TCGA-LUSC wiki page to learn more about the images and to obtain any supporting metadata for this collection.",
+                "image_types": "CT, NM, PT, SM",
+                "subjects_count": 504,
+                "doi": "10.7937/K9/TCIA.2016.TYGKKFMQ",
+                "species": "Human",
+                "disease_type": "Lung Squamous Cell Carcinoma",
+                "data_type": "Clinical, Genomics",
+                "primary_site": "Lung",
+                "tags": [
+                    {
+                        "name": "Lung Squamous Cell Carcinoma",
+                        "category": "disease_type",
+                    },
+                    {"name": "Clinical, Genomics", "category": "data_type"},
+                    {"name": "Lung", "category": "primary_site"},
+                ],
+            },
+        },
+    }
+
+
+@respx.mock
+def test_get_metadata_pdc():
+    pid_response = """
+      {
+        "data": {
+          "studyCatalog": [
+            {
+              "pdc_study_id": "PDC000109"
+            },
+            {
+              "pdc_study_id": "PDC000110"
+            },
+            {
+              "pdc_study_id": "PDC000111"
+            }
+          ]
+        }
+      }
+    """
+
+    json_response = r"""
+{
+  "data": {
+    "PDC000109": [
+      {
+        "submitter_id_name": null,
+        "study_id": "bb67ec40-57b8-11e8-b07a-00a098d917f8",
+        "study_name": "Prospective Colon VU Proteome",
+        "study_shortname": "Prospective COAD Proteome S037-1",
+        "analytical_fraction": "Proteome",
+        "experiment_type": "Label Free",
+        "embargo_date": null,
+        "acquisition_type": null,
+        "cases_count": 100,
+        "filesCount": [
+          {
+            "files_count": 14
+          },
+          {
+            "files_count": 600
+          }
+        ],
+        "disease_type": "Colon Adenocarcinoma",
+        "program_name": "Clinical Proteomic Tumor Analysis Consortium",
+        "program_id": "10251935-5540-11e8-b664-00a098d917f8",
+        "project_name": "CPTAC2 Confirmatory",
+        "project_id": "48653303-5546-11e8-b664-00a098d917f8",
+        "project_submitter_id": null,
+        "primary_site": "Colon",
+        "pdc_study_id": "PDC000109"
+      }
+    ],
+    "PDC000110": [
+      {
+        "submitter_id_name": null,
+        "study_id": "6338aad7-851b-4eea-ba90-ba50237cb875",
+        "study_name": "Prospective Ovarian JHU Proteome",
+        "study_shortname": "Prospective Ovarian JHU Proteome v2",
+        "analytical_fraction": "Proteome",
+        "experiment_type": "TMT10",
+        "embargo_date": null,
+        "acquisition_type": null,
+        "cases_count": 97,
+        "filesCount": [
+          {
+            "files_count": 13
+          },
+          {
+            "files_count": 312
+          }
+        ],
+        "disease_type": "Other;Ovarian Serous Cystadenocarcinoma",
+        "program_name": "Clinical Proteomic Tumor Analysis Consortium",
+        "program_id": "10251935-5540-11e8-b664-00a098d917f8",
+        "project_name": "CPTAC2 Confirmatory",
+        "project_id": "48653303-5546-11e8-b664-00a098d917f8",
+        "project_submitter_id": null,
+        "primary_site": "Not Reported;Ovary",
+        "pdc_study_id": "PDC000110"
+      }
+    ],
+    "PDC000111": [
+      {
+        "submitter_id_name": null,
+        "study_id": "b998098f-57b8-11e8-b07a-00a098d917f8",
+        "study_name": "TCGA Colon Cancer Proteome",
+        "study_shortname": "TCGA COAD Proteome S016-1",
+        "analytical_fraction": "Proteome",
+        "experiment_type": "Label Free",
+        "embargo_date": null,
+        "acquisition_type": null,
+        "cases_count": 90,
+        "filesCount": [
+          {
+            "files_count": 5
+          },
+          {
+            "files_count": 1425
+          }
+        ],
+        "disease_type": "Colon Adenocarcinoma;Rectum Adenocarcinoma",
+        "program_name": "Clinical Proteomic Tumor Analysis Consortium",
+        "program_id": "10251935-5540-11e8-b664-00a098d917f8",
+        "project_name": "CPTAC2 Retrospective",
+        "project_id": "48af5040-5546-11e8-b664-00a098d917f8",
+        "project_submitter_id": null,
+        "primary_site": "Colon;Rectum",
+        "pdc_study_id": "PDC000111"
+      }
+    ]
+  }
+}
+    """
+    field_mappings = {
+        "commons": "CRDC Proteomic Data Commons",
+        "_unique_id": "path:pdc_study_id",
+        "study_title": "path:pdc_study_id",
+        "accession_number": "path:pdc_study_id",
+        "short_name": "path:study_shortname",
+        "full_name": "path:study_name",
+        "disease_type": "path:disease_type",
+        "primary_site": "path:primary_site",
+        "analytical_fraction": "path:analytical_fraction",
+        "experiment_type": "path:experiment_type",
+        "cases_count": "path:cases_count",
+        "program_name": "path:program_name",
+        "project_name": "path:project_name",
+        "description": "",
+        "files_count": {"path": "filesCount", "filters": ["aggregate_pdc_file_count"]},
+        "tags": [],
+    }
+
+    subject_query_string = (
+        "{"
+        + " ".join(
+            [
+                (
+                    f"{study_id} : "
+                    f'  study (pdc_study_id: "{study_id}" acceptDUA: true) {{'
+                    "    submitter_id_name"
+                    "    study_id"
+                    "    study_name"
+                    "    study_shortname"
+                    "    analytical_fraction"
+                    "    experiment_type"
+                    "    embargo_date"
+                    "    acquisition_type"
+                    "    cases_count"
+                    "    filesCount {"
+                    "      files_count"
+                    "    }"
+                    "    disease_type"
+                    "    analytical_fraction"
+                    "    program_name"
+                    "    program_id"
+                    "    project_name"
+                    "    project_id"
+                    "    project_submitter_id"
+                    "    primary_site"
+                    "    pdc_study_id"
+                    "  }"
+                )
+                for study_id in ["PDC000109", "PDC000110", "PDC000111"]
+            ]
+        )
+        + "}"
+    )
+    respx.post(
+        "http://test/ok",
+        json={"query": "{studyCatalog(acceptDUA: true){pdc_study_id}}"},
+    ).mock(return_value=httpx.Response(status_code=200, content=pid_response))
+
+    respx.post(
+        "http://test/ok",
+        json={"query": subject_query_string},
+    ).mock(return_value=httpx.Response(status_code=200, content=json_response))
+
+    filters = {"size": 1000}
+
+    assert get_metadata(
+        "pdc", "http://test/ok", filters=filters, mappings=field_mappings
+    ) == {
+        "PDC000109": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Proteomic Data Commons",
+                "_unique_id": "PDC000109",
+                "study_title": "PDC000109",
+                "accession_number": "PDC000109",
+                "short_name": "Prospective COAD Proteome S037-1",
+                "full_name": "Prospective Colon VU Proteome",
+                "disease_type": "Colon Adenocarcinoma",
+                "primary_site": "Colon",
+                "analytical_fraction": "Proteome",
+                "experiment_type": "Label Free",
+                "cases_count": 100,
+                "program_name": "Clinical Proteomic Tumor Analysis Consortium",
+                "project_name": "CPTAC2 Confirmatory",
+                "description": "",
+                "files_count": 614,
+                "tags": [
+                    {"name": "Colon Adenocarcinoma", "category": "disease_type"},
+                    {"name": "Colon", "category": "primary_site"},
+                ],
+            },
+        },
+        "PDC000110": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Proteomic Data Commons",
+                "_unique_id": "PDC000110",
+                "study_title": "PDC000110",
+                "accession_number": "PDC000110",
+                "short_name": "Prospective Ovarian JHU Proteome v2",
+                "full_name": "Prospective Ovarian JHU Proteome",
+                "disease_type": "Other;Ovarian Serous Cystadenocarcinoma",
+                "primary_site": "Not Reported;Ovary",
+                "analytical_fraction": "Proteome",
+                "experiment_type": "TMT10",
+                "cases_count": 97,
+                "program_name": "Clinical Proteomic Tumor Analysis Consortium",
+                "project_name": "CPTAC2 Confirmatory",
+                "description": "",
+                "files_count": 325,
+                "tags": [
+                    {
+                        "name": "Other;Ovarian Serous Cystadenocarcinoma",
+                        "category": "disease_type",
+                    },
+                    {"name": "Not Reported;Ovary", "category": "primary_site"},
+                ],
+            },
+        },
+        "PDC000111": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "commons": "CRDC Proteomic Data Commons",
+                "_unique_id": "PDC000111",
+                "study_title": "PDC000111",
+                "accession_number": "PDC000111",
+                "short_name": "TCGA COAD Proteome S016-1",
+                "full_name": "TCGA Colon Cancer Proteome",
+                "disease_type": "Colon Adenocarcinoma;Rectum Adenocarcinoma",
+                "primary_site": "Colon;Rectum",
+                "analytical_fraction": "Proteome",
+                "experiment_type": "Label Free",
+                "cases_count": 90,
+                "program_name": "Clinical Proteomic Tumor Analysis Consortium",
+                "project_name": "CPTAC2 Retrospective",
+                "description": "",
+                "files_count": 1430,
+                "tags": [
+                    {
+                        "name": "Colon Adenocarcinoma;Rectum Adenocarcinoma",
+                        "category": "disease_type",
+                    },
+                    {"name": "Colon;Rectum", "category": "primary_site"},
+                ],
+            },
+        },
+    }
