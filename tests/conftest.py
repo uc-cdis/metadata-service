@@ -221,7 +221,7 @@ def valid_upload_bad_id_file_patcher(client, forbidden_guid_mock, signed_url_moc
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=200, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
     data_upload_guid_mock = respx.get(
@@ -229,7 +229,7 @@ def valid_upload_bad_id_file_patcher(client, forbidden_guid_mock, signed_url_moc
     ).mock(
         return_value=httpx.Response(
             status_code=200,
-            json=data_upload_mocked_reponse | {"alias": "data_upload_guid"},
+            json=data_upload_mocked_reponse or {"alias": "data_upload_guid"},
         )
     )
 
@@ -238,7 +238,7 @@ def valid_upload_bad_id_file_patcher(client, forbidden_guid_mock, signed_url_moc
     ).mock(
         return_value=httpx.Response(
             status_code=200,
-            json=data_upload_mocked_reponse | {"alias": "create_aliases"},
+            json=data_upload_mocked_reponse or {"alias": "create_aliases"},
         )
     )
 
@@ -280,7 +280,7 @@ def no_authz_upload_file_patcher(client, guid_mock, signed_url_mock):
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=403, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=403, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
     data_upload_guid_mock = respx.get(
@@ -288,7 +288,7 @@ def no_authz_upload_file_patcher(client, guid_mock, signed_url_mock):
     ).mock(
         return_value=httpx.Response(
             status_code=403,
-            json=data_upload_mocked_reponse | {"alias": "data_upload_guid"},
+            json=data_upload_mocked_reponse or {"alias": "data_upload_guid"},
         )
     )
 
@@ -339,7 +339,7 @@ def no_authz_create_aliases_patcher(client, guid_mock, signed_url_mock):
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=200, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
 
@@ -386,7 +386,7 @@ def upload_failure_file_patcher(client, guid_mock):
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=500, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=500, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
 
@@ -436,7 +436,7 @@ def create_aliases_failure_patcher(client, guid_mock, signed_url_mock):
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=200, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
 
@@ -486,7 +486,7 @@ def create_aliases_duplicate_patcher(client, guid_mock, signed_url_mock):
         config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/upload"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=data_upload_mocked_reponse | {"alias": "data_upload"}
+            status_code=200, json=data_upload_mocked_reponse or {"alias": "data_upload"}
         )
     )
 
