@@ -62,7 +62,6 @@ def aggregate_pdc_file_count(record: list):
     file_count = 0
     for x in record:
         file_count += x["files_count"]
-    logger.info(file_count)
     return file_count
 
 
@@ -1194,35 +1193,6 @@ class ICDCAdapter(RemoteMetadataAdapter):
 class GDCAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for Genomic Data Commons
-
-        "CRDC Genomic Data Commons": {
-                        "mds_url": "https://api.gdc.cancer.gov/projects",
-                        "commons_url": "https://gdc.cancer.gov/",
-                        "adapter": "gdc",
-                        "filters": {
-                "size" : 1000
-            },
-                        "keep_original_fields": false,
-                        "field_mappings": {
-                                "commons": "CRDC Genomic Data Commons",
-                                "short_name": "path:id",
-                                "full_name": "path:name",
-                                "disease_type": "path:disease_type",
-                                "primary_site": "path:primary_site",
-                                "_unique_id": "path:id",
-                                "tags": [],
-                                "project_id": "path:id",
-                                "study_title": "path:id",
-                                "accession_number": "path:id",
-                                "description": "",
-                                "funding": "",
-                                "source": "",
-                                "dbgap_accession_number": "path:dbgap_accession_number",
-                                "_subjects_count" : "path:summary.case_count",
-                                "subjects_count" : "path:summary.case_count",
-                                "files_count" : "path:summary.file_count"
-                        }
-                }
     """
 
     @retry(
@@ -1338,32 +1308,6 @@ class GDCAdapter(RemoteMetadataAdapter):
 class CIDCAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for Cancer Imaging Data Commons
-
-        "CRDC Cancer Imaging Data Commons": {
-                        "mds_url": "https://api.imaging.datacommons.cancer.gov/v1/collections",
-                        "commons_url": "https://portal.imaging.datacommons.cancer.gov/collections/",
-                        "adapter": "cidc",
-                        "filters": {},
-                        "keep_original_fields": false,
-                        "field_mappings": {
-                                "commons": "CRDC Cancer Imaging Data Commons",
-                                "_unique_id": "path:collection_id",
-                                "study_title": "path:collection_id",
-                                "accession_number": "path:collection_id",
-                                "short_name": {"path" :"collection_id", "filters": [ "uppercase" ]},
-                                "full_name": {"path" :"collection_id", "filters": [ "uppercase" ]},
-                                "dbgap_accession_number": {"path" :"collection_id", "filters": [ "uppercase" ]},
-                                "description": {"path" :"description", "filters": [ "strip_html" , "prepare_cidc_description"]}
-                                "image_types": "path:image_types",
-                                "subjects_count" : "path:subject_count",
-                                "doi" : {"path" :"doi", "filters": [ "uppercase" ]},
-                                "species" : "path:subject_count",
-                                "disease_type" : "path:cancer_type",
-                                "data_type" : "path:supporting_data",
-                                "primary_site": "path:location"
-                                "tags": [],
-                        }
-                }
     """
 
     @retry(
@@ -1461,32 +1405,6 @@ class CIDCAdapter(RemoteMetadataAdapter):
 class PDCAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for Proteomic Data Commons
-
-        "CRDC Proteomic Data Commons": {
-                        "mds_url": "https://proteomic.datacommons.cancer.gov/graphql",
-                        "commons_url": "https://pdc.cancer.gov/pdc/",
-                        "adapter": "pdc",
-                        "filters": {"batchSize": 5},
-                        "keep_original_fields": false,
-                        "field_mappings": {
-                                "commons": "CRDC Proteomic Data Commons",
-                                "_unique_id": "path:pdc_study_id",
-                                "study_title": "path:pdc_study_id",
-                                "accession_number": "path:pdc_study_id",
-                                "short_name": "path:study_shortname,
-                                "full_name": "path:study_name,
-                                "disease_type" : "path:disease_type",
-                                "primary_site" : "path:primary_site",
-                                "analytical_fraction" : "path:analytical_fraction",
-                                "experiment_type" : "path:experiment_type",
-                                "cases_count" : "path:cases_count",
-                                "program_name" : "path:program_name",
-                                "project_name" : "path:project_name",
-                                "description": "",
-                                "files_count": {"path": "filesCount", "filter" : "aggregate_pdc_file_count"},
-                                "tags": [],
-                        }
-                }
     """
 
     @retry(
@@ -1513,9 +1431,6 @@ class PDCAdapter(RemoteMetadataAdapter):
                         }
                         """
         try:
-            from datetime import datetime
-
-            start = datetime.now()
             response = httpx.post(mds_url, json={"query": subject_catalog_query})
             response.raise_for_status()
             response_data = response.json()
@@ -1569,9 +1484,7 @@ class PDCAdapter(RemoteMetadataAdapter):
                 record_list.update(response.json()["data"])
             results["results"] = [value[0] for _, value in record_list.items()]
         except httpx.TimeoutException as exc:
-            logger.error(
-                f"An timeout error occurred while requesting {mds_url}. Waited for -- {datetime.now() - start} seconds"
-            )
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
             raise
         except httpx.HTTPError as exc:
             logger.error(
@@ -1626,7 +1539,6 @@ class PDCAdapter(RemoteMetadataAdapter):
                 }
                 for tag in ["disease_type", "primary_site"]
             ]
-            logger.info(normalized_item)
             results[normalized_item["_unique_id"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
