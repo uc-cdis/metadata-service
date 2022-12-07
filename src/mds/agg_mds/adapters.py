@@ -60,8 +60,9 @@ def prepare_cidc_description(desc: str):
 
 def aggregate_pdc_file_count(record: list):
     file_count = 0
-    for x in record:
-        file_count += x["files_count"]
+    if record:
+        for x in record:
+            file_count += x["files_count"]
     return file_count
 
 
