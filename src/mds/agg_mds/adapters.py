@@ -238,7 +238,7 @@ class RemoteMetadataAdapter(ABC):
                 if hasDefaultValue:
                     field_value = default_value
                 else:
-                    logger.warn(
+                    logger.warning(
                         f"{key} = None{', is not in the schema,' if key not in schema else ''} "
                         f"and has no default value. Consider adding {key} to the schema"
                     )
