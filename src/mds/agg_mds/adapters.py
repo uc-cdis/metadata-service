@@ -1556,7 +1556,9 @@ class PDCAdapter(RemoteMetadataAdapter):
                     )
                     + "}"
                 )
-                response = httpx.post(mds_url, json={"query": subject_query_string})
+                response = httpx.post(
+                    mds_url, json={"query": subject_query_string}, timeout=60
+                )
                 response.raise_for_status()
                 record_list.update(response.json()["data"])
             results["results"] = [value[0] for _, value in record_list.items()]
