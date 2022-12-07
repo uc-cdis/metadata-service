@@ -62,6 +62,7 @@ def aggregate_pdc_file_count(record: list):
     file_count = 0
     for x in record:
         file_count += x["files_count"]
+    logger.info(file_count)
     return file_count
 
 
@@ -1461,11 +1462,11 @@ class PDCAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for Proteomic Data Commons
 
-        "CRDC Cancer Imaging Data Commons": {
+        "CRDC Proteomic Data Commons": {
                         "mds_url": "https://proteomic.datacommons.cancer.gov/graphql",
                         "commons_url": "https://pdc.cancer.gov/pdc/",
                         "adapter": "pdc",
-                        "filters": {},
+                        "filters": {"batchSize": 5},
                         "keep_original_fields": false,
                         "field_mappings": {
                                 "commons": "CRDC Proteomic Data Commons",
@@ -1500,6 +1501,11 @@ class PDCAdapter(RemoteMetadataAdapter):
         if mds_url is None:
             return results
 
+        if "filters" not in kwargs or kwargs["filters"] is None:
+            return results
+
+        batchSize = kwargs["filters"].get("size", 5)
+
         subject_catalog_query = """{
                             studyCatalog(acceptDUA: true) {
                                 pdc_study_id
@@ -1520,7 +1526,7 @@ class PDCAdapter(RemoteMetadataAdapter):
             total = len(pid_list)
 
             record_list = {}
-            for i in range(0, total, 5):
+            for i in range(0, total, batchSize):
                 subject_query_string = (
                     "{"
                     + " ".join(
@@ -1599,7 +1605,6 @@ class PDCAdapter(RemoteMetadataAdapter):
         :param data:
         :return:
         """
-        logger.info(data)
         mappings = kwargs.get("mappings", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
@@ -1621,7 +1626,7 @@ class PDCAdapter(RemoteMetadataAdapter):
                 }
                 for tag in ["disease_type", "primary_site"]
             ]
-
+            logger.info(normalized_item)
             results[normalized_item["_unique_id"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
