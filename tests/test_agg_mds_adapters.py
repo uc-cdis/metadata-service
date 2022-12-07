@@ -5745,10 +5745,22 @@ def test_get_metadata_gdc():
         "files_count": "path:summary.file_count",
     }
 
+    filters = {"size": 1000}
+    respx.get("http://test/ok?expand=summary&from=0&size=1000").mock(
+        side_effect=httpx.TimeoutException
+    )
+
+    assert (
+        get_metadata("gdc", "http://test/ok", filters=filters, mappings=field_mappings)
+        == {}
+    )
+
     respx.get("http://test/ok?expand=summary&from=0&size=1000").mock(
         return_value=httpx.Response(status_code=200, content=json_response)
     )
-    filters = {"size": 1000}
+
+    assert get_metadata("gdc", None, filters=filters, mappings=field_mappings) == {}
+
     assert get_metadata(
         "gdc", "http://test/ok", filters=filters, mappings=field_mappings
     ) == {
@@ -5936,12 +5948,19 @@ def test_get_metadata_cidc():
         "tags": [],
     }
 
+    respx.get("http://test/ok").mock(side_effect=httpx.TimeoutException)
+    assert (
+        get_metadata("cidc", "http://test/ok", filters=None, mappings=field_mappings)
+        == {}
+    )
+
     respx.get("http://test/ok").mock(
         return_value=httpx.Response(status_code=200, content=json_response)
     )
-    filters = {"size": 1000}
+    assert get_metadata("cidc", None, filters=None, mappings=field_mappings) == {}
+
     assert get_metadata(
-        "cidc", "http://test/ok", filters=filters, mappings=field_mappings
+        "cidc", "http://test/ok", filters=None, mappings=field_mappings
     ) == {
         "tcga_prad": {
             "_guid_type": "discovery_metadata",
@@ -6260,7 +6279,14 @@ def test_get_metadata_pdc():
         json={"query": subject_query_string},
     ).mock(return_value=httpx.Response(status_code=200, content=json_response))
 
-    filters = {"size": 1000}
+    assert (
+        get_metadata("pdc", "http://test/ok", filters=None, mappings=field_mappings)
+        == {}
+    )
+
+    filters = {"size": 5}
+
+    assert get_metadata("pdc", None, filters=filters, mappings=field_mappings) == {}
 
     assert get_metadata(
         "pdc", "http://test/ok", filters=filters, mappings=field_mappings
@@ -6344,3 +6370,13 @@ def test_get_metadata_pdc():
             },
         },
     }
+
+    respx.post(
+        "http://test/ok",
+        json={"query": "{studyCatalog(acceptDUA: true){pdc_study_id}}"},
+    ).mock(side_effect=httpx.TimeoutException)
+
+    assert (
+        get_metadata("pdc", "http://test/ok", filters=filters, mappings=field_mappings)
+        == {}
+    )

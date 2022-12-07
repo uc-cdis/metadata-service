@@ -1273,7 +1273,7 @@ class GDCAdapter(RemoteMetadataAdapter):
         :return:
         """
         mappings = kwargs.get("mappings", None)
-        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
         schema = kwargs.get("schema", {})
 
@@ -1374,7 +1374,7 @@ class CIDCAdapter(RemoteMetadataAdapter):
         :return:
         """
         mappings = kwargs.get("mappings", None)
-        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
         schema = kwargs.get("schema", {})
 
@@ -1515,7 +1515,7 @@ class PDCAdapter(RemoteMetadataAdapter):
         :return:
         """
         mappings = kwargs.get("mappings", None)
-        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
         schema = kwargs.get("schema", {})
 
