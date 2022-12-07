@@ -1507,6 +1507,9 @@ class PDCAdapter(RemoteMetadataAdapter):
                         }
                         """
         try:
+            from datetime import datetime
+
+            start = datetime.now()
             response = httpx.post(mds_url, json={"query": subject_catalog_query})
             response.raise_for_status()
             response_data = response.json()
@@ -1558,7 +1561,9 @@ class PDCAdapter(RemoteMetadataAdapter):
                 record_list.update(response.json()["data"])
             results["results"] = [value[0] for _, value in record_list.items()]
         except httpx.TimeoutException as exc:
-            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            logger.error(
+                f"An timeout error occurred while requesting {mds_url}. Waited for -- {datetime.now() - start} seconds"
+            )
             raise
         except httpx.HTTPError as exc:
             logger.error(
