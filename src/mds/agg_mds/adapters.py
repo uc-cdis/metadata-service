@@ -1194,6 +1194,8 @@ class ICDCAdapter(RemoteMetadataAdapter):
 class GDCAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for Genomic Data Commons
+    Expected Parameters:
+        size: number of studies to pull in a single call, default=1000 and therefore optional
     """
 
     @retry(
@@ -1206,9 +1208,6 @@ class GDCAdapter(RemoteMetadataAdapter):
 
         mds_url = kwargs.get("mds_url", None)
         if mds_url is None:
-            return results
-
-        if "filters" not in kwargs or kwargs["filters"] is None:
             return results
 
         batchSize = kwargs["filters"].get("size", 1000)
@@ -1406,6 +1405,10 @@ class CIDCAdapter(RemoteMetadataAdapter):
 class PDCAdapter(RemoteMetadataAdapter):
     """
     Simple adapter for Proteomic Data Commons
+    Expected Parameters:
+        size:   Number of studies to pull in a single call, default=5 and therefore optional
+        #Note - The API doesn't seem to do very well with large requests,
+                hence confining it to a smaller number
     """
 
     @retry(
@@ -1419,10 +1422,6 @@ class PDCAdapter(RemoteMetadataAdapter):
         mds_url = kwargs.get("mds_url", None)
         if mds_url is None:
             return results
-
-        if "filters" not in kwargs or kwargs["filters"] is None:
-            return results
-
         batchSize = kwargs["filters"].get("size", 5)
 
         subject_catalog_query = "{studyCatalog(acceptDUA: true){pdc_study_id}}"

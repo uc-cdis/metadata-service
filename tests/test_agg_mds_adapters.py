@@ -5778,10 +5778,6 @@ def test_get_metadata_gdc():
     )
 
     assert get_metadata("gdc", None, filters=filters, mappings=field_mappings) == {}
-    assert (
-        get_metadata("gdc", "http://test/ok", filters=None, mappings=field_mappings)
-        == {}
-    )
 
     assert get_metadata(
         "gdc",
@@ -6619,11 +6615,6 @@ def test_get_metadata_pdc():
         "http://test/ok",
         json={"query": subject_query_string},
     ).mock(return_value=httpx.Response(status_code=200, content=json_response))
-
-    assert (
-        get_metadata("pdc", "http://test/ok", filters=None, mappings=field_mappings)
-        == {}
-    )
 
     filters = {"size": 5}
 
