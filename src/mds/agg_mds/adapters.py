@@ -1237,7 +1237,7 @@ class GDCAdapter(RemoteMetadataAdapter):
                 logger.error(
                     f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
                 )
-                break  # need to break here as cannot be assured of leaving while loop
+                break
             except Exception as exc:
                 logger.error(
                     f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
@@ -1484,7 +1484,11 @@ class PDCAdapter(RemoteMetadataAdapter):
             raise
         except httpx.HTTPError as exc:
             logger.error(
-                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}."
+                f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
             )
         return results
 

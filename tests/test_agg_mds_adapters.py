@@ -5778,6 +5778,10 @@ def test_get_metadata_gdc():
     )
 
     assert get_metadata("gdc", None, filters=filters, mappings=field_mappings) == {}
+    assert (
+        get_metadata("gdc", "http://test/ok", filters=None, mappings=field_mappings)
+        == {}
+    )
 
     assert get_metadata(
         "gdc",
@@ -6841,7 +6845,7 @@ def test_get_metadata_pdc():
     respx.post(
         "http://test/ok",
         json={"query": "{studyCatalog(acceptDUA: true){pdc_study_id}}"},
-    ).mock(side_effect=httpx.HTTPError)
+    ).mock(side_effect=httpx.HTTPError("This is a HTTP Error"))
 
     assert (
         get_metadata("pdc", "http://test/ok", filters=filters, mappings=field_mappings)
