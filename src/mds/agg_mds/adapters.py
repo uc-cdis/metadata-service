@@ -1467,7 +1467,7 @@ class PDCAdapter(RemoteMetadataAdapter):
                                 "    pdc_study_id"
                                 "  }"
                             )
-                            for study_id in pid_list[i : i + 10]
+                            for study_id in pid_list[i : i + batchSize]
                         ]
                     )
                     + "}"
@@ -1477,6 +1477,7 @@ class PDCAdapter(RemoteMetadataAdapter):
                 )
                 response.raise_for_status()
                 record_list.update(response.json()["data"])
+                logger.info(f"Fetched ({i+batchSize}/{total} records from PDC.)")
             results["results"] = [value[0] for _, value in record_list.items()]
         except httpx.TimeoutException as exc:
             logger.error(f"An timeout error occurred while requesting {mds_url}.")
