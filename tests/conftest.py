@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import asyncio
 
 environ["TESTING"] = "TRUE"
+environ["USE_AGG_MDS"] = "true"  # enable the Agg MDS endpoints
 from mds import config
 from mds.agg_mds import datastore
 from mds.objects import FORBIDDEN_IDS
