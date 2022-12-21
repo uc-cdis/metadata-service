@@ -2,6 +2,7 @@ import respx
 import httpx
 
 from mds.agg_mds.adapters import get_metadata
+from tenacity import RetryError, wait_none
 
 
 @respx.mock
