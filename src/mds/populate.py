@@ -205,12 +205,12 @@ async def main(commons_config: Commons) -> None:
                 await populate_metadata(name, common, results, use_temp_index=True)
 
         if mdsCount == 0:
-            raise ValueError("Could not obtain any metadata from any adapters.")
-
-        # populate global information index
-        await populate_info(commons_config, use_temp_index=True)
-        # populate array index information to support guppy
-        await populate_config(commons_config, use_temp_index=True)
+            logger.info("Could not obtain any metadata from any adapters.")
+        else:
+            # populate global information index
+            await populate_info(commons_config, use_temp_index=True)
+            # populate array index information to support guppy
+            await populate_config(commons_config, use_temp_index=True)
 
     except Exception as ex:
         logger.error(
