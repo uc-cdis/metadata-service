@@ -206,6 +206,7 @@ async def main(commons_config: Commons) -> None:
 
         if mdsCount == 0:
             logger.info("Could not obtain any metadata from any adapters.")
+            return
         else:
             # populate global information index
             await populate_info(commons_config, use_temp_index=True)
