@@ -44,6 +44,12 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
         entry = next(iter(x.values()))
 
         def normalize(entry: dict) -> Any:
+            # normalize study level metadata field names
+            if common.study_data_field != config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD:
+                entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD] = entry.pop(
+                    common.study_data_field
+                )
+
             if (
                 not hasattr(common, "columns_to_fields")
                 or common.columns_to_fields is None
@@ -91,7 +97,7 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
     info = {"commons_url": common.commons_url}
 
     await datastore.update_metadata(
-        name, mds_arr, keys, tags, info, common.study_data_field, use_temp_index
+        name, mds_arr, keys, tags, info, common.data_dict_field, use_temp_index
     )
 
 

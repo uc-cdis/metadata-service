@@ -221,7 +221,6 @@ async def test_update_metadata():
             [],
             {},
             {},
-            "gen3_discovery",
         )
     mock_index.assert_has_calls(
         [
@@ -232,7 +231,13 @@ async def test_update_metadata():
                 index=AGG_MDS_INFO_INDEX,
             ),
             call(
-                body={"some_field": "some_value", "__manifest": {}, "sites": ""},
+                body={
+                    "gen3_discovery": {
+                        "some_field": "some_value",
+                        "__manifest": {},
+                        "sites": "",
+                    }
+                },
                 doc_type="commons",
                 id="my_id",
                 index=AGG_MDS_INDEX,
@@ -264,7 +269,6 @@ async def test_update_metadata_to_temp_index():
             [],
             {},
             {},
-            "gen3_discovery",
             use_temp_index=True,
         )
     mock_index.assert_has_calls(
@@ -276,7 +280,13 @@ async def test_update_metadata_to_temp_index():
                 index=AGG_MDS_INFO_INDEX_TEMP,
             ),
             call(
-                body={"some_field": "some_value", "__manifest": {}, "sites": ""},
+                body={
+                    "gen3_discovery": {
+                        "some_field": "some_value",
+                        "__manifest": {},
+                        "sites": "",
+                    }
+                },
                 doc_type="commons",
                 id="my_id",
                 index=AGG_MDS_INDEX_TEMP,

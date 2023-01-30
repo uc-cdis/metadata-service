@@ -81,7 +81,7 @@ async def test_populate_metadata():
             ["id1"],
             {"my_category": ["my_name"]},
             {"commons_url": "http://commons"},
-            "gen3_discovery",
+            None,
             False,
         )
 

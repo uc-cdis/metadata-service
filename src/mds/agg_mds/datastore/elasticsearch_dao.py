@@ -2,7 +2,12 @@ from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
 from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
 from mds import logger
-from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
+from mds.config import (
+    AGG_MDS_NAMESPACE,
+    ES_RETRY_LIMIT,
+    ES_RETRY_INTERVAL,
+    AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
+)
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -189,7 +194,7 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
-    study_data_field: str,
+    data_dict_field: str = None,
     use_temp_index: bool = False,
 ):
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
@@ -201,10 +206,15 @@ async def update_metadata(
     )
 
     index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
-    for doc in data:
-        key = list(doc.keys())[0]
+    for d in data:
+        key = list(d.keys())[0]
         # Flatten out this structure
-        doc = doc[key][study_data_field]
+        doc = {
+            AGG_MDS_DEFAULT_STUDY_DATA_FIELD: d[key][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]
+        }
+        if data_dict_field in d[key]:
+            doc[data_dict_field] = d[key][data_dict_field]
+        print(doc)
 
         try:
             elastic_search_client.index(
@@ -295,11 +305,11 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
     counts: converts the count of the entry[count] if it is a dict or array
     returns:
 
-    flattend == true
+    flattened == true
     results : MDS results as a dict
               paging info
 
-    flattend == false
+    flattened == false
     results : {
         commonsA: metadata
         commonsB: metadata

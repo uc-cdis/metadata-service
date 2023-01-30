@@ -1001,6 +1001,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         config = kwargs.get("config", {})
         study_field = config.get("study_field", "gen3_discovery")
+        data_dict_field = config.get("data_dict_field", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
         schema = kwargs.get("schema", {})
@@ -1021,6 +1022,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": item,
             }
+            # for VLMD, bring it into AggMDS records
+            if data_dict_field is not None and data_dict_field in record:
+                results[guid][data_dict_field] = record[data_dict_field]
 
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
