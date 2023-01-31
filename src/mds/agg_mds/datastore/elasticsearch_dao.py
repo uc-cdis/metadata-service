@@ -276,7 +276,10 @@ async def get_commons():
         )
         return {
             "commons": [
-                x["key"] for x in res["aggregations"]["commons_names"]["buckets"]
+                x["key"]
+                for x in res["aggregations"][AGG_MDS_DEFAULT_STUDY_DATA_FIELD][
+                    "commons_names"
+                ]["buckets"]
             ]
         }
     except Exception as error:
