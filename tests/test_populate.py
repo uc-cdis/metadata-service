@@ -275,7 +275,7 @@ async def test_populate_config():
             )
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config)
-        mock_datastore.update_config_info.called_with(["_subjects_count"])
+        await mock_datastore.update_config_info.called_with(["_subjects_count"])
 
 
 @pytest.mark.asyncio
