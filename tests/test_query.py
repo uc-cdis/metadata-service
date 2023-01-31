@@ -171,7 +171,7 @@ def test_query_filter_all_values(client):
         assert list(sorted(client.get("/metadata?a.b=*").json())) == ["tq_5"]
 
         # query all records with a == "*"
-        assert list(sorted(client.get("/metadata?a=*").json())) == ["tq_4"]
+        assert list(sorted(client.get("/metadata?a=\*").json())) == ["tq_4"]
     finally:
         for i in range(1, 8):
             client.delete(f"/metadata/tq_{i}")
