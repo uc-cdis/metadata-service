@@ -261,10 +261,15 @@ async def get_commons():
             body={
                 "size": 0,
                 "aggs": {
-                    "commons_names": {
-                        "terms": {
-                            "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword"
-                        }
+                    AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                        "nested": {"path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD},
+                        "aggs": {
+                            "commons_names": {
+                                "terms": {
+                                    "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword"
+                                }
+                            }
+                        },
                     }
                 },
             },
