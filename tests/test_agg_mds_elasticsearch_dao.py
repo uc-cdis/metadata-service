@@ -410,11 +410,11 @@ def test_count_value_none():
 
 def test_process_records():
     _id = "123"
-    _source = {"count": [1, 2, 3, 4], "name": "my_name"}
+    _source = {"gen3_discovery": {"count": [1, 2, 3, 4], "name": "my_name"}}
     record = {"_id": _id, "_source": _source}
     rid, normalized = process_record(record, ["count"])
     assert rid == _id
-    assert normalized == {"count": 4, "name": "my_name"}
+    assert normalized == {"gen3_discovery": {"count": 4, "name": "my_name"}}
 
     # test if passed dict field is not array
     rid, normalized = process_record(record, ["name"])
