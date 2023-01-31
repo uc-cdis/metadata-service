@@ -406,8 +406,13 @@ async def get_all_named_commons_metadata(name):
             index=AGG_MDS_INDEX,
             body={
                 "query": {
-                    "match": {
-                        f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": name
+                    "nested": {
+                        "path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
+                        "query": {
+                            "match": {
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "HEAL"
+                            }
+                        },
                     }
                 }
             },
@@ -426,14 +431,16 @@ async def metadata_tags():
                 "size": 0,
                 "aggs": {
                     "tags": {
-                        "nested": {"path": "tags"},
+                        "nested": {"path": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags"},
                         "aggs": {
                             "categories": {
-                                "terms": {"field": "tags.category.keyword"},
+                                "terms": {
+                                    "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags.category.keyword"
+                                },
                                 "aggs": {
                                     "name": {
                                         "terms": {
-                                            "field": "tags.name.keyword",
+                                            "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags.name.keyword"
                                         }
                                     }
                                 },
