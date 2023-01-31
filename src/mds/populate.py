@@ -49,6 +49,14 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
                 entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD] = entry.pop(
                     common.study_data_field
                 )
+            # normalize variable level metadata field names, if available
+            if (
+                common.data_dict_field is not None
+                and common.data_dict_field != config.AGG_MDS_DEFAULT_DATA_DICT_FIELD
+            ):
+                entry[config.AGG_MDS_DEFAULT_DATA_DICT_FIELD] = entry.pop(
+                    common.data_dict_field
+                )
 
             if (
                 not hasattr(common, "columns_to_fields")
@@ -60,13 +68,13 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
                 if field == column:
                     continue
                 if isinstance(field, ColumnsToFields):
-                    entry[common.study_data_field][column] = field.get_value(
-                        entry[common.study_data_field]
-                    )
+                    entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD][
+                        column
+                    ] = field.get_value(entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD])
                 else:
-                    if field in entry[common.study_data_field]:
-                        entry[common.study_data_field][column] = entry[
-                            common.study_data_field
+                    if field in entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD]:
+                        entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD][column] = entry[
+                            config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD
                         ][field]
             return entry
 
@@ -74,14 +82,14 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
 
         # add the common field, selecting the name or an override (i.e. commons_name) and url to the entry
 
-        entry[common.study_data_field]["commons_name"] = (
+        entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD]["commons_name"] = (
             common.commons_name
             if hasattr(common, "commons_name") and common.commons_name is not None
             else name
         )
 
         # add to tags
-        for t in entry[common.study_data_field].get("tags") or {}:
+        for t in entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD].get("tags") or {}:
             if "category" not in t:
                 continue
             if t["category"] not in tags:
@@ -96,9 +104,7 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
 
-    await datastore.update_metadata(
-        name, mds_arr, keys, tags, info, common.data_dict_field, use_temp_index
-    )
+    await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 
 
 async def populate_info(commons_config: Commons, use_temp_index=False) -> None:

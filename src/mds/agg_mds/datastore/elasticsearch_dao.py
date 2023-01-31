@@ -7,6 +7,7 @@ from mds.config import (
     ES_RETRY_LIMIT,
     ES_RETRY_INTERVAL,
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
+    AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
@@ -194,7 +195,6 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
-    data_dict_field: str = None,
     use_temp_index: bool = False,
 ):
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
@@ -212,9 +212,10 @@ async def update_metadata(
         doc = {
             AGG_MDS_DEFAULT_STUDY_DATA_FIELD: d[key][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]
         }
-        if data_dict_field in d[key]:
-            doc[data_dict_field] = d[key][data_dict_field]
-        print(doc)
+        if AGG_MDS_DEFAULT_DATA_DICT_FIELD in d[key]:
+            doc[AGG_MDS_DEFAULT_DATA_DICT_FIELD] = d[key][
+                AGG_MDS_DEFAULT_DATA_DICT_FIELD
+            ]
 
         try:
             elastic_search_client.index(
