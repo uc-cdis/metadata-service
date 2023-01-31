@@ -293,9 +293,12 @@ def process_record(record: dict, counts: Optional[List[str]]) -> Tuple[str, dict
     """
     _id = record["_id"]
     normalized = record["_source"]
-    for c in counts:
-        if c in normalized:
-            normalized[c] = count(normalized[c])
+    if AGG_MDS_DEFAULT_STUDY_DATA_FIELD in normalized:
+        for c in counts:
+            if c in normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD]:
+                normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD][c] = count(
+                    normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD][c]
+                )
     return _id, normalized
 
 
@@ -356,7 +359,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             flat = []
             for record in res["hits"]["hits"]:
                 rid, normalized = process_record(record, toReduce)
-                flat.append({rid: {"gen3_discovery": normalized}})
+                flat.append({rid: normalized})
             return {
                 "results": flat,
                 "pagination": {
@@ -378,12 +381,12 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             }
             for record in res["hits"]["hits"]:
                 rid, normalized = process_record(record, toReduce)
-                commons_name = normalized["commons_name"]
+                commons_name = normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD][
+                    "commons_name"
+                ]
                 if commons_name not in byCommons["results"]:
                     byCommons["results"][commons_name] = []
-                byCommons["results"][commons_name].append(
-                    {rid: {"gen3_discovery": normalized}}
-                )
+                byCommons["results"][commons_name].append({rid: normalized})
 
             return byCommons
     except Exception as error:
@@ -455,7 +458,7 @@ async def get_commons_attribute(name):
                 }
             },
         )
-        return data["hits"]["hits"][0]["_source"]
+        return data["hits"]["hits"][0][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]["_source"]
     except Exception as error:
         logger.error(error)
         return None
