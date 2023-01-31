@@ -260,7 +260,13 @@ async def get_commons():
             index=AGG_MDS_INDEX,
             body={
                 "size": 0,
-                "aggs": {"commons_names": {"terms": {"field": "commons_name.keyword"}}},
+                "aggs": {
+                    "commons_names": {
+                        "terms": {
+                            "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword"
+                        }
+                    }
+                },
             },
         )
         return {
@@ -398,7 +404,13 @@ async def get_all_named_commons_metadata(name):
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
-            body={"query": {"match": {"commons_name.keyword": name}}},
+            body={
+                "query": {
+                    "match": {
+                        f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": name
+                    }
+                }
+            },
         )
         return [x["_source"] for x in res["hits"]["hits"]]
     except Exception as error:
@@ -458,7 +470,7 @@ async def get_commons_attribute(name):
                 }
             },
         )
-        return data["hits"]["hits"][0][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]["_source"]
+        return data["hits"]["hits"][0]["_source"]
     except Exception as error:
         logger.error(error)
         return None
@@ -473,7 +485,9 @@ async def get_aggregations(name):
                 "query": {
                     "constant_score": {
                         "filter": {
-                            "match": {"commons_name": name},
+                            "match": {
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name": name
+                            },
                         }
                     }
                 },
