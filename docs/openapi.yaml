@@ -126,8 +126,14 @@ paths:
     get:
       description: "Returns status and configuration information about aggregate metadata\
         \ service.\n\nReturn configuration information. Currently supports only 1\
-        \ information type:\n**schema**\n\nExample:\n\n    {\n      schema: {\n  \
-        \          ...\n            ...\n            }\n    }"
+        \ information type:\n**schema**\n\nExample:\n\n{\n    \"__manifest\":{\n \
+        \       \"type\":\"array\",\n        \"properties\":{\n            \"file_name\"\
+        :{\n                \"type\":\"string\",\n                \"description\"\
+        :\"\"\n            },\n            \"file_size\":{\n                \"type\"\
+        :\"integer\",\n                \"description\":\"\"\n            }\n     \
+        \   },\n        \"description\":\"\",\n        \"default\":[\n\n        ]\n\
+        \    },\n    \"commons_url\":{\n        \"type\":\"string\",\n        \"description\"\
+        :\"\"\n    },\n    ...\n}"
       operationId: get_commons_info_aggregate_info__what__get
       parameters:
       - in: path
@@ -238,8 +244,9 @@ paths:
       - Aggregate
   /aggregate/metadata/guid/{guid}:
     get:
-      description: "Returns a metadata record by GUID\n\nExample:\n\n     { id2: {\
-        \ name: \"bear\" } }"
+      description: "Returns a metadata record by GUID\n\nExample:\n\n     {\n    \
+        \    \"gen3_discovery\": {\n            \"name\": \"cat\",\n            \"\
+        type\": \"study\",\n            ...\n        }\n    }"
       operationId: get_aggregate_metadata_guid_aggregate_metadata_guid__guid__get
       parameters:
       - in: path
@@ -267,8 +274,13 @@ paths:
     get:
       description: "et all metadata records from a commons by name\n\nReturns an array\
         \ containing all the metadata entries for a single commons.\nThere are no\
-        \ limit/offset parameters.\n\nExample:\n\n    [ { id2: { name: \"bear\" }\
-        \ } , { id3: { name: \"cat\" } }]"
+        \ limit/offset parameters.\n\nExample:\n\n    [\n        {\n            \"\
+        gen3_discovery\": {\n                \"name\": \"bear\",\n               \
+        \ \"type\": \"study\",\n                ...\n            },\n            \"\
+        data_dictionaries\": {\n                ...\n            }\n        },\n \
+        \       {\n            \"gen3_discovery\": {\n                \"name\": \"\
+        cat\",\n                \"type\": \"study\",\n                ...\n      \
+        \      }\n        },\n        ...\n    ]"
       operationId: get_aggregate_metadata_for_commons_aggregate_metadata__name__get
       parameters:
       - in: path
