@@ -29,12 +29,7 @@ async def get_commons_info(what: str):
 
     Example:
 
-        {
-          schema: {
-                ...
-                ...
-                }
-        }
+        {"__manifest":{"type":"array","properties":{"file_name":{"type":"string","description":""},"file_size":{"type":"integer","description":""}},"description":"","default":[]},"commons_url":{"type":"string","description":""}}
 
     """
     res = await datastore.get_commons_attribute(what)
