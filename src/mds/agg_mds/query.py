@@ -29,7 +29,30 @@ async def get_commons_info(what: str):
 
     Example:
 
-        {"__manifest":{"type":"array","properties":{"file_name":{"type":"string","description":""},"file_size":{"type":"integer","description":""}},"description":"","default":[]},"commons_url":{"type":"string","description":""}}
+    {
+        "__manifest":{
+            "type":"array",
+            "properties":{
+                "file_name":{
+                    "type":"string",
+                    "description":""
+                },
+                "file_size":{
+                    "type":"integer",
+                    "description":""
+                }
+            },
+            "description":"",
+            "default":[
+
+            ]
+        },
+        "commons_url":{
+            "type":"string",
+            "description":""
+        },
+        ...
+    }
 
     """
     res = await datastore.get_commons_attribute(what)
@@ -131,7 +154,26 @@ async def get_aggregate_metadata_for_commons(
 
     Example:
 
-        [ { id2: { name: "bear" } } , { id3: { name: "cat" } }]
+        [
+            {
+                "gen3_discovery": {
+                    "name": "bear",
+                    "type": "study",
+                    ...
+                },
+                "data_dictionaries": {
+                    ...
+                }
+            },
+            {
+                "gen3_discovery": {
+                    "name": "cat",
+                    "type": "study",
+                    ...
+                }
+            },
+            ...
+        ]
 
     """
     res = await datastore.get_all_named_commons_metadata(name)
@@ -206,7 +248,13 @@ async def get_aggregate_metadata_guid(guid: str):
 
     Example:
 
-         { id2: { name: "bear" } }
+         {
+            "gen3_discovery": {
+                "name": "cat",
+                "type": "study",
+                ...
+            }
+        }
     """
     res = await datastore.get_by_guid(guid)
     if res:
