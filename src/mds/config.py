@@ -19,6 +19,12 @@ TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
+AGG_MDS_DEFAULT_STUDY_DATA_FIELD = config(
+    "AGG_MDS_DEFAULT_STUDY_DATA_FIELD", cast=str, default="gen3_discovery"
+)
+AGG_MDS_DEFAULT_DATA_DICT_FIELD = config(
+    "AGG_MDS_DEFAULT_DATA_DICT_FIELD", cast=str, default="data_dictionaries"
+)
 ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
 # Database
