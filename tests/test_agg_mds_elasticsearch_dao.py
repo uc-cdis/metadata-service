@@ -12,6 +12,7 @@ from mds.agg_mds.datastore.elasticsearch_dao import (
     AGG_MDS_INFO_INDEX_TEMP,
     AGG_MDS_CONFIG_INDEX_TEMP,
     AGG_MDS_INFO_TYPE,
+    AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     count,
     process_record,
 )
@@ -210,7 +211,7 @@ async def test_update_metadata():
             [
                 {
                     "my_id": {
-                        "gen3_discovery": {
+                        AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
                             "some_field": "some_value",
                             "__manifest": {},
                             "sites": "",
@@ -221,7 +222,6 @@ async def test_update_metadata():
             [],
             {},
             {},
-            "gen3_discovery",
         )
     mock_index.assert_has_calls(
         [
@@ -232,7 +232,13 @@ async def test_update_metadata():
                 index=AGG_MDS_INFO_INDEX,
             ),
             call(
-                body={"some_field": "some_value", "__manifest": {}, "sites": ""},
+                body={
+                    AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                        "some_field": "some_value",
+                        "__manifest": {},
+                        "sites": "",
+                    }
+                },
                 doc_type="commons",
                 id="my_id",
                 index=AGG_MDS_INDEX,
@@ -253,7 +259,7 @@ async def test_update_metadata_to_temp_index():
             [
                 {
                     "my_id": {
-                        "gen3_discovery": {
+                        AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
                             "some_field": "some_value",
                             "__manifest": {},
                             "sites": "",
@@ -264,7 +270,6 @@ async def test_update_metadata_to_temp_index():
             [],
             {},
             {},
-            "gen3_discovery",
             use_temp_index=True,
         )
     mock_index.assert_has_calls(
@@ -276,7 +281,13 @@ async def test_update_metadata_to_temp_index():
                 index=AGG_MDS_INFO_INDEX_TEMP,
             ),
             call(
-                body={"some_field": "some_value", "__manifest": {}, "sites": ""},
+                body={
+                    AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                        "some_field": "some_value",
+                        "__manifest": {},
+                        "sites": "",
+                    }
+                },
                 doc_type="commons",
                 id="my_id",
                 index=AGG_MDS_INDEX_TEMP,
@@ -367,7 +378,18 @@ async def test_get_commons():
             index=AGG_MDS_INDEX,
             body={
                 "size": 0,
-                "aggs": {"commons_names": {"terms": {"field": "commons_name.keyword"}}},
+                "aggs": {
+                    AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                        "nested": {"path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD},
+                        "aggs": {
+                            "commons_names": {
+                                "terms": {
+                                    "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword"
+                                }
+                            }
+                        },
+                    }
+                },
             },
         )
 
@@ -400,11 +422,15 @@ def test_count_value_none():
 
 def test_process_records():
     _id = "123"
-    _source = {"count": [1, 2, 3, 4], "name": "my_name"}
+    _source = {
+        AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {"count": [1, 2, 3, 4], "name": "my_name"}
+    }
     record = {"_id": _id, "_source": _source}
     rid, normalized = process_record(record, ["count"])
     assert rid == _id
-    assert normalized == {"count": 4, "name": "my_name"}
+    assert normalized == {
+        AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {"count": 4, "name": "my_name"}
+    }
 
     # test if passed dict field is not array
     rid, normalized = process_record(record, ["name"])
@@ -443,7 +469,18 @@ async def test_get_all_named_commons_metadata():
         await elasticsearch_dao.get_all_named_commons_metadata("my-commons")
         mock_client.search.assert_called_with(
             index=AGG_MDS_INDEX,
-            body={"query": {"match": {"commons_name.keyword": "my-commons"}}},
+            body={
+                "query": {
+                    "nested": {
+                        "path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
+                        "query": {
+                            "match": {
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "HEAL"
+                            }
+                        },
+                    }
+                }
+            },
         )
 
     with patch(
@@ -467,12 +504,18 @@ async def test_metadata_tags():
                 "size": 0,
                 "aggs": {
                     "tags": {
-                        "nested": {"path": "tags"},
+                        "nested": {"path": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags"},
                         "aggs": {
                             "categories": {
-                                "terms": {"field": "tags.category.keyword"},
+                                "terms": {
+                                    "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags.category.keyword"
+                                },
                                 "aggs": {
-                                    "name": {"terms": {"field": "tags.name.keyword"}}
+                                    "name": {
+                                        "terms": {
+                                            "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags.name.keyword"
+                                        }
+                                    }
                                 },
                             }
                         },
@@ -518,7 +561,11 @@ async def test_get_aggregations():
                 "size": 0,
                 "query": {
                     "constant_score": {
-                        "filter": {"match": {"commons_name": "my-commons"}}
+                        "filter": {
+                            "match": {
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name": "my-commons"
+                            }
+                        }
                     }
                 },
                 "aggs": {"_subjects_count": {"sum": {"field": "_subjects_count"}}},

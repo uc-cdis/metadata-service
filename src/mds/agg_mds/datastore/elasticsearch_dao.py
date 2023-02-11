@@ -2,7 +2,13 @@ from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
 from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
 from mds import logger
-from mds.config import AGG_MDS_NAMESPACE, ES_RETRY_LIMIT, ES_RETRY_INTERVAL
+from mds.config import (
+    AGG_MDS_NAMESPACE,
+    ES_RETRY_LIMIT,
+    ES_RETRY_INTERVAL,
+    AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
+    AGG_MDS_DEFAULT_DATA_DICT_FIELD,
+)
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -189,7 +195,6 @@ async def update_metadata(
     guid_arr: List[str],
     tags: Dict[str, List[str]],
     info: Dict[str, str],
-    study_data_field: str,
     use_temp_index: bool = False,
 ):
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
@@ -201,10 +206,16 @@ async def update_metadata(
     )
 
     index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
-    for doc in data:
-        key = list(doc.keys())[0]
+    for d in data:
+        key = list(d.keys())[0]
         # Flatten out this structure
-        doc = doc[key][study_data_field]
+        doc = {
+            AGG_MDS_DEFAULT_STUDY_DATA_FIELD: d[key][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]
+        }
+        if AGG_MDS_DEFAULT_DATA_DICT_FIELD in d[key]:
+            doc[AGG_MDS_DEFAULT_DATA_DICT_FIELD] = d[key][
+                AGG_MDS_DEFAULT_DATA_DICT_FIELD
+            ]
 
         try:
             elastic_search_client.index(
@@ -249,12 +260,26 @@ async def get_commons():
             index=AGG_MDS_INDEX,
             body={
                 "size": 0,
-                "aggs": {"commons_names": {"terms": {"field": "commons_name.keyword"}}},
+                "aggs": {
+                    AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                        "nested": {"path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD},
+                        "aggs": {
+                            "commons_names": {
+                                "terms": {
+                                    "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword"
+                                }
+                            }
+                        },
+                    }
+                },
             },
         )
         return {
             "commons": [
-                x["key"] for x in res["aggregations"]["commons_names"]["buckets"]
+                x["key"]
+                for x in res["aggregations"][AGG_MDS_DEFAULT_STUDY_DATA_FIELD][
+                    "commons_names"
+                ]["buckets"]
             ]
         }
     except Exception as error:
@@ -282,9 +307,12 @@ def process_record(record: dict, counts: Optional[List[str]]) -> Tuple[str, dict
     """
     _id = record["_id"]
     normalized = record["_source"]
-    for c in counts:
-        if c in normalized:
-            normalized[c] = count(normalized[c])
+    if AGG_MDS_DEFAULT_STUDY_DATA_FIELD in normalized:
+        for c in counts:
+            if c in normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD]:
+                normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD][c] = count(
+                    normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD][c]
+                )
     return _id, normalized
 
 
@@ -295,11 +323,11 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
     counts: converts the count of the entry[count] if it is a dict or array
     returns:
 
-    flattend == true
+    flattened == true
     results : MDS results as a dict
               paging info
 
-    flattend == false
+    flattened == false
     results : {
         commonsA: metadata
         commonsB: metadata
@@ -345,7 +373,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             flat = []
             for record in res["hits"]["hits"]:
                 rid, normalized = process_record(record, toReduce)
-                flat.append({rid: {"gen3_discovery": normalized}})
+                flat.append({rid: normalized})
             return {
                 "results": flat,
                 "pagination": {
@@ -367,12 +395,12 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             }
             for record in res["hits"]["hits"]:
                 rid, normalized = process_record(record, toReduce)
-                commons_name = normalized["commons_name"]
+                commons_name = normalized[AGG_MDS_DEFAULT_STUDY_DATA_FIELD][
+                    "commons_name"
+                ]
                 if commons_name not in byCommons["results"]:
                     byCommons["results"][commons_name] = []
-                byCommons["results"][commons_name].append(
-                    {rid: {"gen3_discovery": normalized}}
-                )
+                byCommons["results"][commons_name].append({rid: normalized})
 
             return byCommons
     except Exception as error:
@@ -384,7 +412,18 @@ async def get_all_named_commons_metadata(name):
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
-            body={"query": {"match": {"commons_name.keyword": name}}},
+            body={
+                "query": {
+                    "nested": {
+                        "path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
+                        "query": {
+                            "match": {
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "HEAL"
+                            }
+                        },
+                    }
+                }
+            },
         )
         return [x["_source"] for x in res["hits"]["hits"]]
     except Exception as error:
@@ -400,14 +439,16 @@ async def metadata_tags():
                 "size": 0,
                 "aggs": {
                     "tags": {
-                        "nested": {"path": "tags"},
+                        "nested": {"path": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags"},
                         "aggs": {
                             "categories": {
-                                "terms": {"field": "tags.category.keyword"},
+                                "terms": {
+                                    "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags.category.keyword"
+                                },
                                 "aggs": {
                                     "name": {
                                         "terms": {
-                                            "field": "tags.name.keyword",
+                                            "field": f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.tags.name.keyword"
                                         }
                                     }
                                 },
@@ -459,7 +500,9 @@ async def get_aggregations(name):
                 "query": {
                     "constant_score": {
                         "filter": {
-                            "match": {"commons_name": name},
+                            "match": {
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name": name
+                            },
                         }
                     }
                 },

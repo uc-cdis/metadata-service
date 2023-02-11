@@ -516,7 +516,7 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
         f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=new_version_data | {"alias": "indexd_post_blank"}
+            status_code=200, json=new_version_data or {"alias": "indexd_post_blank"}
         )
     )
 
@@ -525,7 +525,7 @@ def test_create_for_guid(client, valid_upload_file_patcher, data):
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=indexd_data | {"alias": "indexd_get"}
+            status_code=200, json=indexd_data or {"alias": "indexd_get"}
         )
     )
 
@@ -596,7 +596,7 @@ def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=indexd_data | {"alias": "indexd_get"}
+            status_code=200, json=indexd_data or {"alias": "indexd_get"}
         )
     )
     # mock: creating a new version of "indexd_did" returns 404
@@ -604,7 +604,7 @@ def test_create_for_guid_no_new_version_404(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}"
     ).mock(
         return_value=httpx.Response(
-            status_code=404, json=new_version_data | {"alias": "indexd_post_blank"}
+            status_code=404, json=new_version_data or {"alias": "indexd_post_blank"}
         )
     )
     resp = client.post(
@@ -661,7 +661,7 @@ def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=indexd_data | {"alias": "indexd_get"}
+            status_code=200, json=indexd_data or {"alias": "indexd_get"}
         )
     )
     # mock: creating a new version of "indexd_did" returns 409 (not 401,403,404)
@@ -669,7 +669,7 @@ def test_create_for_guid_no_new_version_409(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}"
     ).mock(
         return_value=httpx.Response(
-            status_code=409, json=new_version_data | {"alias": "indexd_post_blank"}
+            status_code=409, json=new_version_data or {"alias": "indexd_post_blank"}
         )
     )
 
@@ -728,7 +728,7 @@ def test_create_for_guid_not_found(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=new_version_data | {"alias": "indexd_post_blank"}
+            status_code=200, json=new_version_data or {"alias": "indexd_post_blank"}
         )
     )
 
@@ -737,7 +737,7 @@ def test_create_for_guid_not_found(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=404, json=indexd_data | {"alias": "indexd_get"}
+            status_code=404, json=indexd_data or {"alias": "indexd_get"}
         )
     )
     resp = client.post(
@@ -793,7 +793,7 @@ def test_create_for_guid_not_found_409(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=new_version_data | {"alias": "indexd_post_blank"}
+            status_code=200, json=new_version_data or {"alias": "indexd_post_blank"}
         )
     )
 
@@ -802,7 +802,7 @@ def test_create_for_guid_not_found_409(client, valid_upload_file_patcher):
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=409, json=indexd_data | {"alias": "indexd_get"}
+            status_code=409, json=indexd_data or {"alias": "indexd_get"}
         )
     )
     with pytest.raises(Exception):
@@ -866,7 +866,7 @@ def test_create_for_guid_no_access_to_create_blank_version(
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=indexd_data | {"alias": "indexd_get"}
+            status_code=200, json=indexd_data or {"alias": "indexd_get"}
         )
     )
 
@@ -932,7 +932,7 @@ def test_create_for_guid_no_access_to_upload(
         f"{config.INDEXING_SERVICE_ENDPOINT}/index/blank/{indexd_did}",
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=new_version_data | {"alias": "indexd_post_blank"}
+            status_code=200, json=new_version_data or {"alias": "indexd_post_blank"}
         )
     )
 
@@ -941,7 +941,7 @@ def test_create_for_guid_no_access_to_upload(
         f"{config.INDEXING_SERVICE_ENDPOINT}/{guid_or_alias}"
     ).mock(
         return_value=httpx.Response(
-            status_code=200, json=indexd_data | {"alias": "indexd_get"}
+            status_code=200, json=indexd_data or {"alias": "indexd_get"}
         )
     )
 
