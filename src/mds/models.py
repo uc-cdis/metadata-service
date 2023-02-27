@@ -1,4 +1,6 @@
 from gino.ext.starlette import Gino
+import datetime
+from sqlalchemy import DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 
 from . import config
@@ -19,7 +21,10 @@ class Metadata(db.Model):
     __tablename__ = "metadata"
 
     guid = db.Column(db.Unicode(), primary_key=True)
+    baseid = db.Column(db.Unicode())
     data = db.Column(JSONB())
+    # Note: default function needs to be defined as lambda in order to support function mocking for unit testing
+    created_date = db.Column(DateTime, default=lambda: datetime.datetime.utcnow())
     authz = db.Column(JSONB(), nullable=False)
 
 

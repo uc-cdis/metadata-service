@@ -42,8 +42,13 @@ nest-asyncio = "^1.5.1"
 "maintain" = "mds.maintain"
 "index" = "mds.index"
 "objects" = "mds.objects"
+"semi_structured" = "mds.semi_structured"
 "agg_mds" = "mds.agg_mds"
 "aliases" = "mds.aliases"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest-dependency = "^0.5.1"
 
 [build-system]
 requires = ["poetry>=0.12"]
