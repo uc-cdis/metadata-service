@@ -1,0 +1,67 @@
+{
+	"configuration": {
+		"schema": {
+			"_subjects_count": {
+				"type": "integer"
+			},
+			"__manifest": {
+				"description": "an array of filename (usually DRS ids and its size",
+				"type": "array",
+				"properties": {
+					"file_name": {
+						"type": "string"
+					},
+					"file_size": {
+						"type": "integer"
+					}
+				}
+			},
+			"tags": {
+				"type": "array"
+			},
+			"_unique_id": {},
+			"study_description": {},
+			"study_id": {},
+			"study_url": {},
+			"project_id": {},
+			"short_name": {
+				"default" : "not_set"
+			},
+			"year": {
+				"default" : "not_set"
+			},
+			"full_name": {},
+			"commons_url": {},
+			"commons" : {}
+		},
+		"settings" : {
+			"cache_drs" : true
+		}
+	},
+	"adapter_commons": {
+		"Gen3": {
+			"mds_url": "https://gen3.datacommons.io/",
+			"commons_url": "gen3.datacommons.io/",
+			"adapter": "gen3",
+			"config" : {
+				"guid_type": "discovery_metadata",
+				"study_field": "gen3_discovery"
+			},
+			"keep_original_fields": false,
+			"field_mappings" : {
+				"tags": "path:tags",
+				"_unique_id": "path:_unique_id",
+				"study_description": "path:summary",
+				"full_name": "path:study_title",
+				"short_name": "path:short_name",
+				"year": "path:year",
+				"accession_number": "path:accession_number",
+				"commons": "Gen3 Data Commons",
+				"study_url": {
+					"path": "link",
+					"default": "unknown"
+				}
+			}
+		}
+	}
+}

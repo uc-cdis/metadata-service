@@ -9,7 +9,7 @@ from mds.models import db
 
 def escape(str):
     # escape single quotes for SQL statement
-    return str.replace("'", "''")
+    return str.replace(":", "\\:").replace("'", "''")
 
 
 @pytest.mark.asyncio
@@ -250,15 +250,23 @@ async def test_6819874e85b9_upgrade():
     alembic_main(["--raiseerr", "downgrade", "3354f2c466ec"])
 
     fake_guid = "7891011"
+    # "percent" and "colon" are some edge cases that was causing the migration to fail
     old_metadata = {
         "foo": "bar",
         "bizz": "buzz",
+        "percent": "50% for",
+        "colon": "14(10):1534-47",
         "_uploader_id": "uploader",
         "_filename": "hello.txt",
         "_bucket": "mybucket",
         "_file_extension": ".txt",
     }
-    new_metadata = {"foo": "bar", "bizz": "buzz"}
+    new_metadata = {
+        "foo": "bar",
+        "bizz": "buzz",
+        "percent": "50% for",
+        "colon": "14(10):1534-47",
+    }
     authz_data = {"version": 0, "_resource_paths": ["/programs/DEV"]}
 
     async with db.with_bind(DB_DSN):

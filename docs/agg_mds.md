@@ -12,4 +12,4 @@ The aggregate cache is built using Elasticsearch. See the `docker-compose.yaml` 
 
 # Metadata adapters
 
-See the [Metadata Adapters documentation](metadata_adapters.md).
+See the [Configuring the Gen3 Aggregate Metadata Service and Adapters documentation](config_agg_mds.md).

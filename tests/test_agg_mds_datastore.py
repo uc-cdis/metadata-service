@@ -16,10 +16,38 @@ async def test_init():
 
 
 @pytest.mark.asyncio
-async def test_drop_all():
+async def test_drop_all_non_temp_indexes():
     with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
-        await datastore.drop_all()
-    mock_client.drop_all.assert_called_with()
+        await datastore.drop_all_non_temp_indexes()
+    mock_client.drop_all_non_temp_indexes.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_drop_all_temp_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.drop_all_temp_indexes()
+    mock_client.drop_all_temp_indexes.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_create_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.create_indexes("{}")
+    mock_client.create_indexes.assert_called_with("{}")
+
+
+@pytest.mark.asyncio
+async def test_create_temp_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.create_temp_indexes("{}")
+    mock_client.create_temp_indexes.assert_called_with("{}")
+
+
+@pytest.mark.asyncio
+async def test_clone_temp_indexes_to_real_indexes():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.clone_temp_indexes_to_real_indexes()
+    mock_client.clone_temp_indexes_to_real_indexes.assert_called_with()
 
 
 @pytest.mark.asyncio
@@ -44,6 +72,20 @@ async def test_update_metadata():
 
 
 @pytest.mark.asyncio
+async def test_update_global_info():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.update_global_info()
+    mock_client.update_global_info.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_update_config_info():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.update_config_info()
+    mock_client.update_config_info.assert_called_with()
+
+
+@pytest.mark.asyncio
 async def test_get_commons_metadata():
     with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
         await datastore.get_commons_metadata()
@@ -55,6 +97,13 @@ async def test_get_all_named_commons_metadata():
     with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
         await datastore.get_all_named_commons_metadata()
     mock_client.get_all_named_commons_metadata.assert_called_with()
+
+
+@pytest.mark.asyncio
+async def test_get_all_tags():
+    with patch("mds.agg_mds.datastore.client", AsyncMock()) as mock_client:
+        await datastore.get_all_tags()
+    mock_client.metadata_tags.assert_called_with()
 
 
 @pytest.mark.asyncio

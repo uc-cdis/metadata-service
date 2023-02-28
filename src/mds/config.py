@@ -19,6 +19,12 @@ TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
+AGG_MDS_DEFAULT_STUDY_DATA_FIELD = config(
+    "AGG_MDS_DEFAULT_STUDY_DATA_FIELD", cast=str, default="gen3_discovery"
+)
+AGG_MDS_DEFAULT_DATA_DICT_FIELD = config(
+    "AGG_MDS_DEFAULT_DATA_DICT_FIELD", cast=str, default="data_dictionaries"
+)
 ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
 # Database
@@ -59,12 +65,20 @@ DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)  # depre
 DB_RETRY_LIMIT = config("DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES)
 DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
 
+# Elasticsearch
+ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)
+ES_RETRY_LIMIT = config("ES_RETRY_LIMIT", cast=int, default=5)
 # Authz string
 
 DEFAULT_AUTHZ_STR = config(
     "DEFAULT_AUTHZ_STR",
     cast=str,
     default='{"version": 0, "_resource_paths": ["/open"]}',
+)
+
+# Limits
+METADATA_QUERY_RESULTS_LIMIT = config(
+    "METADATA_QUERY_RESULTS_LIMIT", cast=int, default=2000
 )
 
 # Security

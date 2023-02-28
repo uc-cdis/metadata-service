@@ -1,15 +1,14 @@
 import asyncio
 from argparse import Namespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
-from mds.agg_mds.commons import MDSInstance, AdapterMDSInstance, Commons, parse_config
+from mds.agg_mds.commons import MDSInstance, ColumnsToFields, Commons, parse_config
 from mds import config, logger
 from pathlib import Path
 from urllib.parse import urlparse
 import argparse
 import sys
-import json
 
 
 def parse_args(argv: List[str]) -> Namespace:
@@ -20,15 +19,11 @@ def parse_args(argv: List[str]) -> Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="config file to use", type=str, required=True)
-    parser.add_argument(
-        "--hostname", help="hostname of server", type=str, default="localhost"
-    )
-    parser.add_argument("--port", help="port of server", type=int, default=6379)
     known_args, unknown_args = parser.parse_known_args(argv)
     return known_args
 
 
-async def populate_metadata(name: str, common, results):
+async def populate_metadata(name: str, common, results, use_temp_index=False):
     mds_arr = [{k: v} for k, v in results.items()]
 
     total_items = len(mds_arr)
@@ -49,6 +44,20 @@ async def populate_metadata(name: str, common, results):
         entry = next(iter(x.values()))
 
         def normalize(entry: dict) -> Any:
+            # normalize study level metadata field names
+            if common.study_data_field != config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD:
+                entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD] = entry.pop(
+                    common.study_data_field
+                )
+            # normalize variable level metadata field names, if available
+            if (
+                common.data_dict_field is not None
+                and common.data_dict_field != config.AGG_MDS_DEFAULT_DATA_DICT_FIELD
+            ):
+                entry[config.AGG_MDS_DEFAULT_DATA_DICT_FIELD] = entry.pop(
+                    common.data_dict_field
+                )
+
             if (
                 not hasattr(common, "columns_to_fields")
                 or common.columns_to_fields is None
@@ -58,19 +67,29 @@ async def populate_metadata(name: str, common, results):
             for column, field in common.columns_to_fields.items():
                 if field == column:
                     continue
-                if field in entry[common.study_data_field]:
-                    entry[common.study_data_field][column] = entry[
-                        common.study_data_field
-                    ][field]
+                if isinstance(field, ColumnsToFields):
+                    entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD][
+                        column
+                    ] = field.get_value(entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD])
+                else:
+                    if field in entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD]:
+                        entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD][column] = entry[
+                            config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD
+                        ][field]
             return entry
 
         entry = normalize(entry)
 
-        # add the common field and url to the entry
-        entry[common.study_data_field]["commons_name"] = name
+        # add the common field, selecting the name or an override (i.e. commons_name) and url to the entry
+
+        entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD]["commons_name"] = (
+            common.commons_name
+            if hasattr(common, "commons_name") and common.commons_name is not None
+            else name
+        )
 
         # add to tags
-        for t in entry[common.study_data_field].get("tags", {}):
+        for t in entry[config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD].get("tags") or {}:
             if "category" not in t:
                 continue
             if t["category"] not in tags:
@@ -84,16 +103,56 @@ async def populate_metadata(name: str, common, results):
 
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
-    await datastore.update_metadata(
-        name, mds_arr, keys, tags, info, common.study_data_field
-    )
+
+    await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 
 
-async def main(commons_config: Commons, hostname: str, port: int) -> None:
+async def populate_info(commons_config: Commons, use_temp_index=False) -> None:
+    agg_info = {
+        key: value.to_dict() for key, value in commons_config.aggregations.items()
+    }
+    await datastore.update_global_info("aggregations", agg_info, use_temp_index)
+
+    if commons_config.configuration.schema:
+        json_schema = {
+            k: v.to_schema(all_fields=True)
+            for k, v in commons_config.configuration.schema.items()
+        }
+        await datastore.update_global_info("schema", json_schema, use_temp_index)
+    await populate_drs_info(commons_config, use_temp_index)
+
+
+async def populate_drs_info(commons_config: Commons, use_temp_index=False) -> None:
+    if commons_config.configuration.settings.cache_drs:
+        server = commons_config.configuration.settings.drs_indexd_server
+        if server is not None:
+            drs_data = adapters.get_metadata("drs_indexd", server, None)
+
+            for id, entry in drs_data.get("cache", {}).items():
+                await datastore.update_global_info(id, entry, use_temp_index)
+
+
+async def populate_config(commons_config: Commons, use_temp_index=False) -> None:
+    array_definition = {
+        "array": [
+            field
+            for field, value in commons_config.configuration.schema.items()
+            if value.type == "array"
+        ]
+    }
+
+    await datastore.update_config_info(array_definition, use_temp_index)
+
+
+async def main(commons_config: Commons) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
     {
+        "configuration" : {
+                schema: { dict of data schema for normalized fields }
+                settings: { dict of additional configuration properties }
+        },
        "commons_name" : {
             "metadata" : [ array of metadata entries ],
             "field_mapping" : { dictionary of field_name to column_name },
@@ -106,36 +165,88 @@ async def main(commons_config: Commons, hostname: str, port: int) -> None:
     """
 
     if not config.USE_AGG_MDS:
-        print("aggregate MDS disabled")
+        logger.info("aggregate MDS disabled")
         exit(1)
 
     url_parts = urlparse(config.ES_ENDPOINT)
 
     await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
-    await datastore.drop_all()
 
-    for name, common in commons_config.gen3_commons.items():
-        logger.info(f"Populating {name} using Gen3 MDS connector")
-        results = pull_mds(common.mds_url, common.guid_type)
-        logger.info(f"Received {len(results)} from {name}")
-        if len(results) > 0:
-            await populate_metadata(name, common, results)
+    # build mapping table for commons index
 
-    for name, common in commons_config.adapter_commons.items():
-        logger.info(f"Populating {name} using adapter: {common.adapter}")
-        results = adapters.get_metadata(
-            common.adapter,
-            common.mds_url,
-            common.filters,
-            common.config,
-            common.field_mappings,
-            common.per_item_values,
-            common.keep_original_fields,
-            common.global_field_filters,
+    field_mapping = {
+        "mappings": {
+            "commons": {
+                "properties": {
+                    config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                        "type": "nested",
+                        "properties": {
+                            k: v.to_schema(True)
+                            for k, v in commons_config.configuration.schema.items()
+                        },
+                    }
+                }
+            }
+        }
+    }
+
+    await datastore.drop_all_temp_indexes()
+    await datastore.create_temp_indexes(commons_mapping=field_mapping)
+
+    mdsCount = 0
+    try:
+        for name, common in commons_config.gen3_commons.items():
+            logger.info(f"Populating {name} using Gen3 MDS connector")
+            results = pull_mds(common.mds_url, common.guid_type)
+            logger.info(f"Received {len(results)} from {name}")
+            if len(results) > 0:
+                mdsCount += len(results)
+                await populate_metadata(name, common, results, use_temp_index=True)
+
+        for name, common in commons_config.adapter_commons.items():
+            logger.info(f"Populating {name} using adapter: {common.adapter}")
+            results = adapters.get_metadata(
+                common.adapter,
+                common.mds_url,
+                common.filters,
+                common.config,
+                common.field_mappings,
+                common.per_item_values,
+                common.keep_original_fields,
+                common.global_field_filters,
+                schema=commons_config.configuration.schema,
+            )
+            logger.info(f"Received {len(results)} from {name}")
+            if len(results) > 0:
+                mdsCount += len(results)
+                await populate_metadata(name, common, results, use_temp_index=True)
+
+        if mdsCount == 0:
+            raise ValueError("Could not obtain any metadata from any adapters.")
+
+        # populate global information index
+        await populate_info(commons_config, use_temp_index=True)
+        # populate array index information to support guppy
+        await populate_config(commons_config, use_temp_index=True)
+
+    except Exception as ex:
+        logger.error(
+            "Error occurred during mds population. Existing indexes are left in place."
         )
-        logger.info(f"Received {len(results)} from {name}")
-        if len(results) > 0:
-            await populate_metadata(name, common, results)
+        logger.error(ex)
+        raise ex
+
+    logger.info(f"Temp indexes populated successfully. Proceeding to clone")
+    # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
+    try:
+        await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
+        await datastore.create_indexes(commons_mapping=field_mapping)
+        await datastore.clone_temp_indexes_to_real_indexes()
+        await datastore.drop_all_temp_indexes()
+    except Exception as ex:
+        logger.error("Error occurred during cloning.")
+        logger.error(ex)
+        raise ex
 
     res = await datastore.get_status()
     print(res)
@@ -176,9 +287,15 @@ async def filter_entries(
     return filtered
 
 
-def parse_config_from_file(path: Path) -> Commons:
-    with open(path, "rt") as infile:
-        return parse_config(json.load(infile))
+def parse_config_from_file(path: Path) -> Optional[Commons]:
+    if not path.exists():
+        logger.error(f"configuration file: {path} does not exist")
+        return None
+    try:
+        return parse_config(path.read_text())
+    except IOError as ex:
+        logger.error(f"cannot read configuration file {path}: {ex}")
+        raise ex
 
 
 if __name__ == "__main__":
@@ -187,4 +304,4 @@ if __name__ == "__main__":
     """
     args: Namespace = parse_args(sys.argv)
     commons = parse_config_from_file(Path(args.config))
-    asyncio.run(main(commons_config=commons, hostname=args.hostname, port=args.port))
+    asyncio.run(main(commons_config=commons))
