@@ -137,6 +137,7 @@ helm upgrade --install gen3/metadata
 These commands will add the Gen3 helm chart repo and install the metadata service to your Kubernetes cluster.
 
 Deploying metadata this way will use the defaults that are defined in this [values.yaml file](https://github.com/uc-cdis/gen3-helm/blob/master/helm/metadata/values.yaml)
+
 You can learn more about these values by accessing the metadata [README.md](https://github.com/uc-cdis/gen3-helm/blob/master/helm/metadata/README.md)
 
 If you would like to override any of the default values, simply copy the above values.yaml file into a local file and make any changes needed.
