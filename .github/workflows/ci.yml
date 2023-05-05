@@ -39,8 +39,6 @@ jobs:
         DB_PORT: 5432
         DB_USER: metadata_user
         DB_PASSWORD: metadata_pass
-        TESTING: true
-        USE_AGG_MDS: true
         PGPASSWORD: metadata_pass
       run: |
         poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=94 --cov-report xml

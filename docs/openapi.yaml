@@ -901,8 +901,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      security:
-      - HTTPBearer: []
       summary: Delete Object
       tags:
       - Object
