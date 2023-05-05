@@ -227,7 +227,6 @@ def test_parse_config():
                     }
                 }
             },
-
             "gen3_commons": {
                 "my_gen3_commons": {
                     "mds_url": "http://mds",
@@ -247,6 +246,13 @@ def test_parse_config():
                     "mds_url": "http://non-gen3",
                     "commons_url": "non-gen3",
                     "adapter": "icpsr"
+                },
+                "another_gen3_commons": {
+                    "mds_url": "http://another-gen3",
+                    "commons_url": "another-gen3",
+                    "adapter": "gen3",
+                    "study_data_field" : "my_metadata",
+                    "data_dict_field" : "my_data_dict"
                 }
             }
         }
@@ -295,7 +301,14 @@ def test_parse_config():
                 "http://non-gen3",
                 "non-gen3",
                 "icpsr",
-            )
+            ),
+            "another_gen3_commons": AdapterMDSInstance(
+                "http://another-gen3",
+                "another-gen3",
+                "gen3",
+                study_data_field="my_metadata",
+                data_dict_field="my_data_dict",
+            ),
         },
     )
 

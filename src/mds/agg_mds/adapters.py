@@ -46,12 +46,35 @@ def add_clinical_trials_source_url(study_id: str):
     return f"https://clinicaltrials.gov/ct2/show/{study_id}"
 
 
+def uppercase(s: str):
+    if not isinstance(s, str):
+        return s
+    return s.upper()
+
+
+def prepare_cidc_description(desc: str):
+    desc = re.sub("\t|\n", "", desc)
+    desc = re.sub("&nbsp;|&thinsp;", " ", desc)
+    return desc
+
+
+def aggregate_pdc_file_count(record: list):
+    file_count = 0
+    if record:
+        for x in record:
+            file_count += x["files_count"]
+    return file_count
+
+
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
         "strip_email": strip_email,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
+        "uppercase": uppercase,
+        "prepare_cidc_description": prepare_cidc_description,
+        "aggregate_pdc_file_count": aggregate_pdc_file_count,
     }
 
     @classmethod
@@ -79,6 +102,7 @@ def get_json_path_value(
 
     try:
         jsonpath_expr = parse(expression)
+
     except JSONPathError as exc:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
@@ -214,7 +238,7 @@ class RemoteMetadataAdapter(ABC):
                 if hasDefaultValue:
                     field_value = default_value
                 else:
-                    logger.warn(
+                    logger.warning(
                         f"{key} = None{', is not in the schema,' if key not in schema else ''} "
                         f"and has no default value. Consider adding {key} to the schema"
                     )
@@ -977,6 +1001,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         mappings = kwargs.get("mappings", None)
         config = kwargs.get("config", {})
         study_field = config.get("study_field", "gen3_discovery")
+        data_dict_field = config.get("data_dict_field", None)
         keepOriginalFields = kwargs.get("keepOriginalFields", True)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
         schema = kwargs.get("schema", {})
@@ -997,6 +1022,9 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": item,
             }
+            # for VLMD, bring it into AggMDS records
+            if data_dict_field is not None and data_dict_field in record:
+                results[guid][data_dict_field] = record[data_dict_field]
 
         perItemValues = kwargs.get("perItemValues", None)
         if perItemValues is not None:
@@ -1167,6 +1195,364 @@ class ICDCAdapter(RemoteMetadataAdapter):
         return results
 
 
+class GDCAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Genomic Data Commons
+    Expected Parameters:
+        size: number of studies to pull in a single call, default=1000 and therefore optional
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        batchSize = kwargs["filters"].get("size", 1000)
+        offset = 0
+        remaining = True
+        data = []
+
+        while remaining:
+            try:
+                response = httpx.get(
+                    f"{mds_url}?expand=summary&from={offset}&size={batchSize}"
+                )
+                response.raise_for_status()
+
+                response_data = response.json()
+                data = response_data["data"]["hits"]
+                results["results"] += data
+
+                remaining = len(data) == batchSize
+                offset += batchSize
+
+            except httpx.TimeoutException as exc:
+                logger.error(f"An timeout error occurred while requesting {mds_url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+                )
+                break
+            except Exception as exc:
+                logger.error(
+                    f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+                )
+                break
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = GDCAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item[
+                "description"
+            ] = f"Genomic Data Commons study of {normalized_item['disease_type']} in {normalized_item['primary_site']}"
+
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag][0] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "primary_site"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class CIDCAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Cancer Imaging Data Commons
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        data = []
+
+        try:
+            response = httpx.get(mds_url)
+            response.raise_for_status()
+
+            response_data = response.json()
+            data = response_data["collections"]
+            results["results"] = data
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = CIDCAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "data_type", "primary_site"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class PDCAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Proteomic Data Commons
+    Expected Parameters:
+        size:   Number of studies to pull in a single call, default=5 and therefore optional
+        #Note - The API doesn't seem to do very well with large requests,
+                hence confining it to a smaller number
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+        batchSize = kwargs["filters"].get("size", 5)
+
+        subject_catalog_query = "{studyCatalog(acceptDUA: true){pdc_study_id}}"
+        try:
+            response = httpx.post(mds_url, json={"query": subject_catalog_query})
+            response.raise_for_status()
+            response_data = response.json()
+            pid_list = [
+                record["pdc_study_id"]
+                for record in response_data["data"]["studyCatalog"]
+            ]
+            total = len(pid_list)
+
+            record_list = {}
+            for i in range(0, total, batchSize):
+                subject_query_string = (
+                    "{"
+                    + " ".join(
+                        [
+                            (
+                                f"{study_id} : "
+                                f'  study (pdc_study_id: "{study_id}" acceptDUA: true) {{'
+                                "    submitter_id_name"
+                                "    study_id"
+                                "    study_name"
+                                "    study_shortname"
+                                "    analytical_fraction"
+                                "    experiment_type"
+                                "    embargo_date"
+                                "    acquisition_type"
+                                "    cases_count"
+                                "    filesCount {"
+                                "      files_count"
+                                "    }"
+                                "    disease_type"
+                                "    analytical_fraction"
+                                "    program_name"
+                                "    program_id"
+                                "    project_name"
+                                "    project_id"
+                                "    project_submitter_id"
+                                "    primary_site"
+                                "    pdc_study_id"
+                                "  }"
+                            )
+                            for study_id in pid_list[i : i + batchSize]
+                        ]
+                    )
+                    + "}"
+                )
+                response = httpx.post(
+                    mds_url, json={"query": subject_query_string}, timeout=60
+                )
+                response.raise_for_status()
+                record_list.update(response.json()["data"])
+                logger.info(
+                    f"Fetched ({min(i+batchSize,total)}/{total} records from PDC)"
+                )
+            results["results"] = [value[0] for _, value in record_list.items()]
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDCAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "primary_site"]
+            ]
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
 def gather_metadata(
     gather,
     mds_url,
@@ -1208,6 +1594,9 @@ adapters = {
     "drs_indexd": DRSIndexdAdapter,
     "harvard_dataverse": HarvardDataverse,
     "icdc": ICDCAdapter,
+    "gdc": GDCAdapter,
+    "cidc": CIDCAdapter,
+    "pdc": PDCAdapter,
 }
 
 
