@@ -94,8 +94,8 @@ async def create_object(
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
         token_claims = await access_token("user", "openid", purpose="access")(token)
-    except Exception as exc:
-        logger.error(exc, exc_info=True)
+    except Exception as e:
+        logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
         raise HTTPException(
             HTTP_401_UNAUTHORIZED,
             f"Could not verify, parse, and/or validate scope from provided access token.",
@@ -182,8 +182,8 @@ async def create_object_for_id(
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
         token_claims = await access_token("user", "openid", purpose="access")(token)
-    except Exception as exc:
-        logger.error(exc, exc_info=True)
+    except Exception as e:
+        logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
         raise HTTPException(
             HTTP_401_UNAUTHORIZED,
             "Could not verify, parse, and/or validate scope from provided access token.",
