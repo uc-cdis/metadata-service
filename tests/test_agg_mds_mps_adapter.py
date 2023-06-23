@@ -172,7 +172,9 @@ def test_get_metadata_mps():
 
         MPSAdapter.getRemoteDataAsJson.retry.wait = wait_none()
 
-        respx.get("http://test/timeouterror/23/",).mock(
+        respx.get(
+            "http://test/timeouterror/23/",
+        ).mock(
             side_effect=httpx.TimeoutException,
         )
 
