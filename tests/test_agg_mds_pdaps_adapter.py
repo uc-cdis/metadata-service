@@ -781,18 +781,7 @@ def test_get_metadata_pdaps():
         "dataset_5_title": "",
         "administering_ic": "NIDA",
         "advSearchFilters": [],
-        "dataset_category": "",
-        "research_program": "",
-        "research_question": "",
-        "study_description": "",
-        "clinical_trial_link": "",
-        "dataset_description": "",
-        "research_focus_area": "",
-        "dataset_1_description": "",
-        "dataset_2_description": "",
-        "dataset_3_description": "",
-        "dataset_4_description": "",
-        "dataset_5_description": "",
+        "study_metadata.minimal_info.alternative_study_name": "path:preview[0].title",
     }
 
     item_values = {
@@ -1619,18 +1608,11 @@ def test_get_metadata_pdaps():
       "dataset_5_title": "",
       "administering_ic": "NIDA",
       "advSearchFilters": [],
-      "dataset_category": "",
-      "research_program": "",
-      "research_question": "",
-      "study_description": "",
-      "clinical_trial_link": "",
-      "dataset_description": "",
-      "research_focus_area": "",
-      "dataset_1_description": "",
-      "dataset_2_description": "",
-      "dataset_3_description": "",
-      "dataset_4_description": "",
-      "dataset_5_description": ""
+      "study_metadata": {
+        "minimal_info": {
+          "alternative_study_name": "Naloxone Overdose Prevention Laws"
+        }
+      }
     }
   }
 }
@@ -1647,23 +1629,29 @@ def test_get_metadata_pdaps():
         )
     )
 
-    get_metadata(
-        "pdaps",
-        "http://test/err404",
-        filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
-        mappings=field_mappings,
-        perItemValues=item_values,
-        keepOriginalFields=True,
-    ) == {}
+    assert (
+        get_metadata(
+            "pdaps",
+            "http://test/err404",
+            filters={"datasets": ["laws-regulating-administration-of-naloxone"]},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+        == {}
+    )
 
-    get_metadata(
-        "pdaps",
-        "http://test/ok",
-        filters={"datasets_error": ["laws-regulating-administration-of-naloxone"]},
-        mappings=field_mappings,
-        perItemValues=item_values,
-        keepOriginalFields=True,
-    ) == {}
+    assert (
+        get_metadata(
+            "pdaps",
+            "http://test/ok",
+            filters={"datasets_error": ["laws-regulating-administration-of-naloxone"]},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+        == {}
+    )
 
     try:
         from mds.agg_mds.adapters import PDAPS
