@@ -187,62 +187,75 @@ class RemoteMetadataAdapter(ABC):
         results = {}
 
         for key, value in mappings.items():
+            try:
+                jsonpath_expr = parse(key)
+            except JSONPathError as exc:
+                logger.error(
+                    f"Invalid JSON Path expression {exc} found as key . See https://github.com/json-path/JsonPath. Skipping this field"
+                )
+                continue
+            key_entries_in_schema = jsonpath_expr.find(schema)
+
             if isinstance(value, dict):  # have a complex assignment
                 expression = value.get("path", None)
 
-                hasDefaultValue = False
+                has_default_value = False
                 default_value = None
                 # get adapter's default value if set
                 if "default" in value:
-                    hasDefaultValue = True
+                    has_default_value = True
                     default_value = value["default"]
 
                 # get schema default value if set
-                if hasDefaultValue is False:
-                    if key in schema and schema[key].default is not None:
-                        hasDefaultValue = True
-                        default_value = schema[key].default
+                if has_default_value is False:
+                    if (
+                        len(key_entries_in_schema)
+                        and key_entries_in_schema[0].default is not None
+                    ):
+                        has_default_value = True
+                        default_value = key_entries_in_schema[0].default
 
                 field_value = get_json_path_value(
-                    expression, item, hasDefaultValue, default_value
+                    expression, item, has_default_value, default_value
                 )
 
                 filters = value.get("filters", [])
-                for filter in filters:
-                    field_value = FieldFilters.execute(filter, field_value)
+                for flt in filters:
+                    field_value = FieldFilters.execute(flt, field_value)
 
             elif isinstance(value, str) and "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
 
-                hasDefaultValue = False
+                has_default_value = False
                 default_value = None
-                if key in schema:
-                    d = schema[key].default
-                    if d is not None:
-                        hasDefaultValue = True
-                        default_value = d
+                if (
+                    len(key_entries_in_schema)
+                    and key_entries_in_schema[0].default is not None
+                ):
+                    has_default_value = True
+                    default_value = key_entries_in_schema[0].default
 
                 field_value = get_json_path_value(
-                    expression, item, hasDefaultValue, default_value
+                    expression, item, has_default_value, default_value
                 )
             else:
                 field_value = value
 
-            for f in global_filters:
-                field_value = FieldFilters.execute(f, field_value)
-            if key in schema:
-                field_value = schema[key].normalize_value(field_value)
+            for gf in global_filters:
+                field_value = FieldFilters.execute(gf, field_value)
+            if len(key_entries_in_schema):
+                field_value = key_entries_in_schema[0].normalize_value(field_value)
             # set to default if conversion failed and a default value is available
             if field_value is None:
-                if hasDefaultValue:
+                if has_default_value:
                     field_value = default_value
                 else:
                     logger.warning(
                         f"{key} = None{', is not in the schema,' if key not in schema else ''} "
                         f"and has no default value. Consider adding {key} to the schema"
                     )
-            results[key] = field_value
+            jsonpath_expr.update_or_create(results, field_value)
         return results
 
     @staticmethod
@@ -1009,7 +1022,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         results = {}
         for guid, record in data["results"].items():
             if study_field not in record:
-                logger.error(f"Study field not in record. Skipping")
+                logger.error("Study field not in record. Skipping")
                 continue
             item = Gen3Adapter.addGen3ExpectedFields(
                 record[study_field],
