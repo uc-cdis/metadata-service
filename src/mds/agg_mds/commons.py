@@ -47,7 +47,7 @@ def string_to_array(s: str) -> Optional[List[str]]:
 
 def array_to_string(arr: Optional[list]) -> Optional[str]:
     if arr is None:
-        logger.error(f"array is None")
+        logger.error("array is None")
         return None
     return "".join(arr)
 
