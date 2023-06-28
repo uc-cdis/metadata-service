@@ -210,10 +210,10 @@ class RemoteMetadataAdapter(ABC):
                 if has_default_value is False:
                     if (
                         len(key_entries_in_schema)
-                        and key_entries_in_schema[0].default is not None
+                        and key_entries_in_schema[0].value.default is not None
                     ):
                         has_default_value = True
-                        default_value = key_entries_in_schema[0].default
+                        default_value = key_entries_in_schema[0].value.default
 
                 field_value = get_json_path_value(
                     expression, item, has_default_value, default_value
@@ -231,10 +231,10 @@ class RemoteMetadataAdapter(ABC):
                 default_value = None
                 if (
                     len(key_entries_in_schema)
-                    and key_entries_in_schema[0].default is not None
+                    and key_entries_in_schema[0].value.default is not None
                 ):
                     has_default_value = True
-                    default_value = key_entries_in_schema[0].default
+                    default_value = key_entries_in_schema[0].value.default
 
                 field_value = get_json_path_value(
                     expression, item, has_default_value, default_value
@@ -245,7 +245,9 @@ class RemoteMetadataAdapter(ABC):
             for gf in global_filters:
                 field_value = FieldFilters.execute(gf, field_value)
             if len(key_entries_in_schema):
-                field_value = key_entries_in_schema[0].normalize_value(field_value)
+                field_value = key_entries_in_schema[0].value.normalize_value(
+                    field_value
+                )
             # set to default if conversion failed and a default value is available
             if field_value is None:
                 if has_default_value:
