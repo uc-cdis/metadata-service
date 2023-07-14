@@ -115,7 +115,6 @@ async def clone_temp_indexes_to_real_indexes():
 async def create_indexes(common_mapping: dict):
     try:
         mapping = {**SEARCH_CONFIG, **common_mapping}
-        print(json.dumps(mapping, indent=4))
         res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=mapping)
         logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
     except es_exceptions.RequestError as ex:
@@ -154,6 +153,7 @@ async def create_indexes(common_mapping: dict):
 async def create_temp_indexes(common_mapping: dict):
     try:
         mapping = {**SEARCH_CONFIG, **common_mapping}
+        print(json.dumps(mapping, indent=4))
         res = elastic_search_client.indices.create(
             index=AGG_MDS_INDEX_TEMP, body=mapping
         )
