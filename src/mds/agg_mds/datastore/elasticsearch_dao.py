@@ -1,4 +1,3 @@
-import json
 from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
 from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
@@ -153,7 +152,6 @@ async def create_indexes(common_mapping: dict):
 async def create_temp_indexes(common_mapping: dict):
     try:
         mapping = {**SEARCH_CONFIG, **common_mapping}
-        print(json.dumps(mapping, indent=4))
         res = elastic_search_client.indices.create(
             index=AGG_MDS_INDEX_TEMP, body=mapping
         )
@@ -224,7 +222,6 @@ async def update_metadata(
                 index=index_to_update, doc_type=AGG_MDS_TYPE, id=key, body=doc
             )
         except Exception as ex:
-            print(json.dumps(doc, indent=4))
             raise (ex)
 
 
