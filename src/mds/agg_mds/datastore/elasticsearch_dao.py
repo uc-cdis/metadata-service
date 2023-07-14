@@ -1,3 +1,4 @@
+import json
 from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
 from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
@@ -222,6 +223,7 @@ async def update_metadata(
                 index=index_to_update, doc_type=AGG_MDS_TYPE, id=key, body=doc
             )
         except Exception as ex:
+            print(json.dumps(doc, indent=4))
             raise (ex)
 
 
