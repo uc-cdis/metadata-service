@@ -40,7 +40,7 @@ FieldDefinition = TypeVar("FieldDefinition")
 
 
 def string_to_array(s: str) -> Optional[List[str]]:
-    if s == "":
+    if not s:
         return []
     return [s]
 
