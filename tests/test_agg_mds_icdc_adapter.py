@@ -88,6 +88,11 @@ def test_get_metadata_icdc():
         "study_url": "N/A",
         "_subjects_count": {"path": "numberOfCases", "default": 0},
         "commons_url": "nci-crdc.datacommons.io",
+        "study_metadata.metadata_location.other_study_websites": {
+            "path": "CRDCLinks[*].url",
+            "default": [],
+        },
+        "study_metadata.minimal_info.alternative_study_name": "path:clinical_study_name",
     }
 
     respx.post("http://test/ok").mock(
@@ -111,6 +116,12 @@ def test_get_metadata_icdc():
                 "study_url": "N/A",
                 "_subjects_count": 84,
                 "commons_url": "nci-crdc.datacommons.io",
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Preclinical Comparison of Three Indenoisoquinoline Candidates in Tumor-Bearing Dogs"
+                    },
+                    "metadata_location": {"other_study_websites": []},
+                },
             },
         },
         "GLIOMA01": {
@@ -127,6 +138,17 @@ def test_get_metadata_icdc():
                 "study_url": "N/A",
                 "_subjects_count": 81,
                 "commons_url": "nci-crdc.datacommons.io",
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Comparative Molecular Life History of Spontaneous Canine and Human Gliomas"
+                    },
+                    "metadata_location": {
+                        "other_study_websites": [
+                            "https://doi.org/10.7937/TCIA.SVQT-Q016",
+                            'https://imaging.datacommons.cancer.gov/explore/?filters_for_load\u003d[{"filters":[{"id":"120","values":["icdc_glioma"]}]}]',
+                        ]
+                    },
+                },
             },
         },
         "MGT01": {
@@ -143,6 +165,12 @@ def test_get_metadata_icdc():
                 "study_url": "N/A",
                 "_subjects_count": 13,
                 "commons_url": "nci-crdc.datacommons.io",
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Molecular Homology and Differences Between Spontaneous Canine Mammary Cancer and Human Breast Cancer"
+                    },
+                    "metadata_location": {"other_study_websites": []},
+                },
             },
         },
     }

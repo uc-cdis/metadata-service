@@ -134,6 +134,7 @@ def test_get_metadata_pdc():
         "description": "",
         "files_count": {"path": "filesCount", "filters": ["aggregate_pdc_file_count"]},
         "tags": [],
+        "study_metadata.minimal_info.alternative_study_name": "path:study_name",
     }
 
     subject_query_string = (
@@ -210,6 +211,11 @@ def test_get_metadata_pdc():
                     {"name": "Colon Adenocarcinoma", "category": "disease_type"},
                     {"name": "Colon", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Prospective Colon VU Proteome"
+                    },
+                },
             },
         },
         "PDC000110": {
@@ -237,6 +243,11 @@ def test_get_metadata_pdc():
                     },
                     {"name": "Not Reported;Ovary", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Prospective Ovarian JHU Proteome"
+                    },
+                },
             },
         },
         "PDC000111": {
@@ -264,6 +275,11 @@ def test_get_metadata_pdc():
                     },
                     {"name": "Colon;Rectum", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "TCGA Colon Cancer Proteome"
+                    },
+                },
             },
         },
     }
@@ -308,6 +324,11 @@ def test_get_metadata_pdc():
                     {"name": "Colon Adenocarcinoma", "category": "disease_type"},
                     {"name": "Colon", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Prospective Colon VU Proteome"
+                    },
+                },
             },
         },
         "PDC000110": {
@@ -346,6 +367,11 @@ def test_get_metadata_pdc():
                     },
                     {"name": "Not Reported;Ovary", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "Prospective Ovarian JHU Proteome"
+                    },
+                },
             },
         },
         "PDC000111": {
@@ -384,6 +410,11 @@ def test_get_metadata_pdc():
                     },
                     {"name": "Colon;Rectum", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "TCGA Colon Cancer Proteome"
+                    },
+                },
             },
         },
     }

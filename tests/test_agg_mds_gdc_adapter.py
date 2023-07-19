@@ -91,6 +91,7 @@ def test_get_metadata_gdc():
         "_subjects_count": "path:summary.case_count",
         "subjects_count": "path:summary.case_count",
         "files_count": "path:summary.file_count",
+        "study_metadata.minimal_info.alternative_study_name": "path:name",
     }
 
     filters = {"size": 1000}
@@ -173,6 +174,9 @@ def test_get_metadata_gdc():
                 "_subjects_count": 1132,
                 "subjects_count": 1132,
                 "files_count": 5358,
+                "study_metadata": {
+                    "minimal_info": {"alternative_study_name": "Neuroblastoma"},
+                },
             },
         },
         "GENIE-GRCC": {
@@ -214,6 +218,11 @@ def test_get_metadata_gdc():
                 "_subjects_count": 1038,
                 "subjects_count": 1038,
                 "files_count": 1038,
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "AACR Project GENIE - Contributed by Institut Gustave Roussy"
+                    },
+                },
             },
         },
         "GENIE-DFCI": {
@@ -252,6 +261,11 @@ def test_get_metadata_gdc():
                 "_subjects_count": 14232,
                 "subjects_count": 14232,
                 "files_count": 28464,
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "AACR Project GENIE - Contributed by Dana-Farber Cancer Institute"
+                    },
+                },
             },
         },
     }
@@ -288,6 +302,9 @@ def test_get_metadata_gdc():
                 "_subjects_count": 1132,
                 "subjects_count": 1132,
                 "files_count": 5358,
+                "study_metadata": {
+                    "minimal_info": {"alternative_study_name": "Neuroblastoma"},
+                },
             },
         },
         "GENIE-GRCC": {
@@ -319,6 +336,11 @@ def test_get_metadata_gdc():
                 "_subjects_count": 1038,
                 "subjects_count": 1038,
                 "files_count": 1038,
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "AACR Project GENIE - Contributed by Institut Gustave Roussy"
+                    },
+                },
             },
         },
         "GENIE-DFCI": {
@@ -347,6 +369,11 @@ def test_get_metadata_gdc():
                 "_subjects_count": 14232,
                 "subjects_count": 14232,
                 "files_count": 28464,
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_name": "AACR Project GENIE - Contributed by Dana-Farber Cancer Institute"
+                    },
+                },
             },
         },
     }

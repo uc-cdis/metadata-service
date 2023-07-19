@@ -333,6 +333,23 @@ where:
 }
 ```
 
+#### Nested Field Names
+**(New in 3.1.0)** The field mapping now supports setting up nested fields in result by using [JSON path syntax](https://tools.ietf.org/id/draft-goessner-dispatch-jsonpath-00.html) as field names.
+For example, the following field mapping
+```json
+"study_metadata.summary": {
+      "path":"description",
+      "default" : "N/A"
+}
+```
+
+will yield to a result like this as output
+```json
+"study_metadata":{
+  "summary": "This is a summary"
+}
+```
+
 ### Per Item Overrides
 
 The configuration file also supports what is called per item overrides. This gives you the ability to override or add values to specific metadata entries after they are normalized but before they are added to the Aggregate Metadata. To override an item value, add a JSON object with the id of the item you want to override, as shown in the figure above. The JSON object should set each field that you to override. In the case the item is not present, the per item values are ignored. If the per item values are not present in the normalized fields, they are added.

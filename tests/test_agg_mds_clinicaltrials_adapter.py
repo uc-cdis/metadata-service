@@ -360,36 +360,14 @@ def test_get_metadata_clinicaltrials():
         "study_type": "",
         "study_url": {"path": "NCTId", "filters": ["add_clinical_trials_source_url"]},
         "institutions": "path:LeadSponsorName",
-        "year_awarded": "",
         "investigators_name": "path:OverallOfficial[0].OverallOfficialName",
-        "protocol_name": "",
-        "study_summary": "",
-        "_file_manifest": "",
-        "dataset_1_type": "",
-        "dataset_2_type": "",
-        "dataset_3_type": "",
-        "dataset_4_type": "",
-        "dataset_5_type": "",
         "project_number": "path:OrgStudyId",
-        "dataset_1_title": "",
-        "dataset_2_title": "",
-        "dataset_3_title": "",
-        "dataset_4_title": "",
-        "dataset_5_title": "",
-        "administering_ic": "",
         "advSearchFilters": [],
-        "dataset_category": "",
-        "research_program": "",
-        "research_question": "",
-        "study_description": "",
-        "clinical_trial_link": "",
-        "dataset_description": "",
-        "research_focus_area": "",
-        "dataset_1_description": "",
-        "dataset_2_description": "",
-        "dataset_3_description": "",
-        "dataset_4_description": "",
-        "dataset_5_description": "",
+        "clinical_trial_link": {
+            "path": "NCTId",
+            "filters": ["add_clinical_trials_source_url"],
+        },
+        "study_metadata.metadata_location.clinical_trials_study_ID": "path:NCTId",
     }
 
     item_values = {"NCT01874691": {"__manifest": {"filename": "foo.zip "}}}
@@ -664,36 +642,46 @@ def test_get_metadata_clinicaltrials():
                 "study_type": "",
                 "study_url": "https://clinicaltrials.gov/ct2/show/NCT01874691",
                 "institutions": "Chinese Academy of Medical Sciences, Fuwai Hospital",
-                "year_awarded": "",
                 "investigators_name": "Yuejin Yang, MD.",
-                "protocol_name": "",
-                "study_summary": "",
-                "_file_manifest": "",
-                "dataset_1_type": "",
-                "dataset_2_type": "",
-                "dataset_3_type": "",
-                "dataset_4_type": "",
-                "dataset_5_type": "",
                 "project_number": "2011BAI11B02-A",
-                "dataset_1_title": "",
-                "dataset_2_title": "",
-                "dataset_3_title": "",
-                "dataset_4_title": "",
-                "dataset_5_title": "",
-                "administering_ic": "",
                 "advSearchFilters": [],
-                "dataset_category": "",
-                "research_program": "",
-                "research_question": "",
-                "study_description": "",
-                "clinical_trial_link": "",
-                "dataset_description": "",
-                "research_focus_area": "",
-                "dataset_1_description": "",
-                "dataset_2_description": "",
-                "dataset_3_description": "",
-                "dataset_4_description": "",
-                "dataset_5_description": "",
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/NCT01874691",
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "NCT01874691"}
+                },
+            },
+        }
+    }
+
+    assert get_metadata(
+        "clinicaltrials",
+        "http://test/ok",
+        filters={"term": "heart attack", "maxItems": 1},
+        mappings=field_mappings,
+        perItemValues=item_values,
+        keepOriginalFields=False,
+    ) == {
+        "NCT01874691": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "tags": [],
+                "authz": "",
+                "sites": "",
+                "study_description_summary": "This study is to build a Chinese national registry and surveillance system for acute myocardial infarction(AMI) to obtain real-world information about current status of characteristics, risk factors, diagnosis, treatment and outcomes of Chinese AMI patients; And to propose scientific precaution strategies aimed to prevent effectively from the incidence of AMI; And to optimize the management and outcomes of AMI patients through implementation of guideline recommendations in clinical practice, and analysis and development of effective treatment strategies; And to create cost-effective assessment system.",
+                "location": "Fuwai Hospital, Beijing, Beijing",
+                "subjects": "20000",
+                "__manifest": {"filename": "foo.zip "},
+                "study_name_title": "",
+                "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/NCT01874691",
+                "institutions": "Chinese Academy of Medical Sciences, Fuwai Hospital",
+                "investigators_name": "Yuejin Yang, MD.",
+                "project_number": "2011BAI11B02-A",
+                "advSearchFilters": [],
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/NCT01874691",
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "NCT01874691"}
+                },
             },
         }
     }
@@ -883,47 +871,168 @@ def test_get_metadata_clinicaltrials():
         )
     )
 
-    get_metadata(
+    assert get_metadata(
         "clinicaltrials",
         "http://test/ok",
         filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
         mappings=field_mappings,
         perItemValues=item_values,
         keepOriginalFields=True,
-    )
+    ) == {
+        "1": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "BriefSummary": "summary1",
+                "EnrollmentCount": "100",
+                "NCTId": "1",
+                "__manifest": "",
+                "advSearchFilters": [],
+                "authz": "",
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/1",
+                "institutions": None,
+                "investigators_name": None,
+                "location": "",
+                "project_number": None,
+                "sites": "",
+                "study_description_summary": "summary1",
+                "study_name_title": "",
+                "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/1",
+                "subjects": "100",
+                "tags": [],
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "1"}
+                },
+            },
+        },
+        "2": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "BriefSummary": "summary2",
+                "EnrollmentCount": "100",
+                "NCTId": "2",
+                "__manifest": "",
+                "advSearchFilters": [],
+                "authz": "",
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/2",
+                "institutions": None,
+                "investigators_name": None,
+                "location": "",
+                "project_number": None,
+                "sites": "",
+                "study_description_summary": "summary2",
+                "study_name_title": "",
+                "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/2",
+                "subjects": "100",
+                "tags": [],
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "2"}
+                },
+            },
+        },
+        "3": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "BriefSummary": "summary3",
+                "EnrollmentCount": "100",
+                "NCTId": "3",
+                "__manifest": "",
+                "advSearchFilters": [],
+                "authz": "",
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/3",
+                "institutions": None,
+                "investigators_name": None,
+                "location": "",
+                "project_number": None,
+                "sites": "",
+                "study_description_summary": "summary3",
+                "study_name_title": "",
+                "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/3",
+                "subjects": "100",
+                "tags": [],
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "3"}
+                },
+            },
+        },
+        "4": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "BriefSummary": "summary4",
+                "EnrollmentCount": "100",
+                "NCTId": "4",
+                "__manifest": "",
+                "advSearchFilters": [],
+                "authz": "",
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/4",
+                "institutions": None,
+                "investigators_name": None,
+                "location": "",
+                "project_number": None,
+                "sites": "",
+                "study_description_summary": "summary4",
+                "study_name_title": "",
+                "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/4",
+                "subjects": "100",
+                "tags": [],
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "4"}
+                },
+            },
+        },
+        "5": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "BriefSummary": "summary5",
+                "EnrollmentCount": "100",
+                "NCTId": "5",
+                "__manifest": "",
+                "advSearchFilters": [],
+                "authz": "",
+                "clinical_trial_link": "https://clinicaltrials.gov/ct2/show/5",
+                "institutions": None,
+                "investigators_name": None,
+                "location": "",
+                "project_number": None,
+                "sites": "",
+                "study_description_summary": "summary5",
+                "study_name_title": "",
+                "study_type": "",
+                "study_url": "https://clinicaltrials.gov/ct2/show/5",
+                "subjects": "100",
+                "tags": [],
+                "study_metadata": {
+                    "metadata_location": {"clinical_trials_study_ID": "5"}
+                },
+            },
+        },
+    }
 
-    respx.get("http://test/ok?expr=heart+attack&fmt=json&min_rnk=4&max_rnk=6").mock(
-        return_value=httpx.Response(
-            status_code=200,
-            content=json_response2,
+    assert (
+        get_metadata(
+            "clinicaltrials",
+            None,
+            filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
         )
+        == {}
     )
 
-    get_metadata(
-        "clinicaltrials",
-        "http://test/ok",
-        filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
-        mappings=field_mappings,
-        perItemValues=item_values,
-        keepOriginalFields=True,
-    )
-
-    get_metadata(
-        "clinicaltrials",
-        None,
-        filters={"term": "heart attack", "maxItems": 5, "batchSize": 3},
-        mappings=field_mappings,
-        perItemValues=item_values,
-        keepOriginalFields=True,
-    )
-
-    get_metadata(
-        "clinicaltrials",
-        "http://test/ok",
-        filters={"term_bad": "heart attack", "maxItems": 5, "batchSize": 3},
-        mappings=field_mappings,
-        perItemValues=item_values,
-        keepOriginalFields=True,
+    assert (
+        get_metadata(
+            "clinicaltrials",
+            "http://test/ok",
+            filters={"term_bad": "heart attack", "maxItems": 5, "batchSize": 3},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+        == {}
     )
 
     ## test missing fields
