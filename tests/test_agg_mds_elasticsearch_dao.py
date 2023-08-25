@@ -21,18 +21,16 @@ from mds.config import ES_RETRY_LIMIT, ES_RETRY_INTERVAL
 
 COMMON_MAPPING = {
     "mappings": {
-        "commons": {
-            "properties": {
-                "__manifest": {
-                    "type": "nested",
-                },
-                "tags": {
-                    "type": "nested",
-                },
-                "data_dictionary": {
-                    "type": "nested",
-                },
-            }
+        "properties": {
+            "__manifest": {
+                "type": "nested",
+            },
+            "tags": {
+                "type": "nested",
+            },
+            "data_dictionary": {
+                "type": "nested",
+            },
         }
     }
 }
