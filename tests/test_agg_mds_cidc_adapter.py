@@ -93,6 +93,10 @@ def test_get_metadata_cidc():
         "data_type": "path:supporting_data",
         "primary_site": "path:location",
         "tags": [],
+        "study_metadata.minimal_info.alternative_study_description": {
+            "path": "description",
+            "filters": ["strip_html", "prepare_cidc_description"],
+        },
     }
 
     respx.get("http://test/ok").mock(side_effect=httpx.TimeoutException)
@@ -147,6 +151,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Prostate", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "Note: This collection has special restrictions on its usage. See Data Usage Policies and Restrictions. The Cancer Imaging Program (CIP)  is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the TCGA Data Portal. Currently this image collection of prostate adenocarcinoma (PRAD) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.  Please see the TCGA-PRAD wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_blca": {
@@ -175,6 +184,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Bladder", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Genome Atlas-Bladder Endothelial Carcinoma (TCGA-BLCA) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP), with the cooperation of several of the TCGA tissue-contributing institutions, has archived a large portion of the radiological images of the genetically-analyzed BLCA cases.Please see the TCGA-BLCA wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_ucec": {
@@ -203,6 +217,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Uterus", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Genome Atlas-Uterine Corpus Endometrial Carcinoma (TCGA-UCEC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the genetically-analyzed UCEC cases.Please see the TCGA-UCEC wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_hnsc": {
@@ -231,6 +250,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Head-Neck", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Imaging Program (CIP)  is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the TCGA Data Portal. Currently this large PET/CT multi-sequence image collection of head and neck squamous cell carcinoma (HNSC) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.  Please see the TCGA -HNSC wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_lusc": {
@@ -259,6 +283,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Lung", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Genome Atlas-Lung Squamous Cell Carcinoma (TCGA-LUSC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the LUSC cases.Please see the TCGA-LUSC wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
     }
@@ -298,6 +327,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Prostate", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "Note: This collection has special restrictions on its usage. See Data Usage Policies and Restrictions. The Cancer Imaging Program (CIP)  is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the TCGA Data Portal. Currently this image collection of prostate adenocarcinoma (PRAD) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.  Please see the TCGA-PRAD wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_blca": {
@@ -332,6 +366,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Bladder", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Genome Atlas-Bladder Endothelial Carcinoma (TCGA-BLCA) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP), with the cooperation of several of the TCGA tissue-contributing institutions, has archived a large portion of the radiological images of the genetically-analyzed BLCA cases.Please see the TCGA-BLCA wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_ucec": {
@@ -366,6 +405,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Uterus", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Genome Atlas-Uterine Corpus Endometrial Carcinoma (TCGA-UCEC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the genetically-analyzed UCEC cases.Please see the TCGA-UCEC wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_hnsc": {
@@ -400,6 +444,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Head-Neck", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Imaging Program (CIP)  is working directly with primary investigators from institutes participating in TCGA to obtain and load images relating to the genomic, clinical, and pathological data being stored within the TCGA Data Portal. Currently this large PET/CT multi-sequence image collection of head and neck squamous cell carcinoma (HNSC) patients can be matched by each unique case identifier with the extensive gene and expression data of the same case from The Cancer Genome Atlas Data Portal to research the link between clinical phenome and tissue genome.  Please see the TCGA -HNSC wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
         "tcga_lusc": {
@@ -434,6 +483,11 @@ def test_get_metadata_cidc():
                     {"name": "Clinical, Genomics", "category": "data_type"},
                     {"name": "Lung", "category": "primary_site"},
                 ],
+                "study_metadata": {
+                    "minimal_info": {
+                        "alternative_study_description": "The Cancer Genome Atlas-Lung Squamous Cell Carcinoma (TCGA-LUSC) data collection is part of a larger effort to enhance the TCGA http://cancergenome.nih.gov/ data set with characterized radiological images. The Cancer Imaging Program (CIP) with the cooperation of several of the TCGA tissue-contributing institutions are working to archive a large portion of the radiological images of the LUSC cases.Please see the TCGA-LUSC wiki page to learn more about the images and to obtain any supporting metadata for this collection."
+                    }
+                },
             },
         },
     }

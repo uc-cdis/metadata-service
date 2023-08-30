@@ -94,8 +94,8 @@ async def create_object(
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
         token_claims = await access_token("user", "openid", purpose="access")(token)
-    except Exception as exc:
-        logger.error(exc, exc_info=True)
+    except Exception as e:
+        logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
         raise HTTPException(
             HTTP_401_UNAUTHORIZED,
             f"Could not verify, parse, and/or validate scope from provided access token.",
@@ -182,8 +182,8 @@ async def create_object_for_id(
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
         token_claims = await access_token("user", "openid", purpose="access")(token)
-    except Exception as exc:
-        logger.error(exc, exc_info=True)
+    except Exception as e:
+        logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
         raise HTTPException(
             HTTP_401_UNAUTHORIZED,
             "Could not verify, parse, and/or validate scope from provided access token.",
@@ -409,9 +409,7 @@ async def get_object(guid: str, request: Request) -> JSONResponse:
 
 
 @mod.delete("/objects/{guid:path}")
-async def delete_object(
-    guid: str, request: Request, token: HTTPAuthorizationCredentials = Security(bearer)
-) -> JSONResponse:
+async def delete_object(guid: str, request: Request) -> JSONResponse:
     """
     Delete the metadata for the specified object and also delete the record from indexd.
     [Optional] Remove the object from existing bucket location(s) by proxying to
@@ -440,7 +438,7 @@ async def delete_object(
                 f"Query param `delete_file_locations` should not contain any value",
             )
         delete_file_locations = True
-    svc_name = "fence" if "delete_file_locations" in request.query_params else "indexd"
+    svc_name = "fence" if delete_file_locations else "indexd"
     try:
         auth_header = str(request.headers.get("Authorization", ""))
         headers = {"Authorization": auth_header}
@@ -707,7 +705,9 @@ async def _add_metadata(blank_guid: str, metadata: dict, authz: dict, uploader: 
 
 
 def _is_authz_version_supported(authz):
-    return str(authz.get("version", "")) == "0"
+    if str(authz.get("version", "")) == "0":
+        return isinstance(authz.get("resource_paths"), list)
+    return False
 
 
 def init_app(app):
