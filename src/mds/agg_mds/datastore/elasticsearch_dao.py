@@ -26,15 +26,13 @@ AGG_MDS_CONFIG_INDEX_TEMP = f"{AGG_MDS_NAMESPACE}-commons-config-index-temp"
 # will not be searching on it
 INFO_MAPPING = {
     "mappings": {
-        AGG_MDS_INFO_TYPE: {
-            "dynamic": False,
-        }
+        "dynamic": False,
     }
 }
 
 CONFIG = {
     "settings": {"index": {"number_of_shards": 1, "number_of_replicas": 0}},
-    "mappings": {"_doc": {"properties": {"array": {"type": "keyword"}}}},
+    "mappings": {"properties": {"array": {"type": "keyword"}}},
 }
 
 SEARCH_CONFIG = {
@@ -218,9 +216,7 @@ async def update_metadata(
             ]
 
         try:
-            elastic_search_client.index(
-                index=index_to_update, doc_type=AGG_MDS_TYPE, id=key, body=doc
-            )
+            elastic_search_client.index(index=index_to_update, id=key, body=doc)
         except Exception as ex:
             raise (ex)
 
