@@ -147,7 +147,7 @@ async def get_aggregate_metadata_for_commons(
         False, description="Return the results without grouping items by commons."
     )
 ):
-    """et all metadata records from a commons by name
+    """get all metadata records from a commons by name
 
     Returns an array containing all the metadata entries for a single commons.
     There are no limit/offset parameters.
@@ -240,6 +240,26 @@ async def get_aggregate_metadata_commons_info(name: str):
             HTTP_404_NOT_FOUND,
             {"message": f"no common exists with the given: {name}", "code": 404},
         )
+
+
+@mod.get("/aggregate/search")
+async def search(
+    _: Request,
+    field: str = Query(
+        "gen3_discovery",
+        description="path to the field to search on. (e.g. gen3_discovery.name)",
+    ),
+    term: str = Query("", description="term to search for. (e.g. cat)"),
+    limit: int = Query(
+        20, description="Maximum number of records returned. (e.g. max: 2000)"
+    ),
+    offset: int = Query(0, description="Return results at this given offset."),
+):
+    res = await datastore.search(field, term, limit, offset)
+    if res:
+        return res
+    else:
+        return []
 
 
 @mod.get("/aggregate/metadata/guid/{guid:path}")

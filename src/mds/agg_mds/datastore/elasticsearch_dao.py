@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
+from elasticsearch import Elasticsearch, exceptions as es_exceptions
 from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
 from mds import logger
@@ -9,6 +9,12 @@ from mds.config import (
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
+from mds.agg_mds.datastore.search import (
+    build_nested_field_dictionary,
+    build_exist_count_query,
+    build_search_query,
+)
+import jsonpath_ng as jp
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -72,6 +78,25 @@ SEARCH_CONFIG = {
 elastic_search_client = None
 
 
+# get the mapping from the elastic search client
+def init_search_fields_from_mapping():
+    raw_data = elastic_search_client.indices.get_mapping(index=AGG_MDS_INDEX)
+
+    # get paths to 'nested' fields using jsonpath_ng
+    nested = [
+        str(match.full_path).replace("properties.", "").replace(".type", "")
+        for match in jp.parse("$..type").find(
+            raw_data[AGG_MDS_INDEX]["mappings"]["commons"]
+        )
+        if match.value == "nested"
+    ]
+    # TODO build a list of all fields in the index
+    # allFields = [str(match.full_path).replace('.keyword','').replace('properties.','').replace('.type','').replace('.fields','') for match in jp.parse('$..type').find(raw_data[AGG_MDS_INDEX]["mappings"]['commons'])]
+
+    # set the global variable nestedFields to a nested dictionary of all the nested fields
+    build_nested_field_dictionary(nested)
+
+
 async def init(hostname: str = "0.0.0.0", port: int = 9200):
     global elastic_search_client
     elastic_search_client = Elasticsearch(
@@ -82,6 +107,7 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
+    init_search_fields_from_mapping()
 
 
 async def drop_all_non_temp_indexes():
@@ -489,6 +515,21 @@ async def get_commons_attribute(name):
     except Exception as error:
         logger.error(error)
         return None
+
+
+async def search(field, term, limit=10, offset=0):
+    query = build_search_query(field, term, limit, offset)
+    if query is None:
+        return {}
+    try:
+        data = elastic_search_client.search(
+            index=AGG_MDS_INDEX,
+            body=query,
+        )
+        return data["hits"]["hits"]
+    except Exception as error:
+        logger.error(error)
+        return {}
 
 
 async def get_aggregations(name):

@@ -72,6 +72,10 @@ async def get_by_guid(*args):
     return await client.get_by_guid(*args)
 
 
+async def search(*args):
+    return await client.search(*args)
+
+
 async def get_commons_attribute(*args):
     return await client.get_commons_attribute(*args)
 
