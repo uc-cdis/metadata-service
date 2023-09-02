@@ -254,8 +254,11 @@ async def search(
         20, description="Maximum number of records returned. (e.g. max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    op: str = Query(
+        "OR", description="logical combination operator to use when searching."
+    ),
 ):
-    res = await datastore.search(field, term, limit, offset)
+    res = await datastore.search(field, term, limit, offset, op)
     if res:
         return res
     else:

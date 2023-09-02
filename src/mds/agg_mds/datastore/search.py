@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 nestedFields = {}
 
@@ -33,9 +33,39 @@ def find_nested_path(value: str) -> str:
     return value
 
 
+# given a field and a value, return the operator that should be used to query the field
+def classify_query_operator(field: Union[str, List[str]], value: str):
+    if isinstance(field, list):
+        return "multi_match"
+    if isinstance(value, list):
+        return "match_phrase"
+    if "*" in value:
+        return "wildcard"
+    if "/" in value:
+        return "regexp"
+    return "match"
+
+
+def query_by_operator(field: Union[str, List[str]], value: str, operator: str) -> Any:
+    if operator == "match":
+        return {"match": {field: value}}
+    elif operator == "match_phrase":
+        return {"match_phrase": {field: value}}
+    elif operator == "multi_match":
+        return {"multi_match": {"query": value, "fields": field}}
+    elif operator == "wildcard":
+        return {"wildcard": {field: value}}
+    elif operator == "regexp":
+        return {"regexp": {field: value}}
+    elif operator == "exists":
+        return {"exists": {"field": field}}
+
+
 def build_nested_search_query(nestedPath, fullPath, value, level=0, operator="match"):
     if level == len(nestedPath.split(".")) - 1:
-        return {operator: {fullPath: value}}
+        # final leaf where search is performed
+        return query_by_operator(fullPath, value, operator)
+
     parts = nestedPath.split(".")
     field = [parts[x] for x in range(0, level + 1)]
     field = ".".join(field)
@@ -72,6 +102,28 @@ def build_search_query(path, value, limit=10, offset=0, operator="match"):
         "size": limit,
         "from": offset,
         "query": build_nested_search_query(nestedPath, path, value, operator=operator),
+    }
+
+
+LogicalOperatorMap = {"AND": "must", "OR": "should", "NOT": "must_not"}
+
+
+def build_multi_search_query(
+    paths: List[str], value, limit=10, offset=0, op="OR", operator="match"
+):
+    queries = [
+        build_search_query(path, value, limit, offset, operator) for path in paths
+    ]
+    return {
+        "size": limit,
+        "from": offset,
+        "query": {
+            "bool": {
+                LogicalOperatorMap[op]: [
+                    query["query"] for query in queries if query is not None
+                ]
+            }
+        },
     }
 
 

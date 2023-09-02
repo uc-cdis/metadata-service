@@ -1,7 +1,14 @@
-from elasticsearch import Elasticsearch, exceptions as es_exceptions
-from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
+from typing import Any, List, Dict, Union, Optional, Tuple
+import jsonpath_ng as jp
+from elasticsearch import Elasticsearch, exceptions as es_exceptions
+
 from mds import logger
+from mds.agg_mds.datastore.search import (
+    build_multi_search_query,
+    build_nested_field_dictionary,
+    build_search_query,
+)
 from mds.config import (
     AGG_MDS_NAMESPACE,
     ES_RETRY_LIMIT,
@@ -9,12 +16,6 @@ from mds.config import (
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
-from mds.agg_mds.datastore.search import (
-    build_nested_field_dictionary,
-    build_exist_count_query,
-    build_search_query,
-)
-import jsonpath_ng as jp
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -517,8 +518,13 @@ async def get_commons_attribute(name):
         return None
 
 
-async def search(field, term, limit=10, offset=0):
-    query = build_search_query(field, term, limit, offset)
+async def search(field: str, term: str, limit=10, offset=0, op="OR"):
+    fields = field.split(",")
+    if len(fields) > 1:
+        query = build_multi_search_query(fields, term, limit, offset, op)
+    else:
+        query = build_search_query(field, term, limit, offset)
+
     if query is None:
         return {}
     try:
