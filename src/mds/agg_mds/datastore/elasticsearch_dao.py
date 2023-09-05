@@ -8,6 +8,7 @@ from mds.agg_mds.datastore.search import (
     build_multi_search_query,
     build_nested_field_dictionary,
     build_search_query,
+    build_facet_search_query,
 )
 from mds.config import (
     AGG_MDS_NAMESPACE,
@@ -525,6 +526,21 @@ async def search(field: str, term: str, limit=10, offset=0, op="OR"):
     else:
         query = build_search_query(field, term, limit, offset)
 
+    if query is None:
+        return {}
+    try:
+        data = elastic_search_client.search(
+            index=AGG_MDS_INDEX,
+            body=query,
+        )
+        return data["hits"]["hits"]
+    except Exception as error:
+        logger.error(error)
+        return {}
+
+
+async def facetSearch(searchQuery):
+    query = build_facet_search_query(searchQuery)
     if query is None:
         return {}
     try:

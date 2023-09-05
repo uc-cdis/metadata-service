@@ -35,6 +35,9 @@ class FacetSearchParams:
     keyField: str
     valueField: str
     facets: Dict[str, FacetValue] = field(default_factory=dict)
+    limit: int = 10
+    offset: int = 0
+    operator: str = "AND"
 
 
 # given an array of strings separated by '.', build a nested dictionary for each string separated by '.'
@@ -198,13 +201,13 @@ def build_nested_faceted_search_query(
     return build_search_query(f"{rootPath}.", query, limit, offset, "useValue")
 
 
-def build_facet_search_query(queryParams, limit=10, offset=0, op="OR"):
+def build_facet_search_query(queryParams):
     return build_nested_faceted_search_query(
         queryParams["rootPath"],
         queryParams["facets"],
-        limit,
-        offset,
-        op,
+        queryParams["limit"],
+        queryParams["offset"],
+        queryParams["operator"],
         queryParams["keyField"],
         queryParams["valueField"],
     )
@@ -249,6 +252,9 @@ def main():
         "rootPath": "gen3_discovery.advSearchFilters",
         "keyField": "key",
         "valueField": "value",
+        "limit": 10,
+        "offset": 0,
+        "operator": "OR",
         "facets": {
             "Age": {
                 "operator": "AND",

@@ -2,8 +2,7 @@ from fastapi import HTTPException, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
-from typing import Any, Dict, List
-from pydantic import BaseModel
+from typing import Any, Dict
 
 mod = APIRouter()
 
@@ -259,6 +258,34 @@ async def search(
     ),
 ):
     res = await datastore.search(field, term, limit, offset, op)
+    if res:
+        return res
+    else:
+        return []
+
+
+@mod.post("/aggregate/facetSearch")
+async def search(query: Dict[str, Any]):
+    """Returns metadata records that match the given query
+    this is a POST endpoint that takes a JSON object as the body of the request.
+    A query object is a dictionary with the following structure:
+        {
+            "query": {
+                "rootPath": "gen3_discovery.advSearch",
+                "keyField": "key",
+                "valueField": "value",
+                "op": "AND",
+                "facets": {
+                    "Age": {
+                        "operation": "OR",
+                        "values": ["1", "2", "3"]
+                        }
+                    }
+                }
+        }
+    """
+
+    res = await datastore.facetSearch(query["query"])
     if res:
         return res
     else:
