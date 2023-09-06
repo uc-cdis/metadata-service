@@ -198,7 +198,6 @@ async def update_metadata(
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
     elastic_search_client.index(
         index=index_to_update,
-        doc_type=AGG_MDS_INFO_TYPE,
         id=name,
         body=info,
     )
@@ -223,9 +222,7 @@ async def update_metadata(
 
 async def update_global_info(key, doc, use_temp_index: bool = False) -> None:
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
-    elastic_search_client.index(
-        index=index_to_update, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
-    )
+    elastic_search_client.index(index=index_to_update, id=key, body=doc)
 
 
 async def update_config_info(doc, use_temp_index: bool = False) -> None:
@@ -234,7 +231,6 @@ async def update_config_info(doc, use_temp_index: bool = False) -> None:
     )
     elastic_search_client.index(
         index=index_to_update,
-        doc_type="_doc",
         id=AGG_MDS_INDEX,
         body=doc,
     )
@@ -517,7 +513,6 @@ async def get_by_guid(guid):
     try:
         data = elastic_search_client.get(
             index=AGG_MDS_INDEX,
-            doc_type=AGG_MDS_TYPE,
             id=guid,
         )
         return data["_source"]

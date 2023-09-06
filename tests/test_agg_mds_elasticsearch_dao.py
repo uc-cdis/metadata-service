@@ -225,7 +225,6 @@ async def test_update_metadata():
         [
             call(
                 body={},
-                doc_type="commons-info",
                 id="my_commons",
                 index=AGG_MDS_INFO_INDEX,
             ),
@@ -237,7 +236,6 @@ async def test_update_metadata():
                         "sites": "",
                     }
                 },
-                doc_type="commons",
                 id="my_id",
                 index=AGG_MDS_INDEX,
             ),
@@ -274,7 +272,6 @@ async def test_update_metadata_to_temp_index():
         [
             call(
                 body={},
-                doc_type="commons-info",
                 id="my_commons",
                 index=AGG_MDS_INFO_INDEX_TEMP,
             ),
@@ -286,7 +283,6 @@ async def test_update_metadata_to_temp_index():
                         "sites": "",
                     }
                 },
-                doc_type="commons",
                 id="my_id",
                 index=AGG_MDS_INDEX_TEMP,
             ),
@@ -303,9 +299,7 @@ async def test_update_global_info():
     ) as mock_client:
         await elasticsearch_dao.update_global_info(key="123", doc={})
 
-    mock_client.index.assert_called_with(
-        index=AGG_MDS_INFO_INDEX, doc_type=AGG_MDS_INFO_TYPE, id="123", body={}
-    )
+    mock_client.index.assert_called_with(index=AGG_MDS_INFO_INDEX, id="123", body={})
 
 
 @pytest.mark.asyncio
@@ -319,7 +313,7 @@ async def test_update_global_info_to_temp_index():
         )
 
     mock_client.index.assert_called_with(
-        index=AGG_MDS_INFO_INDEX_TEMP, doc_type=AGG_MDS_INFO_TYPE, id="123", body={}
+        index=AGG_MDS_INFO_INDEX_TEMP, id="123", body={}
     )
 
 
@@ -332,7 +326,7 @@ async def test_update_config_info():
         await elasticsearch_dao.update_config_info(doc={})
 
     mock_client.index.assert_called_with(
-        index=AGG_MDS_CONFIG_INDEX, doc_type="_doc", id=AGG_MDS_INDEX, body={}
+        index=AGG_MDS_CONFIG_INDEX, id=AGG_MDS_INDEX, body={}
     )
 
 
@@ -345,7 +339,7 @@ async def test_update_config_info_to_temp_index():
         await elasticsearch_dao.update_config_info(doc={}, use_temp_index=True)
 
     mock_client.index.assert_called_with(
-        index=AGG_MDS_CONFIG_INDEX_TEMP, doc_type="_doc", id=AGG_MDS_INDEX, body={}
+        index=AGG_MDS_CONFIG_INDEX_TEMP, id=AGG_MDS_INDEX, body={}
     )
 
 
@@ -585,7 +579,6 @@ async def test_get_by_guid():
         await elasticsearch_dao.get_by_guid("my-commons")
         mock_client.get.assert_called_with(
             index=AGG_MDS_INDEX,
-            doc_type="commons",
             id="my-commons",
         )
 

@@ -418,6 +418,8 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     logger.error(
                         f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
                     )
+        print("Results: ")
+        print(results)
 
         return results
 
@@ -507,14 +509,20 @@ class ClinicalTrials(RemoteMetadataAdapter):
 
         mds_url = kwargs.get("mds_url", None)
         if mds_url is None:
+            print("Clinical result with mds_url is None: ")
+            print(results)
             return results
 
         if "filters" not in kwargs or kwargs["filters"] is None:
+            print("Clinical result with filters is None: ")
+            print(results)
             return results
 
         term = kwargs["filters"].get("term", None)
 
         if term == None:
+            print("Clinical result with term is None: ")
+            print(results)
             return results
 
         term = term.replace(" ", "+")
@@ -552,6 +560,10 @@ class ClinicalTrials(RemoteMetadataAdapter):
                 numReturned = data["FullStudiesResponse"]["NStudiesReturned"]
                 results["results"].extend(data["FullStudiesResponse"]["FullStudies"])
                 if maxItems is not None and len(results["results"]) >= maxItems:
+                    print(
+                        "Clinical result with maxItems is not None and result more than maxItems: "
+                    )
+                    print(results)
                     return results
                 remaining = remaining - numReturned
                 offset += numReturned
@@ -575,7 +587,8 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
-
+        print("Clinical result: ")
+        print(results)
         return results
 
     @staticmethod
@@ -1592,6 +1605,8 @@ def gather_metadata(
             globalFieldFilters=globalFieldFilters,
             schema=schema,
         )
+        print("Result after normalizing: ")
+        print(results)
         return results
     except ValueError as exc:
         logger.error(f"Exception occurred: {exc}. Returning no results")
