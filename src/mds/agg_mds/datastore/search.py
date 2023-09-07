@@ -82,29 +82,31 @@ def classify_query_operator(field: Union[str, List[str]], value: str):
     return "match"
 
 
-def query_by_operator(field: Union[str, List[str]], value: Any, operator: str) -> Any:
-    if operator == "match":
+def query_by_operator(field: Union[str, List[str]], value: Any, function: str) -> Any:
+    if function == "match":
         return {"match": {field: value}}
-    elif operator == "match_phrase":
+    elif function == "match_phrase":
         return {"match_phrase": {field: value}}
-    elif operator == "multi_match":
+    elif function == "multi_match":
         return {"multi_match": {"query": value, "fields": field}}
-    elif operator == "wildcard":
+    elif function == "wildcard":
         return {"wildcard": {field: value}}
-    elif operator == "regexp":
+    elif function == "regexp":
         return {"regexp": {field: value}}
-    elif operator == "exists":
+    elif function == "exists":
         return {"exists": {"field": field}}
-    elif operator == "useValue":
+    elif function == "useValue":
         return value
+    elif function == "countAgg":
+        return {"aggs": {"count": {"value_count": {"field": field}}}}
     else:
         return {"match": {field: value}}
 
 
-def build_nested_search_query(nestedPath, fullPath, value, level=0, operator="match"):
+def build_nested_search_query(nestedPath, fullPath, value, level=0, function="match"):
     if level == len(nestedPath.split(".")) - 1:
         # final leaf where search is performed
-        return query_by_operator(fullPath, value, operator)
+        return query_by_operator(fullPath, value, function)
 
     parts = nestedPath.split(".")
     field = [parts[x] for x in range(0, level + 1)]
@@ -113,7 +115,7 @@ def build_nested_search_query(nestedPath, fullPath, value, level=0, operator="ma
         "nested": {
             "path": field,
             "query": build_nested_search_query(
-                nestedPath, fullPath, value, level + 1, operator
+                nestedPath, fullPath, value, level + 1, function
             ),
         }
     }
@@ -134,14 +136,14 @@ def build_nested_exists_count_query(nestedPath, fullPath, level=0):
     }
 
 
-def build_search_query(path, value, limit=10, offset=0, operator="match"):
+def build_search_query(path, value, limit=10, offset=0, function="match"):
     nestedPath = find_nested_path(path)
     if len(nestedPath) == 0:
         return None
     return {
         "size": limit,
         "from": offset,
-        "query": build_nested_search_query(nestedPath, path, value, operator=operator),
+        "query": build_nested_search_query(nestedPath, path, value, function=function),
     }
 
 
@@ -164,6 +166,17 @@ def build_multi_search_query(
                 ]
             }
         },
+    }
+
+
+def build_aggregation_query(path):
+    nestedPath = find_nested_path(path)
+    if len(nestedPath) == 0:
+        return None
+    return {
+        "size": 0,
+        "from": 0,
+        "query": build_nested_search_query(nestedPath, path, None, 0, "countAgg"),
     }
 
 
@@ -268,6 +281,9 @@ def main():
     }
 
     query = build_facet_search_query(facetsAndValues)
+    print("query:", json.dumps(query, indent=2))
+
+    query = build_aggregation_query("gen3_discovery._hdp_uid")
     print("query:", json.dumps(query, indent=2))
 
 
