@@ -9,6 +9,7 @@ from mds.config import (
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
+import json
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -359,7 +360,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             index=AGG_MDS_INDEX,
             body={"size": limit, "from": offset, "query": {"match_all": {}}},
         )
-        hitsTotal = res["hits"]["total"]
+        hitsTotal = res["hits"]["total"]["value"]
         toReduce = counts.split(",") if counts is not None else None
         if flatten:
             flat = []

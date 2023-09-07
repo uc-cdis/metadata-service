@@ -46,12 +46,15 @@ services:
       - ./postgres-data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d:ro
   esproxy-service:
-    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.8.12
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.0
     container_name: esproxy-service
     environment:
       - cluster.name=elasticsearch-cluster
       - bootstrap.memory_lock=false
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - discovery.type=single-node
+      - network.host=0.0.0.0
+      - http.port=9200
     entrypoint:
       - /bin/bash
     # mmapfs requires systemctl update - see https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-store.html#mmapfs
