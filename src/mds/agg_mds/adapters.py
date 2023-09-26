@@ -1596,7 +1596,7 @@ def gather_metadata(
     except ValueError as exc:
         logger.error(f"Exception occurred: {exc}. Returning no results")
     except RetryError:
-        logger.error(f"Multiple retrys failed. Returning no results")
+        logger.error("Multiple retries failed. Returning no results")
     return {}
 
 
