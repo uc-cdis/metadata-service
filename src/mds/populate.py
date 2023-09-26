@@ -226,11 +226,11 @@ async def main(commons_config: Commons) -> None:
                 "Could not obtain any metadata from any adapters. Existing indexes are left in place."
             )
             return
-        else:
-            # populate global information index
-            await populate_info(commons_config, use_temp_index=True)
-            # populate array index information to support guppy
-            await populate_config(commons_config, use_temp_index=True)
+
+        # populate global information index
+        await populate_info(commons_config, use_temp_index=True)
+        # populate array index information to support guppy
+        await populate_config(commons_config, use_temp_index=True)
 
     except Exception as ex:
         logger.error(
