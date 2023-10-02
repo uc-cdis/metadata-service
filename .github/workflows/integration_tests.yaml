@@ -1,0 +1,13 @@
+name: Integration Tests
+
+on: pull_request
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration_tests:
+    name: Integration tests
+    uses: uc-cdis/.github/.github/workflows/integration_tests.yaml@chore/add_wf_integration_tests
+    secrets: inherit  #pragma: allowlist secret
