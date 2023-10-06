@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_201_CREATED,
     HTTP_400_BAD_REQUEST,
+    HTTP_401_UNAUTHORIZED,
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
 )
@@ -136,11 +137,16 @@ async def update_metadata(guid, data: dict, merge: bool = False):
 @mod.delete("/metadata/{guid:path}")
 async def delete_metadata(guid):
     """Delete the metadata of the GUID."""
-    metadata = (
-        await Metadata.delete.where(Metadata.guid == guid)
-        .returning(*Metadata)
-        .gino.first()
-    )
+    try:
+        metadata = (
+            await Metadata.delete.where(Metadata.guid == guid)
+            .returning(*Metadata)
+            .gino.first()
+        )
+    except Exception as e:
+        raise HTTPException(
+            HTTP_401_UNAUTHORIZED, "Could not delete with provided access token."
+        )
     if metadata:
         return metadata.data
     else:
