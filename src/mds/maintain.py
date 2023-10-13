@@ -144,7 +144,7 @@ async def delete_metadata(guid):
             .returning(*Metadata)
             .gino.first()
         )
-    except httpx.HTTPError as e:
+    except:
         raise HTTPException(
             HTTP_401_UNAUTHORIZED, "Could not delete with provided access token."
         )
