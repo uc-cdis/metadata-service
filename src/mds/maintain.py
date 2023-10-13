@@ -3,7 +3,7 @@ import re
 
 from asyncpg import UniqueViolationError
 from fastapi import HTTPException, APIRouter, Depends
-from gen3authz.client.arborist.errors import ArboristError
+import httpx
 from sqlalchemy import bindparam
 from sqlalchemy.dialects.postgresql import insert
 from starlette.requests import Request
@@ -144,10 +144,11 @@ async def delete_metadata(guid):
             .returning(*Metadata)
             .gino.first()
         )
-    except ArboristError as e:
+    except httpx.HTTPError as e:
         raise HTTPException(
             HTTP_401_UNAUTHORIZED, "Could not delete with provided access token."
         )
+    # print(f"Response status_code = {metadata.status_code}")
     if metadata:
         return metadata.data
     else:
