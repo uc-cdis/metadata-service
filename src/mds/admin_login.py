@@ -6,6 +6,7 @@ from fastapi.security import (
     HTTPBearer,
 )
 from gen3authz.client.arborist.async_client import ArboristClient
+from gen3authz.client.arborist.errors import ArboristError
 from starlette.status import HTTP_403_FORBIDDEN
 
 from . import config
@@ -28,7 +29,12 @@ async def admin_required(
             ):
                 break
         else:
-            if not token or not await arborist.auth_request(
-                token.credentials, "mds_gateway", "access", "/mds_gateway"
-            ):
-                raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+            if not token:
+                try:
+                    authorized = await arborist.auth_request(
+                        token.credentials, "mds_gateway", "access", "/mds_gateway"
+                    )
+                except ArboristError as e:
+                    raise HTTPException(status_code=e.code)
+                if not authorized:
+                    raise HTTPException(status_code=HTTP_403_FORBIDDEN)

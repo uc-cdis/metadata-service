@@ -85,24 +85,6 @@ class ClientDisconnectMiddleware:
         except asyncio.CancelledError:
             if not cancelled:
                 raise
-        except Exception as error:
-            logger.error("Some other exceeption in main: %s", error)
-            raise HTTPException(
-                HTTP_500_INTERNAL_SERVER_ERROR,
-                {
-                    "message": "Some other exception in main",
-                    "code": HTTP_500_INTERNAL_SERVER_ERROR,
-                },
-            )
-        except:
-            logger.error("Some other error: %s", error)
-            raise HTTPException(
-                HTTP_500_INTERNAL_SERVER_ERROR,
-                {
-                    "message": "Some other error in main",
-                    "code": HTTP_500_INTERNAL_SERVER_ERROR,
-                },
-            )
         if waiter and not waiter.done():
             waiter.cancel()
 
