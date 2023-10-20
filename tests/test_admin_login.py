@@ -1,20 +1,9 @@
-from unittest import mock
+from fastapi import HTTPException
+from fastapi.security import HTTPBasicCredentials
 import pytest
 import respx
-from unittest.mock import MagicMock, patch
 
-from fastapi import Depends, HTTPException, Security
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBasic,
-    HTTPBasicCredentials,
-    HTTPBearer,
-)
-
-from gen3authz.client.arborist.async_client import ArboristClient
-from gen3authz.client.arborist.errors import ArboristError
 from mds import config
-from mds.objects import FORBIDDEN_IDS
 from mds import admin_login
 
 
