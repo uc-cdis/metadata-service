@@ -8,9 +8,10 @@ import httpx
 import respx
 from starlette.config import environ
 from starlette.testclient import TestClient
-
 from unittest.mock import MagicMock, patch
 import asyncio
+
+from gen3authz.client.arborist.errors import ArboristError
 
 environ["TESTING"] = "TRUE"
 environ["USE_AGG_MDS"] = "true"  # enable the Agg MDS endpoints
@@ -320,6 +321,154 @@ def no_authz_upload_file_patcher(client, guid_mock, signed_url_mock):
     }
 
     client.delete(f"/metadata/{guid_mock}")
+    for patched_function in patches:
+        patched_function.stop()
+
+
+@pytest.fixture(scope="function")
+def authz_request_patcher():
+    """
+    Mock an arborist response as True
+    """
+    patches = []
+
+    access_token_mock = MagicMock()
+    patches.append(patch("authutils.token.fastapi.access_token", access_token_mock))
+
+    async def get_access_token(*args, **kwargs):
+        return {"sub": "1"}
+
+    access_token_mock.return_value = get_access_token
+
+    auth_request_mock = MagicMock()
+    patches.append(
+        patch(
+            "gen3authz.client.arborist.async_client.ArboristClient.auth_request",
+            auth_request_mock,
+        )
+    )
+    future = asyncio.Future()
+    future.set_result(True)
+    auth_request_mock.return_value = future
+
+    for patched_function in patches:
+        patched_function.start()
+
+    yield {
+        "access_token_mock": access_token_mock,
+        "auth_request_mock": auth_request_mock,
+    }
+
+    for patched_function in patches:
+        patched_function.stop()
+
+
+@pytest.fixture(scope="function")
+def authz_request_false_patcher():
+    """
+    Mock an arborist response as False
+    """
+    patches = []
+
+    access_token_mock = MagicMock()
+    patches.append(patch("authutils.token.fastapi.access_token", access_token_mock))
+
+    async def get_access_token(*args, **kwargs):
+        return {"sub": "1"}
+
+    access_token_mock.return_value = get_access_token
+
+    auth_request_mock = MagicMock()
+    patches.append(
+        patch(
+            "gen3authz.client.arborist.async_client.ArboristClient.auth_request",
+            auth_request_mock,
+        )
+    )
+    future = asyncio.Future()
+    future.set_result(False)
+    auth_request_mock.return_value = future
+
+    for patched_function in patches:
+        patched_function.start()
+
+    yield {
+        "access_token_mock": access_token_mock,
+        "auth_request_mock": auth_request_mock,
+    }
+
+    for patched_function in patches:
+        patched_function.stop()
+
+
+@pytest.fixture(scope="function")
+def authz_request_unauthorized_patcher():
+    """
+    Mock an ArboristError with 401 for invalid authz
+    """
+    patches = []
+
+    access_token_mock = MagicMock()
+    patches.append(patch("authutils.token.fastapi.access_token", access_token_mock))
+
+    async def get_access_token(*args, **kwargs):
+        return {"sub": "1", "credentials": "foo"}
+
+    access_token_mock.return_value = get_access_token
+
+    auth_request_mock = MagicMock()
+    patches.append(
+        patch(
+            "gen3authz.client.arborist.async_client.ArboristClient.auth_request",
+            auth_request_mock,
+        )
+    )
+    auth_request_mock.side_effect = ArboristError("not authorized", 401)
+
+    for patched_function in patches:
+        patched_function.start()
+
+    yield {
+        "access_token_mock": access_token_mock,
+        "auth_request_mock": auth_request_mock,
+    }
+
+    for patched_function in patches:
+        patched_function.stop()
+
+
+@pytest.fixture(scope="function")
+def authz_request_forbidden_patcher():
+    """
+    Mock an ArboristError with 403 for invalid authz
+    """
+    patches = []
+
+    access_token_mock = MagicMock()
+    patches.append(patch("authutils.token.fastapi.access_token", access_token_mock))
+
+    async def get_access_token(*args, **kwargs):
+        return {"sub": "1"}
+
+    access_token_mock.return_value = get_access_token
+
+    auth_request_mock = MagicMock()
+    patches.append(
+        patch(
+            "gen3authz.client.arborist.async_client.ArboristClient.auth_request",
+            auth_request_mock,
+        )
+    )
+    auth_request_mock.side_effect = ArboristError("not authorized", 403)
+
+    for patched_function in patches:
+        patched_function.start()
+
+    yield {
+        "access_token_mock": access_token_mock,
+        "auth_request_mock": auth_request_mock,
+    }
+
     for patched_function in patches:
         patched_function.stop()
 
