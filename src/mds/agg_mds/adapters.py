@@ -418,8 +418,8 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     logger.error(
                         f"An error occurred while requesting {mds_url} {exc}. Skipping {id}"
                     )
-        print("Results: ")
-        print(results)
+        logger.debug("Results: ")
+        logger.debug(results)
 
         return results
 
@@ -587,8 +587,8 @@ class ClinicalTrials(RemoteMetadataAdapter):
                     f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
                 )
                 break
-        print("Clinical result: ")
-        print(results)
+        logger.debug("Clinical result: ")
+        logger.debug(results)
         return results
 
     @staticmethod
@@ -1605,8 +1605,8 @@ def gather_metadata(
             globalFieldFilters=globalFieldFilters,
             schema=schema,
         )
-        print("Result after normalizing: ")
-        print(results)
+        logger.debug("Result after normalizing: ")
+        logger.debug(results)
         return results
     except ValueError as exc:
         logger.error(f"Exception occurred: {exc}. Returning no results")
