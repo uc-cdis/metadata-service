@@ -509,20 +509,20 @@ class ClinicalTrials(RemoteMetadataAdapter):
 
         mds_url = kwargs.get("mds_url", None)
         if mds_url is None:
-            print("Clinical result with mds_url is None: ")
-            print(results)
+            logger.debug("Clinical result with mds_url is None: ")
+            logger.debug(results)
             return results
 
         if "filters" not in kwargs or kwargs["filters"] is None:
-            print("Clinical result with filters is None: ")
-            print(results)
+            logger.debug("Clinical result with filters is None: ")
+            logger.debug(results)
             return results
 
         term = kwargs["filters"].get("term", None)
 
         if term == None:
-            print("Clinical result with term is None: ")
-            print(results)
+            logger.debug("Clinical result with term is None: ")
+            logger.debug(results)
             return results
 
         term = term.replace(" ", "+")
@@ -560,10 +560,10 @@ class ClinicalTrials(RemoteMetadataAdapter):
                 numReturned = data["FullStudiesResponse"]["NStudiesReturned"]
                 results["results"].extend(data["FullStudiesResponse"]["FullStudies"])
                 if maxItems is not None and len(results["results"]) >= maxItems:
-                    print(
+                    logger.debug(
                         "Clinical result with maxItems is not None and result more than maxItems: "
                     )
-                    print(results)
+                    logger.debug(results)
                     return results
                 remaining = remaining - numReturned
                 offset += numReturned
