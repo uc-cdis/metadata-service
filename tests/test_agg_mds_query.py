@@ -98,7 +98,7 @@ async def test_aggregate_metadata_paged_flat(client):
         "timed_out": "false",
         "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0},
         "hits": {
-            "total": 161,
+            "total": {"value": 161},
             "max_score": 1.0,
             "hits": [
                 {
@@ -187,7 +187,7 @@ async def test_aggregate_metadata_counts(client):
         "timed_out": "false",
         "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0},
         "hits": {
-            "total": 161,
+            "total": {"value": 161},
             "max_score": 1.0,
             "hits": [
                 {
@@ -286,7 +286,7 @@ async def test_aggregate_metadata_counts_null(client):
         "timed_out": "false",
         "_shards": {"total": 1, "successful": 1, "skipped": 0, "failed": 0},
         "hits": {
-            "total": 161,
+            "total": {"value": 161},
             "max_score": 1.0,
             "hits": [
                 {
@@ -404,7 +404,7 @@ async def test_aggregate_metadata_tags(client):
     tags = {
         "Access": {"total": 63, "names": [{"restricted": 63}]},
         "Category": {
-            "total": 61,
+            "total": {"value": 61},
             "names": [
                 {
                     "Family/Twin/Trios": 39,

@@ -9,6 +9,7 @@ from mds.config import (
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
+import json
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -26,15 +27,13 @@ AGG_MDS_CONFIG_INDEX_TEMP = f"{AGG_MDS_NAMESPACE}-commons-config-index-temp"
 # will not be searching on it
 INFO_MAPPING = {
     "mappings": {
-        AGG_MDS_INFO_TYPE: {
-            "dynamic": False,
-        }
+        "dynamic": False,
     }
 }
 
 CONFIG = {
     "settings": {"index": {"number_of_shards": 1, "number_of_replicas": 0}},
-    "mappings": {"_doc": {"properties": {"array": {"type": "keyword"}}}},
+    "mappings": {"properties": {"array": {"type": "keyword"}}},
 }
 
 SEARCH_CONFIG = {
@@ -200,7 +199,6 @@ async def update_metadata(
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
     elastic_search_client.index(
         index=index_to_update,
-        doc_type=AGG_MDS_INFO_TYPE,
         id=name,
         body=info,
     )
@@ -218,18 +216,14 @@ async def update_metadata(
             ]
 
         try:
-            elastic_search_client.index(
-                index=index_to_update, doc_type=AGG_MDS_TYPE, id=key, body=doc
-            )
+            elastic_search_client.index(index=index_to_update, id=key, body=doc)
         except Exception as ex:
             raise (ex)
 
 
 async def update_global_info(key, doc, use_temp_index: bool = False) -> None:
     index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
-    elastic_search_client.index(
-        index=index_to_update, doc_type=AGG_MDS_INFO_TYPE, id=key, body=doc
-    )
+    elastic_search_client.index(index=index_to_update, id=key, body=doc)
 
 
 async def update_config_info(doc, use_temp_index: bool = False) -> None:
@@ -238,7 +232,6 @@ async def update_config_info(doc, use_temp_index: bool = False) -> None:
     )
     elastic_search_client.index(
         index=index_to_update,
-        doc_type="_doc",
         id=AGG_MDS_INDEX,
         body=doc,
     )
@@ -367,7 +360,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
             index=AGG_MDS_INDEX,
             body={"size": limit, "from": offset, "query": {"match_all": {}}},
         )
-        hitsTotal = res["hits"]["total"]
+        hitsTotal = res["hits"]["total"]["value"]
         toReduce = counts.split(",") if counts is not None else None
         if flatten:
             flat = []
@@ -521,7 +514,6 @@ async def get_by_guid(guid):
     try:
         data = elastic_search_client.get(
             index=AGG_MDS_INDEX,
-            doc_type=AGG_MDS_TYPE,
             id=guid,
         )
         return data["_source"]

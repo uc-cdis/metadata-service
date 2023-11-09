@@ -176,15 +176,13 @@ async def main(commons_config: Commons) -> None:
 
     field_mapping = {
         "mappings": {
-            "commons": {
-                "properties": {
-                    config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
-                        "type": "nested",
-                        "properties": {
-                            k: v.to_schema(True)
-                            for k, v in commons_config.configuration.schema.items()
-                        },
-                    }
+            "properties": {
+                config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                    "type": "nested",
+                    "properties": {
+                        k: v.to_schema(True)
+                        for k, v in commons_config.configuration.schema.items()
+                    },
                 }
             }
         }
