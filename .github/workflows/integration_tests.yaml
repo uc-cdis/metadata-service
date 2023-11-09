@@ -9,5 +9,7 @@ concurrency:
 jobs:
   integration_tests:
     name: Integration tests
-    uses: uc-cdis/.github/.github/workflows/integration_tests.yaml@chore/add_wf_integration_tests
+    uses: uc-cdis/gen3-code-vigil/.github/workflows/shared_integration_tests.yaml@chore/single_service_test_run
+    with:
+      SERVICE_TO_TEST: mds
     secrets: inherit  #pragma: allowlist secret
