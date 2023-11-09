@@ -231,7 +231,7 @@ def test_get_metadata_icpsr():
     respx.get("http://test/ok?verb=GetRecord&metadataPrefix=oai_dc&identifier=64").mock(
         return_value=httpx.Response(
             status_code=404,
-            content={},
+            content="{}",
         )
     )
 
