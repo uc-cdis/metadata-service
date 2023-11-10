@@ -12,4 +12,3 @@ jobs:
     uses: uc-cdis/.github/.github/workflows/integration_tests.yaml@chore/update_integration_test_workflow
     with:
       SERVICE_TO_TEST: mds
-    secrets: inherit  #pragma: allowlist secret
