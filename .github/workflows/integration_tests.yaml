@@ -12,3 +12,8 @@ jobs:
     uses: uc-cdis/.github/.github/workflows/integration_tests.yaml@chore/update_integration_test_workflow
     with:
       SERVICE_TO_TEST: mds
+    secrets:
+      CI_AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
+      CI_AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
+      JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
+      QA_DASHBOARD_S3_PATH: ${{ secrets.QA_DASHBOARD_S3_PATH }}
