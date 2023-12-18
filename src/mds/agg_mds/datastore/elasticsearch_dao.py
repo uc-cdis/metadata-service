@@ -228,6 +228,7 @@ async def update_metadata(
         try:
             elastic_search_client.index(index=index_to_update, id=key, body=doc)
         except Exception as ex:
+            print(f"Failed to index document in index: {index_to_update}")
             raise (ex)
 
 
