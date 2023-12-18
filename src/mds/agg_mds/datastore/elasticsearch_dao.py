@@ -38,7 +38,7 @@ CONFIG = {
             "number_of_replicas": 0,
             "mapping": {
                 "nested_objects": {
-                    "limit": "200000"
+                    "limit": 200000
                 }
             }
         }
