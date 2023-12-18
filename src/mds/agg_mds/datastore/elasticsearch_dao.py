@@ -38,7 +38,7 @@ CONFIG = {
             "number_of_replicas": 0,
             "mapping": {
                 "nested_objects": {
-                    "limit": 30000000
+                    "limit": 200000
                 }
             }
         }
@@ -50,6 +50,9 @@ SEARCH_CONFIG = {
     "settings": {
         "index": {
             "mapping.ignore_malformed": True,
+            "mapping.nested_objects": {
+                "limit": 200000,
+            },
             "number_of_shards": 1,
             "number_of_replicas": 0,
             "analysis": {
