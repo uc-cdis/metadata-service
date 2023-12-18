@@ -32,7 +32,17 @@ INFO_MAPPING = {
 }
 
 CONFIG = {
-    "settings": {"index": {"number_of_shards": 1, "number_of_replicas": 0, "mapping.nested_objects.limit": 200000}},
+    "settings": {
+        "index": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "mapping": {
+                "nested_objects": {
+                    "limit": "200000"
+                }
+            }
+        }
+    },
     "mappings": {"properties": {"array": {"type": "keyword"}}},
 }
 
