@@ -70,8 +70,8 @@ def find_nested_path(value: str) -> str:
 
 
 # given a field and a value, return the operator that should be used to query the field
-def classify_query_operator(field: Union[str, List[str]], value: str):
-    if isinstance(field, list):
+def classify_query_operator(field_name: Union[str, List[str]], value: str):
+    if isinstance(field_name, list):
         return "multi_match"
     if isinstance(value, list):
         return "match_phrase"
@@ -82,56 +82,82 @@ def classify_query_operator(field: Union[str, List[str]], value: str):
     return "match"
 
 
-def query_by_operator(field: Union[str, List[str]], value: Any, function: str) -> Any:
+def query_by_operator(
+    field_name: Union[str, List[str]], value: Any, function: str
+) -> Any:
     if function == "match":
-        return {"match": {field: value}}
+        return {"match": {field_name: value}}
     elif function == "match_phrase":
-        return {"match_phrase": {field: value}}
+        return {"match_phrase": {field_name: value}}
     elif function == "multi_match":
-        return {"multi_match": {"query": value, "fields": field}}
+        return {"multi_match": {"query": value, "fields": field_name}}
     elif function == "wildcard":
-        return {"wildcard": {field: value}}
+        return {"wildcard": {field_name: value}}
     elif function == "regexp":
-        return {"regexp": {field: value}}
+        return {"regexp": {field_name: value}}
     elif function == "exists":
-        return {"exists": {"field": field}}
+        return {"exists": {"field": field_name}}
     elif function == "useValue":
         return value
-    elif function == "countAgg":
-        return {"aggs": {"count": {"value_count": {"field": field}}}}
+    elif function == "counts":
+        return {field_name.replace(".", "__"): {"value_count": {"field": field_name}}}
+    elif function == "sum":
+        return {field_name.replace(".", "__"): {"sum": {"field": field_name}}}
+    elif function == "terms":
+        return {field_name.replace(".", "__"): {"terms": {"field": field_name}}}
     else:
-        return {"match": {field: value}}
+        return {"match": {field_name: value}}
 
 
-def build_nested_search_query(nestedPath, fullPath, value, level=0, function="match"):
-    if level == len(nestedPath.split(".")) - 1:
+def build_nested_search_query(nested_path, full_path, value, level=0, function="match"):
+    if level == len(nested_path.split(".")) - 1:
         # final leaf where search is performed
-        return query_by_operator(fullPath, value, function)
+        return query_by_operator(full_path, value, function)
 
-    parts = nestedPath.split(".")
+    parts = nested_path.split(".")
     field = [parts[x] for x in range(0, level + 1)]
     field = ".".join(field)
     return {
         "nested": {
             "path": field,
             "query": build_nested_search_query(
-                nestedPath, fullPath, value, level + 1, function
+                nested_path, full_path, value, level + 1, function
             ),
         }
     }
 
 
-def build_nested_exists_count_query(nestedPath, fullPath, level=0):
-    if level >= len(nestedPath.split(".")) - 1:
-        return {"exists": {"field": fullPath}}
+def build_nested_agg_query(nested_path, full_path, value, level=0, function="match"):
+    if level == len(nested_path.split(".")) - 1:
+        # final leaf where search is performed
+        return query_by_operator(full_path, value, function)
 
-    parts = nestedPath.split(".")
+    parts = nested_path.split(".")
+    field = [parts[x] for x in range(0, level + 1)]
+    field = ".".join(field)
+    return {
+        field: {
+            "nested": {
+                "path": field,
+            },
+            "aggs": build_nested_agg_query(
+                nested_path, full_path, value, level + 1, function
+            ),
+        }
+    }
+
+
+def build_nested_exists_count_query(nested_path, full_path, level=0):
+    if level >= len(nested_path.split(".")) - 1:
+        return {"exists": {"field": full_path}}
+
+    parts = nested_path.split(".")
     field = [parts[x] for x in range(0, level + 1)]
     field = ".".join(field)
     return {
         "nested": {
             "path": field,
-            "query": build_nested_exists_count_query(nestedPath, fullPath, level + 1),
+            "query": build_nested_exists_count_query(nested_path, full_path, level + 1),
         }
     }
 
@@ -169,14 +195,15 @@ def build_multi_search_query(
     }
 
 
-def build_aggregation_query(path):
-    nestedPath = find_nested_path(path)
-    if len(nestedPath) == 0:
+def build_aggregation_query(path, function="counts"):
+    nested_path = find_nested_path(
+        path,
+    )
+    if len(nested_path) == 0:
         return None
     return {
         "size": 0,
-        "from": 0,
-        "query": build_nested_search_query(nestedPath, path, None, 0, "countAgg"),
+        "aggs": build_nested_agg_query(nested_path, path, None, 0, function),
     }
 
 
@@ -193,25 +220,25 @@ def build_key_value_query(keyPath, valuePath, facet, facet_value: FacetValue):
 
 
 def build_nested_faceted_search_query(
-    rootPath,
-    facetsAndValues,
+    root_path,
+    facets_and_values,
     limit=10,
     offset=0,
     op="OR",
-    keyField="key",
-    valueField="value",
+    key_field="key",
+    value_field="value",
 ):
     keyQueries = []
-    for facet, values in facetsAndValues.items():
+    for facet, values in facets_and_values.items():
         keyQueries.append(
             build_key_value_query(
-                f"{rootPath}.{keyField}", f"{rootPath}.{valueField}", facet, values
+                f"{root_path}.{key_field}", f"{root_path}.{value_field}", facet, values
             )
         )
 
     query = {"bool": {LogicalOperatorMap[op]: keyQueries}}
 
-    return build_search_query(f"{rootPath}.", query, limit, offset, "useValue")
+    return build_search_query(f"{root_path}.", query, limit, offset, "useValue")
 
 
 def build_facet_search_query(queryParams):
@@ -284,6 +311,9 @@ def main():
     print("query:", json.dumps(query, indent=2))
 
     query = build_aggregation_query("gen3_discovery._hdp_uid")
+    print("query:", json.dumps(query, indent=2))
+
+    query = build_aggregation_query("gen3_discovery.doi_publication_year", "terms")
     print("query:", json.dumps(query, indent=2))
 
 

@@ -9,8 +9,8 @@ simpler to swap out and test new backends in the future.
 """
 
 
-async def init(hostname, port):
-    await client.init(hostname, port)
+async def init(hostname, port, support_search=True):
+    await client.init(hostname, port, support_search)
 
 
 async def drop_all_non_temp_indexes():
@@ -76,8 +76,12 @@ async def search(*args):
     return await client.search(*args)
 
 
-async def facetSearch(*args):
-    return await client.facetSearch(*args)
+async def facet_search(*args):
+    return await client.facet_search(*args)
+
+
+async def aggregates(*args):
+    return await client.get_aggs(*args)
 
 
 async def get_commons_attribute(*args):

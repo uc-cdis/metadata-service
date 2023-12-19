@@ -9,6 +9,7 @@ from mds.agg_mds.datastore.search import (
     build_nested_field_dictionary,
     build_search_query,
     build_facet_search_query,
+    build_aggregation_query,
 )
 from mds.config import (
     AGG_MDS_NAMESPACE,
@@ -99,7 +100,7 @@ def init_search_fields_from_mapping():
     build_nested_field_dictionary(nested)
 
 
-async def init(hostname: str = "0.0.0.0", port: int = 9200):
+async def init(hostname: str = "0.0.0.0", port: int = 9200, support_search=False):
     global elastic_search_client
     elastic_search_client = Elasticsearch(
         [hostname],
@@ -109,7 +110,8 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200):
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
-    init_search_fields_from_mapping()
+    if support_search:
+        init_search_fields_from_mapping()
 
 
 async def drop_all_non_temp_indexes():
@@ -436,7 +438,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
         return {}
 
 
-async def get_all_named_commons_metadata(name):
+async def get_all_named_commons_metadata(name="HEAL"):
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
@@ -446,7 +448,7 @@ async def get_all_named_commons_metadata(name):
                         "path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
                         "query": {
                             "match": {
-                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "HEAL"
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": f"{name}"
                             }
                         },
                     }
@@ -539,8 +541,8 @@ async def search(field: str, term: str, limit=10, offset=0, op="OR"):
         return {}
 
 
-async def facetSearch(searchQuery):
-    query = build_facet_search_query(searchQuery)
+async def facet_search(search_query):
+    query = build_facet_search_query(search_query)
     if query is None:
         return {}
     try:
@@ -549,6 +551,28 @@ async def facetSearch(searchQuery):
             body=query,
         )
         return data["hits"]["hits"]
+    except Exception as error:
+        logger.error(error)
+        return {}
+
+
+async def get_aggs(agg_query, function="count"):
+    print("agg_query", agg_query)
+    query = build_aggregation_query(agg_query, function)
+    print("query", query)
+    if query is None:
+        return {}
+    try:
+        data = elastic_search_client.search(
+            index=AGG_MDS_INDEX,
+            body=query,
+        )
+        print("data", data)
+        query_path = agg_query.replace(".", "__")
+        print("query_path", query_path)
+        matches = jp.parse(f"aggregations..{query_path}").find(data)
+        print("matches", matches)
+        return matches[0].value
     except Exception as error:
         logger.error(error)
         return {}

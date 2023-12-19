@@ -264,7 +264,7 @@ async def search(
         return []
 
 
-@mod.post("/aggregate/facetSearch")
+@mod.post("/aggregate/facets")
 async def search(query: Dict[str, Any]):
     """Returns metadata records that match the given query
     this is a POST endpoint that takes a JSON object as the body of the request.
@@ -285,7 +285,27 @@ async def search(query: Dict[str, Any]):
         }
     """
 
-    res = await datastore.facetSearch(query["query"])
+    res = await datastore.facet_search(query["query"])
+    if res:
+        return res
+    else:
+        return []
+
+
+@mod.get("/aggregate/aggregates")
+async def stats(
+    _: Request,
+    field: str = Query(
+        "gen3_discovery",
+        description="path to the field to search on. (e.g. gen3_discovery.name)",
+    ),
+    function: str = Query("counts", description="function to apply to the field"),
+):
+    """
+    Returns aggregate statistics for the given query
+    """
+
+    res = await datastore.aggregates(field, function)
     if res:
         return res
     else:

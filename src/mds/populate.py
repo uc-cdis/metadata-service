@@ -170,7 +170,9 @@ async def main(commons_config: Commons) -> None:
 
     url_parts = urlparse(config.ES_ENDPOINT)
 
-    await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
+    await datastore.init(
+        hostname=url_parts.hostname, port=url_parts.port, support_search=False
+    )
 
     # build mapping table for commons index
 
