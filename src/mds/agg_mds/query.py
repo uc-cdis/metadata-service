@@ -2,7 +2,8 @@ from fastapi import HTTPException, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
-from typing import Any, Dict
+from typing import Any, Dict, List
+from pydantic import BaseModel
 
 mod = APIRouter()
 
@@ -146,7 +147,7 @@ async def get_aggregate_metadata_for_commons(
         False, description="Return the results without grouping items by commons."
     )
 ):
-    """get all metadata records from a commons by name
+    """et all metadata records from a commons by name
 
     Returns an array containing all the metadata entries for a single commons.
     There are no limit/offset parameters.

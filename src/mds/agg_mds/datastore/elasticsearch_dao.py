@@ -118,8 +118,8 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200, support_search=False
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
-    if support_search:
-        init_search_fields_from_mapping()
+    # if support_search:
+    #    init_search_fields_from_mapping()
 
 
 async def drop_all_non_temp_indexes():
