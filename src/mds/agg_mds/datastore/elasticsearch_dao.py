@@ -92,13 +92,10 @@ elastic_search_client = None
 # get the mapping from the elastic search client
 def init_search_fields_from_mapping():
     raw_data = elastic_search_client.indices.get_mapping(index=AGG_MDS_INDEX)
-
     # get paths to 'nested' fields using jsonpath_ng
     nested = [
         str(match.full_path).replace("properties.", "").replace(".type", "")
-        for match in jp.parse("$..type").find(
-            raw_data[AGG_MDS_INDEX]["mappings"]["commons"]
-        )
+        for match in jp.parse("$..type").find(raw_data[AGG_MDS_INDEX]["mappings"])
         if match.value == "nested"
     ]
     # TODO build a list of all fields in the index
@@ -118,8 +115,8 @@ async def init(hostname: str = "0.0.0.0", port: int = 9200, support_search=False
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
-    # if support_search:
-    #    init_search_fields_from_mapping()
+    if support_search:
+        init_search_fields_from_mapping()
 
 
 async def drop_all_non_temp_indexes():

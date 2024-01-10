@@ -323,9 +323,7 @@ def init_search_fields_from_mapping():
     # get paths to 'nested' fields using jsonpath_ng
     nested = [
         str(match.full_path).replace("properties.", "").replace(".type", "")
-        for match in jp.parse("$..type").find(
-            raw_data[AGG_MDS_INDEX]["mappings"]["commons"]
-        )
+        for match in jp.parse("$..type").find(raw_data[AGG_MDS_INDEX]["mappings"])
         if match.value == "nested"
     ]
     # TODO build a list of all fields in the index
