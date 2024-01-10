@@ -178,15 +178,13 @@ async def main(commons_config: Commons) -> None:
 
     field_mapping = {
         "mappings": {
-            "commons": {
-                "properties": {
-                    config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
-                        "type": "nested",
-                        "properties": {
-                            k: v.to_schema(True)
-                            for k, v in commons_config.configuration.schema.items()
-                        },
-                    }
+            "properties": {
+                config.AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
+                    "type": "nested",
+                    "properties": {
+                        k: v.to_schema(True)
+                        for k, v in commons_config.configuration.schema.items()
+                    },
                 }
             }
         }
@@ -224,7 +222,10 @@ async def main(commons_config: Commons) -> None:
                 await populate_metadata(name, common, results, use_temp_index=True)
 
         if mdsCount == 0:
-            raise ValueError("Could not obtain any metadata from any adapters.")
+            logger.info(
+                "Could not obtain any metadata from any adapters. Existing indexes are left in place."
+            )
+            return
 
         # populate global information index
         await populate_info(commons_config, use_temp_index=True)

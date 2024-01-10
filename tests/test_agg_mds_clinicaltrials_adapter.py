@@ -1042,7 +1042,7 @@ def test_get_metadata_clinicaltrials():
     ).mock(
         return_value=httpx.Response(
             status_code=404,
-            content={},
+            content="{}",
         )
     )
 

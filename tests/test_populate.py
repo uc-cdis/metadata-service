@@ -456,43 +456,42 @@ async def test_populate_main_fail():
     respx.get(
         "http://testfail/ok//mds/metadata?data=True&_guid_type=discovery_metadata&limit=1000&offset=0"
     ).mock(return_value=httpx.Response(status_code=500))
-    with pytest.raises(Exception):
-        await main(
-            Commons(
-                configuration=Config(
-                    settings=Settings(),
-                    schema={
-                        "_subjects_count": FieldDefinition(type="integer"),
-                        "year_awarded": FieldDefinition(type="integer"),
+    await main(
+        Commons(
+            configuration=Config(
+                settings=Settings(),
+                schema={
+                    "_subjects_count": FieldDefinition(type="integer"),
+                    "year_awarded": FieldDefinition(type="integer"),
+                },
+            ),
+            gen3_commons={
+                "my_commons": MDSInstance(
+                    mds_url="http://testfail/ok/",
+                    commons_url="test",
+                    columns_to_fields={
+                        "authz": "path:authz",
+                        "tags": "path:tags",
+                        "_subjects_count": "path:subjects_count",
+                        "dbgap_accession_number": "path:study_id",
+                        "study_description": "path:study_description_summary",
+                        "number_of_datafiles": "path:data_files_count",
+                        "investigator": "path:contributor",
                     },
                 ),
-                gen3_commons={
-                    "my_commons": MDSInstance(
-                        mds_url="http://testfail/ok/",
-                        commons_url="test",
-                        columns_to_fields={
-                            "authz": "path:authz",
-                            "tags": "path:tags",
-                            "_subjects_count": "path:subjects_count",
-                            "dbgap_accession_number": "path:study_id",
-                            "study_description": "path:study_description_summary",
-                            "number_of_datafiles": "path:data_files_count",
-                            "investigator": "path:contributor",
-                        },
-                    ),
-                },
-                adapter_commons={
-                    "adapter_commons": AdapterMDSInstance(
-                        mds_url="",
-                        commons_url="",
-                        adapter="icpsr",
-                    ),
-                },
-            )
+            },
+            adapter_commons={
+                "adapter_commons": AdapterMDSInstance(
+                    mds_url="",
+                    commons_url="",
+                    adapter="icpsr",
+                ),
+            },
         )
+    )
 
-    # check that the get_all_metadata  return value has not been changed
-    # since drop_all should not be called if an exception has been raised
+    # check that the get_all_metadata return value has not been changed
+    # since drop_all should not be called if an exception has been raised or no data has been pulled
     es = await datastore.init("test", 9200)
     assert (await es.get_all_metadata()) == existing_metadata
 
