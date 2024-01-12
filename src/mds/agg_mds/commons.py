@@ -78,6 +78,14 @@ def dict_to_array(d: dict) -> List[Dict[Any, Any]]:
     return [d]
 
 
+def string_to_text(s: str) -> Optional[float]:
+    try:
+        return str(s)
+    except ValueError:
+        logger.error(f"{s} failed to convert to a string")
+        return None
+
+
 @dataclass_json
 @dataclass
 class FieldDefinition:
@@ -106,6 +114,7 @@ class FieldDefinition:
         "string_to_number": string_to_number,
         "string_to_integer": string_to_integer,
         "string_to_object": string_to_dict,
+        "string_to_text": string_to_text,
         "object_to_array": dict_to_array,
         "string_to_array": string_to_array,
         "array_to_string": array_to_string,
@@ -116,6 +125,7 @@ class FieldDefinition:
         "int": "integer",
         "list": "array",
         "dict": "object",
+        "text": "string",
     }
 
     def has_default_value(self):

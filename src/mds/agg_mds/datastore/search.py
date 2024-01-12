@@ -85,6 +85,7 @@ def classify_query_operator(field_name: Union[str, List[str]], value: str):
 def query_by_operator(
     field_name: Union[str, List[str]], value: Any, function: str
 ) -> Any:
+    print("query_by_operator:", field_name, value, function)
     if function == "match":
         return {"match": {field_name: value}}
     elif function == "match_phrase":
@@ -164,6 +165,7 @@ def build_nested_exists_count_query(nested_path, full_path, level=0):
 
 def build_search_query(path, value, limit=10, offset=0, function="match"):
     nestedPath = find_nested_path(path)
+    print("nestedPath:", function)
     if len(nestedPath) == 0:
         return None
     return {
@@ -177,10 +179,10 @@ LogicalOperatorMap = {"AND": "must", "OR": "should", "NOT": "must_not"}
 
 
 def build_multi_search_query(
-    paths: List[str], value, limit=10, offset=0, op="OR", operator="match"
+    paths: List[str], value, limit=10, offset=0, op="OR", function="match"
 ):
     queries = [
-        build_search_query(path, value, limit, offset, operator) for path in paths
+        build_search_query(path, value, limit, offset, function) for path in paths
     ]
     return {
         "size": limit,

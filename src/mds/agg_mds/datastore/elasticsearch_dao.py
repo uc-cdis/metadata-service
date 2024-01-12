@@ -521,13 +521,17 @@ async def get_commons_attribute(name):
         return None
 
 
-async def search(field: str, term: str, limit=10, offset=0, op="OR"):
+import json
+
+
+async def search(field: str, term: str, limit=10, offset=0, op="OR", type="match"):
     fields = field.split(",")
     if len(fields) > 1:
-        query = build_multi_search_query(fields, term, limit, offset, op)
+        query = build_multi_search_query(fields, term, limit, offset, op, type)
     else:
-        query = build_search_query(field, term, limit, offset)
+        query = build_search_query(field, term, limit, offset, type)
 
+    print("query", json.dumps(query, indent=2))
     if query is None:
         return {}
     try:

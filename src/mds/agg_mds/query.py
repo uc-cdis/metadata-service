@@ -249,7 +249,7 @@ async def search(
         "gen3_discovery",
         description="path to the field to search on. (e.g. gen3_discovery.name)",
     ),
-    term: str = Query("", description="term to search for. (e.g. cat)"),
+    term: str = Query("", description="term to search for. (e.g. cohort)"),
     limit: int = Query(
         20, description="Maximum number of records returned. (e.g. max: 2000)"
     ),
@@ -257,8 +257,21 @@ async def search(
     op: str = Query(
         "OR", description="logical combination operator to use when searching."
     ),
+    type: str = Query(
+        "match",
+        description="type of search to perform. (e.g. match, phrase, prefix, regexp)",
+    ),
 ):
-    res = await datastore.search(field, term, limit, offset, op)
+    """
+    Returns metadata records that match the given query
+    this is a GET endpoint that takes query parameters.
+
+    Example:
+        /aggregate/search?field=gen3_discovery.name&term=cat&limit=20&offset=0&op=OR
+
+    """
+
+    res = await datastore.search(field, term, limit, offset, op, type)
     if res:
         return res
     else:
