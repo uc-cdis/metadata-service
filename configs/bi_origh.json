@@ -1,0 +1,110 @@
+{
+        "configuration": {
+                "schema": {
+                        "_manifest": {
+                                "type": "array",
+                                "properties": {
+                                        "file_name": {
+                                                "type": "string"
+                                        },
+                                        "file_size": {
+                                                "type": "integer"
+                                        }
+                                }
+                        },
+                        "filters": {
+                                "type": "array",
+                                 "properties": {
+                                        "key": {
+                                                "type": "string"
+                                        },
+                                        "value": {
+                                                "type": "string"
+                                        }
+                                },
+                                "default": []
+                            },
+                        "tags": {
+                                "type": "array"
+                        },
+                        "Modality": {
+                                "type": "string"
+                        },
+                        "PatientID": {
+                                "type": "string"
+                        },
+                        "PatientSex": {
+                                "type": "string"
+                        },
+                        "Manufacturer": {
+                                "type": "string"
+                        },
+                        "primary_site": {
+                                "type": "string"
+                        },
+                        "collection_id": {
+                                "type": "string"
+                        },
+                        "disease_type": {
+                                "type": "string"
+                        },
+                        "BodyPartExamined": {
+                                "type": "string"
+                        },
+                        "StudyInstanceUID": {
+                                "type": "string"
+                        },
+                        "SeriesDescription": {
+                                "type": "text"
+                        },
+                        "SeriesInstanceUID": {
+                                "type": "string"
+                        },
+                        "ManufacturerModelName": {
+                                "type": "text"
+                        },
+                        "commons": {
+                                "type": "string"
+                        },
+                        "authz": {
+                                "type": "string"
+                        }
+                },
+                "settings": {
+                        "cache_drs": true
+                }
+        },
+        "adapter_commons": {
+                "BiHData": {
+                        "mds_url": "https://bih.data-commons.org/",
+                        "commons_url": "bih.data-commons.org",
+                        "adapter": "gen3",
+                        "config": {
+                                "guid_type": "discovery_metadata",
+                                "study_field": "gen3_discovery",
+                                "batchSize": 1000,
+                                "maxItems": 1000
+                        },
+                        "keep_original_fields": false,
+                        "field_mappings": {
+                                "authz": "path:authz",
+                                "tags": "path:tags",
+                                "Modality": "path:Modality",
+                                "PatientID": "path:PatientID",
+                                "PatientSex": { "path":"PatientSex", "default": "U" },
+                                "Manufacturer": {"path":"Manufacturer", "default": "NA" },
+                                "primary_site": "path:primary_site",
+                                "collection_id": "path:collection_id",
+                                "disease_type": { "path":"disease_type", "default" :  "not reported"},
+                                "BodyPartExamined": { "path":"BodyPartExamined", "default": "NA" },
+                                "StudyInstanceUID": "path:StudyInstanceUID",
+                                "SeriesDescription": { "path":"SeriesDescription", "default": "NA" },
+                                "SeriesInstanceUID": "path:SeriesInstanceUID",
+                                "ManufacturerModelName": { "path":"ManufacturerModelName", "default": "NA" },
+                                "commons": "path:commons",
+                                "_manifest": "path:__manifest",
+                                "commons_url": "bih.data-commons.org"
+                        }
+                }
+        }
+}

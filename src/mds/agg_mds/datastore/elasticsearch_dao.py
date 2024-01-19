@@ -239,7 +239,7 @@ async def update_metadata(
     )
 
     index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
-    for d in tqdm.tqdm(data):
+    for d in data:
         key = list(d.keys())[0]
         # Flatten out this structure
         doc = {
