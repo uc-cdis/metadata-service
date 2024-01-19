@@ -23,7 +23,9 @@ def parse_args(argv: List[str]) -> Namespace:
     return known_args
 
 
-async def populate_metadata(name: str, common, results, use_temp_index=False):
+async def populate_metadata(
+    name: str, common, results, use_temp_index=False, append=False
+):
     mds_arr = [{k: v} for k, v in results.items()]
 
     total_items = len(mds_arr)
@@ -32,6 +34,7 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
         logger.warning(f"populating {name} aborted as there are no items to add")
         return
 
+    logger.info(f"Populating {name} with {total_items} items")
     # prefilter to remove entries not matching a certain field.
     if hasattr(common, "select_field") and common.select_field is not None:
         mds_arr = await filter_entries(common, mds_arr)
@@ -40,7 +43,6 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
 
     # inject common_name field into each entry
     for x in mds_arr:
-        key = next(iter(x.keys()))
         entry = next(iter(x.values()))
 
         def normalize(entry: dict) -> Any:
@@ -104,7 +106,10 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
 
-    await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
+    if append:
+        await datastore.append_metadata(name, mds_arr, keys, tags, info, use_temp_index)
+    else:
+        await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 
 
 async def populate_info(commons_config: Commons, use_temp_index=False) -> None:
@@ -142,6 +147,66 @@ async def populate_config(commons_config: Commons, use_temp_index=False) -> None
     }
 
     await datastore.update_config_info(array_definition, use_temp_index)
+
+
+async def add_commons_metadata(commons_config: Commons) -> None:
+    """ """
+
+    if not config.USE_AGG_MDS:
+        logger.info("aggregate MDS disabled")
+        exit(1)
+
+    url_parts = urlparse(config.ES_ENDPOINT)
+
+    await datastore.init(
+        hostname=url_parts.hostname, port=url_parts.port, support_search=False
+    )
+
+    # build mapping table for commons index
+
+    mdsCount = 0
+    try:
+        for name, common in commons_config.gen3_commons.items():
+            logger.info(f"Populating {name} using Gen3 MDS connector")
+            results = pull_mds(common.mds_url, common.guid_type)
+            logger.info(f"Received {len(results)} from {name}")
+            if len(results) > 0:
+                mdsCount += len(results)
+                await populate_metadata(
+                    name, common, results, use_temp_index=False, append=True
+                )
+
+        for name, common in commons_config.adapter_commons.items():
+            logger.info(f"Populating {name} using adapter: {common.adapter}")
+            results = adapters.get_metadata(
+                common.adapter,
+                common.mds_url,
+                common.filters,
+                common.config,
+                common.field_mappings,
+                common.per_item_values,
+                common.keep_original_fields,
+                common.global_field_filters,
+                schema=commons_config.configuration.schema,
+            )
+            logger.info(f"Received {len(results)} from {name}")
+            if len(results) > 0:
+                mdsCount += len(results)
+                await populate_metadata(
+                    name, common, results, use_temp_index=False, append=True
+                )
+
+        if mdsCount == 0:
+            logger.info(
+                "Could not obtain any metadata from any adapters. Existing indexes are left in place."
+            )
+            return
+    except Exception as ex:
+        logger.error(
+            "Error occurred during mds population. Existing indexes are left in place."
+        )
+        logger.error(ex)
+        raise ex
 
 
 async def main(commons_config: Commons) -> None:
@@ -219,6 +284,7 @@ async def main(commons_config: Commons) -> None:
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
+                print("Populating metadata for %s" % name)
                 await populate_metadata(name, common, results, use_temp_index=True)
 
         if mdsCount == 0:
@@ -252,7 +318,7 @@ async def main(commons_config: Commons) -> None:
         raise ex
 
     res = await datastore.get_status()
-    print(res)
+    logger.info(f"datastore.get_status: {res}")
     await datastore.close()
 
 

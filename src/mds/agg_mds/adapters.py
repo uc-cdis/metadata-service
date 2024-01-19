@@ -6,6 +6,7 @@ import httpx
 import xmltodict
 import bleach
 import logging
+from dataclasses import dataclass
 import re
 from tenacity import (
     retry,
@@ -957,8 +958,13 @@ class Gen3Adapter(RemoteMetadataAdapter):
         offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
-        # extend httpx timeout
-        # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
+        if maxItems is not None:
+            if maxItems > batchSize:
+                limit = batchSize
+            else:
+                limit = maxItems
+
+        total = 0
         while moreData:
             try:
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
@@ -972,8 +978,11 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 data = response.json()
                 results["results"].update(data)
                 numReturned = len(data)
-
-                if numReturned == 0 or numReturned <= limit:
+                total += numReturned
+                offset += numReturned
+                if numReturned == 0 or numReturned < limit:
+                    moreData = False
+                if total >= maxItems:
                     moreData = False
                 offset += numReturned
 

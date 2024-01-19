@@ -18,7 +18,6 @@ from mds.config import (
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
-import json
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -239,6 +238,34 @@ async def update_metadata(
         body=info,
     )
 
+    index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
+    for d in tqdm.tqdm(data):
+        key = list(d.keys())[0]
+        # Flatten out this structure
+        doc = {
+            AGG_MDS_DEFAULT_STUDY_DATA_FIELD: d[key][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]
+        }
+        if AGG_MDS_DEFAULT_DATA_DICT_FIELD in d[key]:
+            doc[AGG_MDS_DEFAULT_DATA_DICT_FIELD] = d[key][
+                AGG_MDS_DEFAULT_DATA_DICT_FIELD
+            ]
+
+        try:
+            elastic_search_client.index(index=index_to_update, id=key, body=doc)
+        except Exception as ex:
+            print(f"Failed to index document in index: {index_to_update}")
+            raise (ex)
+
+
+async def add_metadata(
+    name: str,
+    data: List[Dict],
+    use_temp_index: bool = False,
+):
+    """
+    Add metadata to an existing index.
+    Assumes that the index already exists and that the other required indexes exist.
+    """
     index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
     for d in data:
         key = list(d.keys())[0]
