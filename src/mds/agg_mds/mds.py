@@ -20,7 +20,9 @@ httpx.Client(timeout=20.0)
     wait=wait_random_exponential(multiplier=1, max=20),
     before_sleep=before_sleep_log(logger, logging.DEBUG),
 )
-def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
+def pull_mds(
+    baseURL: str, guid_type: str, offset: int = 0, batchSize: int = 1000
+) -> dict:
     """
     Pull all data from the MDS server at the baseURL. Will pull data using paging in set of "batchsize"
     until all data from NDS is completed. Note that the httpx get request probably needs a retry using
@@ -28,7 +30,6 @@ def pull_mds(baseURL: str, guid_type: str, batchSize: int = 1000) -> dict:
     """
 
     more = True
-    offset = 0
     results = {}
     while more:
         url = f"{baseURL}/mds/metadata?data=True&_guid_type={guid_type}&limit={batchSize}&offset={offset}"

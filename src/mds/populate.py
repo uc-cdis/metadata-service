@@ -19,6 +19,10 @@ def parse_args(argv: List[str]) -> Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="config file to use", type=str, required=True)
+    parser.add_argument(
+        "--offset", help="offset for mds", type=int, default=0, required=False
+    )
+    parser.add_argument("--append", help="append mode for indices", action="store_true")
     known_args, unknown_args = parser.parse_known_args(argv)
     return known_args
 
@@ -107,7 +111,7 @@ async def populate_metadata(
     info = {"commons_url": common.commons_url}
 
     if append:
-        await datastore.append_metadata(name, mds_arr, keys, tags, info, use_temp_index)
+        await datastore.add_metadata(name, mds_arr, use_temp_index)
     else:
         await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 
@@ -151,8 +155,8 @@ async def populate_config(commons_config: Commons, use_temp_index=False) -> None
 
 async def add_commons_metadata(commons_config: Commons) -> None:
     """ """
-
     if not config.USE_AGG_MDS:
+        logger.info(config)
         logger.info("aggregate MDS disabled")
         exit(1)
 
@@ -209,7 +213,7 @@ async def add_commons_metadata(commons_config: Commons) -> None:
         raise ex
 
 
-async def main(commons_config: Commons) -> None:
+async def main(commons_config: Commons, offset=0, append=False) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
@@ -228,7 +232,6 @@ async def main(commons_config: Commons) -> None:
         "..." : {
         }
     """
-
     if not config.USE_AGG_MDS:
         logger.info("aggregate MDS disabled")
         exit(1)
@@ -262,11 +265,18 @@ async def main(commons_config: Commons) -> None:
     try:
         for name, common in commons_config.gen3_commons.items():
             logger.info(f"Populating {name} using Gen3 MDS connector")
-            results = pull_mds(common.mds_url, common.guid_type)
+            results = pull_mds(common.mds_url, common.guid_type, offset=offset)
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
-                await populate_metadata(name, common, results, use_temp_index=True)
+                if append:
+                    await populate_metadata(
+                        name, common, results, use_temp_index=True, append=True
+                    )
+                else:
+                    await populate_metadata(
+                        name, common, results, use_temp_index=True, append=False
+                    )
 
         for name, common in commons_config.adapter_commons.items():
             logger.info(f"Populating {name} using adapter: {common.adapter}")
@@ -280,12 +290,20 @@ async def main(commons_config: Commons) -> None:
                 common.keep_original_fields,
                 common.global_field_filters,
                 schema=commons_config.configuration.schema,
+                offset=offset,
             )
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
                 print("Populating metadata for %s" % name)
-                await populate_metadata(name, common, results, use_temp_index=True)
+                if append:
+                    await populate_metadata(
+                        name, common, results, use_temp_index=True, append=True
+                    )
+                else:
+                    await populate_metadata(
+                        name, common, results, use_temp_index=True, append=False
+                    )
 
         if mdsCount == 0:
             logger.info(
@@ -372,5 +390,8 @@ if __name__ == "__main__":
     Runs a "populate" procedure. Assumes the datastore is ready.
     """
     args: Namespace = parse_args(sys.argv)
+    offset = args.offset
+    append = args.append
+
     commons = parse_config_from_file(Path(args.config))
-    asyncio.run(main(commons_config=commons))
+    asyncio.run(main(commons_config=commons, offset=offset, append=append))

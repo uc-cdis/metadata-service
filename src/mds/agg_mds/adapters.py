@@ -1,7 +1,8 @@
 import collections.abc
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union
-from jsonpath_ng import parse, JSONPathError
+from jsonpath_ng import parse
+from jsonpath_ng.exceptions import JSONPathError
 import httpx
 import xmltodict
 import bleach
@@ -955,7 +956,8 @@ class Gen3Adapter(RemoteMetadataAdapter):
         batchSize = config.get("batchSize", 1000)
         maxItems = config.get("maxItems", None)
 
-        offset = 0
+        offset = kwargs.get("offset", 0)
+
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
         if maxItems is not None:
@@ -1600,10 +1602,12 @@ def gather_metadata(
     keepOriginalFields,
     globalFieldFilters,
     schema,
+    offset,
 ):
+    # loger
     try:
         json_data = gather.getRemoteDataAsJson(
-            mds_url=mds_url, filters=filters, config=config
+            mds_url=mds_url, filters=filters, config=config, offset=offset
         )
         results = gather.normalizeToGen3MDSFields(
             json_data,
@@ -1613,6 +1617,7 @@ def gather_metadata(
             keepOriginalFields=keepOriginalFields,
             globalFieldFilters=globalFieldFilters,
             schema=schema,
+            offset=offset,
         )
         logger.debug("Result after normalizing: ")
         logger.debug(results)
@@ -1649,6 +1654,7 @@ def get_metadata(
     keepOriginalFields=False,
     globalFieldFilters=None,
     schema=None,
+    offset=0,
 ):
     if config is None:
         config = {}
@@ -1676,4 +1682,5 @@ def get_metadata(
         keepOriginalFields=keepOriginalFields,
         globalFieldFilters=globalFieldFilters,
         schema=schema,
+        offset=offset,
     )

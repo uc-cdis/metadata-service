@@ -44,6 +44,10 @@ async def get_status():
     return await client.get_status()
 
 
+async def add_metadata(*args):
+    await client.add_metadata(*args)
+
+
 async def update_metadata(*args):
     await client.update_metadata(*args)
 
