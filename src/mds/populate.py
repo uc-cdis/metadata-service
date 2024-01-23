@@ -38,7 +38,9 @@ async def populate_metadata(
         logger.warning(f"populating {name} aborted as there are no items to add")
         return
 
-    logger.info(f"Populating {name} with {total_items} items")
+    logger.info(
+        f"{'Appending' if append else 'Populating'} {name} with {total_items} items."
+    )
     # prefilter to remove entries not matching a certain field.
     if hasattr(common, "select_field") and common.select_field is not None:
         mds_arr = await filter_entries(common, mds_arr)
@@ -258,8 +260,11 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
         }
     }
 
-    await datastore.drop_all_temp_indexes()
-    await datastore.create_temp_indexes(commons_mapping=field_mapping)
+    if (
+        append is False
+    ):  # create temp indexes and populate them only if not in append mode
+        await datastore.drop_all_temp_indexes()
+        await datastore.create_temp_indexes(commons_mapping=field_mapping)
 
     mdsCount = 0
     try:
@@ -271,7 +276,7 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
                 mdsCount += len(results)
                 if append:
                     await populate_metadata(
-                        name, common, results, use_temp_index=True, append=True
+                        name, common, results, use_temp_index=False, append=True
                     )
                 else:
                     await populate_metadata(
@@ -298,7 +303,7 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
                 print("Populating metadata for %s" % name)
                 if append:
                     await populate_metadata(
-                        name, common, results, use_temp_index=True, append=True
+                        name, common, results, use_temp_index=False, append=True
                     )
                 else:
                     await populate_metadata(
@@ -311,10 +316,11 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
             )
             return
 
-        # populate global information index
-        await populate_info(commons_config, use_temp_index=True)
-        # populate array index information to support guppy
-        await populate_config(commons_config, use_temp_index=True)
+        if append is False:
+            # populate global information index
+            await populate_info(commons_config, use_temp_index=True)
+            # populate array index information to support guppy
+            await populate_config(commons_config, use_temp_index=True)
 
     except Exception as ex:
         logger.error(
@@ -323,17 +329,18 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
         logger.error(ex)
         raise ex
 
-    logger.info(f"Temp indexes populated successfully. Proceeding to clone")
-    # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
-    try:
-        await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
-        await datastore.create_indexes(commons_mapping=field_mapping)
-        await datastore.clone_temp_indexes_to_real_indexes()
-        await datastore.drop_all_temp_indexes()
-    except Exception as ex:
-        logger.error("Error occurred during cloning.")
-        logger.error(ex)
-        raise ex
+    if append is False:
+        logger.info(f"Temp indexes populated successfully. Proceeding to clone")
+        # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
+        try:
+            await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
+            await datastore.create_indexes(commons_mapping=field_mapping)
+            await datastore.clone_temp_indexes_to_real_indexes()
+            await datastore.drop_all_temp_indexes()
+        except Exception as ex:
+            logger.error("Error occurred during cloning.")
+            logger.error(ex)
+            raise ex
 
     res = await datastore.get_status()
     logger.info(f"datastore.get_status: {res}")

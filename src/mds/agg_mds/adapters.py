@@ -7,7 +7,6 @@ import httpx
 import xmltodict
 import bleach
 import logging
-from dataclasses import dataclass
 import re
 from tenacity import (
     retry,
@@ -955,7 +954,6 @@ class Gen3Adapter(RemoteMetadataAdapter):
         filters = config.get("filters", None)
         batchSize = config.get("batchSize", 1000)
         maxItems = config.get("maxItems", None)
-
         offset = kwargs.get("offset", 0)
 
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
