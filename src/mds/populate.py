@@ -300,18 +300,24 @@ def parse_config_from_file(path: Path) -> Optional[Commons]:
         raise ex
 
 
+def is_valid_path(path: str) -> bool:
+    try:
+        validate_filepath(path, platform="auto")
+    except ValidationError as e:
+        logger.error(f"Validation error in config file path: {e}")
+        raise e
+    if path != sanitize_filepath(path):
+        logger.error(f"Unsafe config file path: {path}")
+        return False
+    return True
+
+
 if __name__ == "__main__":
     """
     Runs a "populate" procedure. Assumes the datastore is ready.
     """
     args: Namespace = parse_args(sys.argv)
-    try:
-        validate_filepath(args.config, platform="auto")
-    except ValidationError as e:
-        logger.error(f"Validation error in config file path: {e}")
-        exit()
-    if args.config != sanitize_filepath(args.config):
-        logger.error(f"Unsafe config file path: {args.config}")
+    if not is_valid_path(args.config):
         exit()
     commons = parse_config_from_file(Path(args.config))
     asyncio.run(main(commons_config=commons))
