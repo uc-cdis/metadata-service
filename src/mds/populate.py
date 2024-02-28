@@ -1,5 +1,6 @@
 import asyncio
 from argparse import Namespace
+from pathvalidate import ValidationError, sanitize_filepath, validate_filepath
 from typing import Any, Dict, List, Optional
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
@@ -304,5 +305,13 @@ if __name__ == "__main__":
     Runs a "populate" procedure. Assumes the datastore is ready.
     """
     args: Namespace = parse_args(sys.argv)
+    try:
+        validate_filepath(args.config, platform="auto")
+    except ValidationError as e:
+        logger.error(f"Validation error in config file path: {e}")
+        exit()
+    if args.config != sanitize_filepath(args.config):
+        logger.error(f"Unsafe config file path: {args.config}")
+        exit()
     commons = parse_config_from_file(Path(args.config))
     asyncio.run(main(commons_config=commons))
