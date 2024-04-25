@@ -9,7 +9,7 @@ license = "Apache-2.0"
 python = "^3.9"
 fastapi = "^0.65.2"
 uvicorn = {extras = ["standard"], version="^0.18.2"}
-gunicorn = "^20.0.4"
+gunicorn = ">=20.0.4"
 gino = {version = "^1.0.0", extras = ["starlette"]}
 # restricting sqlalchemy for gino https://github.com/python-gino/gino/discussions/765'
 sqlalchemy = "^1.3.0, <1.4"
