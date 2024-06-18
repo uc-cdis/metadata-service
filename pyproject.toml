@@ -36,7 +36,7 @@ pathvalidate = "^3.2.0"
 pytest = "^5.3"
 pytest-cov = "^2.8"
 pyyaml = "*"
-requests = "^2.22"
+requests = "^2.32"
 respx = "*"
 nest-asyncio = "^1.5.1"
 
