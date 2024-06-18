@@ -29,7 +29,7 @@ jsonpath-ng = "==1.5.3"
 elasticsearch = "==7.10.*"
 bleach = ">=3.3.1"
 tenacity = ">=8.0.0"
-pydash = "^5.1.0"
+pydash = "^6.0.0"
 pathvalidate = "^3.2.0"
 
 [tool.poetry.dev-dependencies]
