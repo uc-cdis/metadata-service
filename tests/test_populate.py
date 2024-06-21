@@ -1,3 +1,4 @@
+from pathvalidate import ValidationError
 import pytest
 import respx
 import httpx
@@ -11,6 +12,7 @@ from mds.populate import (
     populate_info,
     populate_drs_info,
     populate_config,
+    is_valid_path,
 )
 from mds.agg_mds.commons import (
     AdapterMDSInstance,
@@ -657,3 +659,14 @@ def test_parse_config_from_file():
         parse_config_from_file(Path("/"))
     except Exception as exc:
         assert isinstance(exc, IOError) is True
+
+
+def test_is_valid_path():
+    assert is_valid_path("/aggregrate.json")
+    try:
+        is_valid_path("/tmp/:/aggregate.json")
+    except Exception as exc:
+        assert isinstance(exc, ValidationError)
+    assert not is_valid_path("/tmp/../..aggregate.json")
+    assert not is_valid_path("/tmp/|aggregate.json")
+    assert not is_valid_path("/tmp/aggregate.json?hello")
