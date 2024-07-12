@@ -188,7 +188,7 @@ async def main(commons_config: Commons) -> None:
             }
         }
     }
-
+    print(field_mapping)
     await datastore.drop_all_temp_indexes()
     await datastore.create_temp_indexes(commons_mapping=field_mapping)
 
