@@ -93,7 +93,9 @@ async def create_object(
     try:
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
-        token_claims = await access_token("user", "openid", purpose="access")(token)
+        token_claims = await access_token(
+            "user", "openid", audience="openid", purpose="access"
+        )(token)
     except Exception as e:
         logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
         raise HTTPException(
