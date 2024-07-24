@@ -1581,6 +1581,450 @@ class PDCAdapter(RemoteMetadataAdapter):
         return results
 
 
+class PDCSubjectAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Proteomic Data Commons
+    Expected Parameters:
+        size:   Number of studies to pull in a single call, default=5 and therefore optional
+        #Note - The API doesn't seem to do very well with large requests,
+                hence confining it to a smaller number
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+        batchSize = kwargs["filters"].get("size", 5)
+
+        query = """
+                    query FilteredCasesDataPaginated($offset_value: Int, $limit_value: Int, $sort_value: String, $program_name_filter: String!, $project_name_filter: String!, $study_name_filter: String!, $disease_filter: String!, $filterValue: String!, $analytical_frac_filter: String!, $exp_type_filter: String!, $ethnicity_filter: String!, $race_filter: String!, $gender_filter: String!, $tumor_grade_filter: String!, $sample_type_filter: String!, $acquisition_type_filter: String!, $data_category_filter: String!, $file_type_filter: String!, $access_filter: String!, $downloadable_filter: String!, $biospecimen_status_filter: String!, $case_status_filter: String!, $getAll: Boolean!) {
+                    getPaginatedUICase(offset: $offset_value, limit: $limit_value, sort: $sort_value, program_name: $program_name_filter, project_name: $project_name_filter, study_name: $study_name_filter, disease_type: $disease_filter, primary_site: $filterValue, analytical_fraction: $analytical_frac_filter, experiment_type: $exp_type_filter, ethnicity: $ethnicity_filter, race: $race_filter, gender: $gender_filter, tumor_grade: $tumor_grade_filter, sample_type: $sample_type_filter, acquisition_type: $acquisition_type_filter, data_category: $data_category_filter, file_type: $file_type_filter, access: $access_filter, downloadable: $downloadable_filter, biospecimen_status: $biospecimen_status_filter, case_status: $case_status_filter, getAll: $getAll) {
+                        total
+                        uiCases {
+                        aliquot_id
+                        sample_id
+                        case_id
+                        aliquot_submitter_id
+                        aliquot_is_ref
+                        aliquot_status
+                        aliquot_quantity
+                        aliquot_volume
+                        amount
+                        analyte_type
+                        concentration
+                        case_status
+                        sample_status
+                        sample_submitter_id
+                        sample_is_ref
+                        biospecimen_anatomic_site
+                        biospecimen_laterality
+                        composition
+                        current_weight
+                        days_to_collection
+                        days_to_sample_procurement
+                        diagnosis_pathologically_confirmed
+                        freezing_method
+                        initial_weight
+                        intermediate_dimension
+                        longest_dimension
+                        method_of_sample_procurement
+                        pathology_report_uuid
+                        preservation_method
+                        sample_type_id
+                        shortest_dimension
+                        time_between_clamping_and_freezing
+                        time_between_excision_and_freezing
+                        tissue_type
+                        tumor_code
+                        tumor_code_id
+                        tumor_descriptor
+                        case_submitter_id
+                        program_name
+                        project_name
+                        sample_type
+                        disease_type
+                        primary_site
+                        tissue_collection_type
+                        sample_ordinal
+                        __typename
+                        }
+                        pagination {
+                        count
+                        sort
+                        from
+                        page
+                        total
+                        pages
+                        size
+                        __typename
+                        }
+                        __typename
+                    }
+                    }
+                """
+
+        variables = {
+            "offset_value": 0,
+            "limit_value": 1000,
+            "sort_value": "",
+            "program_name_filter": "Applied Proteogenomics OrganizationaL Learning and Outcomes - APOLLO",
+            "project_name_filter": "",
+            "study_name_filter": "",
+            "disease_filter": "",
+            "filterValue": "",
+            "analytical_frac_filter": "",
+            "exp_type_filter": "",
+            "ethnicity_filter": "",
+            "race_filter": "",
+            "gender_filter": "",
+            "tumor_grade_filter": "",
+            "sample_type_filter": "",
+            "acquisition_type_filter": "",
+            "data_category_filter": "",
+            "file_type_filter": "",
+            "access_filter": "",
+            "downloadable_filter": "",
+            "biospecimen_status_filter": "",
+            "case_status_filter": "",
+            "getAll": False,
+        }
+
+        try:
+            response = httpx.post(
+                mds_url, json={"query": query, "variables": variables}
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            results["results"] = response_data["data"]["getPaginatedUICase"]["uiCases"]
+            logger.info(
+                f"Fetched {response_data['data']['getPaginatedUICase']['total']} records from PDC)"
+            )
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDCSubjectAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "primary_site"]
+            ]
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class PDCStudyAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Proteomic Data Commons
+    Expected Parameters:
+        size:   Number of studies to pull in a single call, default=5 and therefore optional
+        #Note - The API doesn't seem to do very well with large requests,
+                hence confining it to a smaller number
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+        batchSize = kwargs["filters"].get("size", 5)
+
+        query = """
+                    query FilteredStudiesDataPaginated(
+                    $offset_value: Int
+                    $limit_value: Int
+                    $sort_value: String
+                    $program_name_filter: String!
+                    $project_name_filter: String!
+                    $study_name_filter: String!
+                    $disease_filter: String!
+                    $filterValue: String!
+                    $analytical_frac_filter: String!
+                    $exp_type_filter: String!
+                    $ethnicity_filter: String!
+                    $race_filter: String!
+                    $gender_filter: String!
+                    $tumor_grade_filter: String!
+                    $sample_type_filter: String!
+                    $acquisition_type_filter: String!
+                    $data_category_filter: String!
+                    $file_type_filter: String!
+                    $access_filter: String!
+                    $downloadable_filter: String!
+                    $biospecimen_status_filter: String!
+                    $case_status_filter: String!
+                    $getAll: Boolean!
+                    ) {
+                    getPaginatedUIStudy(
+                        offset: $offset_value
+                        limit: $limit_value
+                        sort: $sort_value
+                        program_name: $program_name_filter
+                        project_name: $project_name_filter
+                        study_name: $study_name_filter
+                        disease_type: $disease_filter
+                        primary_site: $filterValue
+                        analytical_fraction: $analytical_frac_filter
+                        experiment_type: $exp_type_filter
+                        ethnicity: $ethnicity_filter
+                        race: $race_filter
+                        gender: $gender_filter
+                        tumor_grade: $tumor_grade_filter
+                        sample_type: $sample_type_filter
+                        acquisition_type: $acquisition_type_filter
+                        data_category: $data_category_filter
+                        file_type: $file_type_filter
+                        access: $access_filter
+                        downloadable: $downloadable_filter
+                        biospecimen_status: $biospecimen_status_filter
+                        case_status: $case_status_filter
+                        getAll: $getAll
+                    ) {
+                        total
+                        uiStudies {
+                        study_id
+                        pdc_study_id
+                        submitter_id_name
+                        study_description
+                        study_submitter_id
+                        program_name
+                        project_name
+                        disease_type
+                        primary_site
+                        analytical_fraction
+                        experiment_type
+                        embargo_date
+                        cases_count
+                        aliquots_count
+                        filesCount {
+                            file_type
+                            data_category
+                            files_count
+                            __typename
+                        }
+                        supplementaryFilesCount {
+                            data_category
+                            file_type
+                            files_count
+                            __typename
+                        }
+                        nonSupplementaryFilesCount {
+                            data_category
+                            file_type
+                            files_count
+                            __typename
+                        }
+                        contacts {
+                            name
+                            institution
+                            email
+                            url
+                            __typename
+                        }
+                        versions {
+                            number
+                            __typename
+                        }
+                        __typename
+                        }
+                        pagination {
+                        count
+                        sort
+                        from
+                        page
+                        total
+                        pages
+                        size
+                        __typename
+                        }
+                        __typename
+                    }
+                    }
+                """
+
+        variables = {
+            "offset_value": 0,
+            "limit_value": 10,
+            "sort_value": "",
+            "program_name_filter": "Applied Proteogenomics OrganizationaL Learning and Outcomes - APOLLO",
+            "project_name_filter": "",
+            "study_name_filter": "",
+            "disease_filter": "",
+            "filterValue": "",
+            "analytical_frac_filter": "",
+            "exp_type_filter": "",
+            "ethnicity_filter": "",
+            "race_filter": "",
+            "gender_filter": "",
+            "tumor_grade_filter": "",
+            "sample_type_filter": "",
+            "acquisition_type_filter": "",
+            "data_category_filter": "",
+            "file_type_filter": "",
+            "access_filter": "",
+            "downloadable_filter": "",
+            "biospecimen_status_filter": "",
+            "case_status_filter": "",
+            "getAll": False,
+        }
+
+        try:
+            response = httpx.post(
+                mds_url, json={"query": query, "variables": variables}
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            results["results"] = response_data["data"]["getPaginatedUIStudy"][
+                "uiStudies"
+            ]
+            logger.info(
+                f"Fetched {response_data['data']['getPaginatedUICase']['total']} records from PDC)"
+            )
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDCSubjectAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            tag_list = []
+            for tag_category in ["disease_type", "primary_site"]:
+                if normalized_item[tag_category]:
+                    tag_string = normalized_item[tag_category]
+                    if ";" in tag_string:
+                        tags = tag_string.split(";")
+                        for tag in tags:
+                            tag_list.append({"name": tag, "category": tag_category})
+                    else:
+                        tag_list.append({"name": tag_string, "category": tag_category})
+
+                else:
+                    tag_list.append({"name": "", "category": tag_category})
+
+            normalized_item["tags"] = tag_list
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
 def gather_metadata(
     gather,
     mds_url,
@@ -1627,6 +2071,8 @@ adapters = {
     "gdc": GDCAdapter,
     "cidc": CIDCAdapter,
     "pdc": PDCAdapter,
+    "pdcsubject": PDCSubjectAdapter,
+    "pdcstudy": PDCStudyAdapter,
 }
 
 
