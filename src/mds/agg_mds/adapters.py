@@ -1918,7 +1918,7 @@ query FilteredClinicalDataPaginated($offset_value: Int, $limit_value: Int, $sort
 
         variables = {
             "offset_value": 0,
-            "limit_value": 10,
+            "limit_value": 250,
             "sort_value": "",
             "program_name_filter": "Applied Proteogenomics OrganizationaL Learning and Outcomes - APOLLO",
             "project_name_filter": "",
