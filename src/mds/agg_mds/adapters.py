@@ -1939,7 +1939,7 @@ query FilteredClinicalDataPaginated($offset_value: Int, $limit_value: Int, $sort
             "downloadable_filter": "",
             "case_status_filter": "",
             "biospecimen_status_filter": "",
-            "getAll": false,
+            "getAll": False,
         }
 
         try:
