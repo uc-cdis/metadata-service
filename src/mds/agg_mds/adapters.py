@@ -1948,7 +1948,7 @@ query FilteredClinicalDataPaginated($offset_value: Int, $limit_value: Int, $sort
             )
             response.raise_for_status()
             response_data = response.json()
-            results["results"] = response_data["data"]["getPaginatedUIClinical"]["uiCases"]
+            results["results"] = response_data["data"]["getPaginatedUIClinical"]["uiClinical"]
             logger.info(
                 f"Fetched {response_data['data']['getPaginatedUICase']['total']} records from PDC)"
             )
