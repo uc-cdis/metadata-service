@@ -104,7 +104,7 @@ def test_get_metadata_pdc_study():
         "contacts": "path:contacts",
         "versions": "path:versions",
         "__typename": "path:__typename",
-        "wrong_path": "path:wrong_path",
+        "$myVar.id#$!_+~*/": "path:invalid_path",
     }
 
     query = """
@@ -321,7 +321,6 @@ def test_get_metadata_pdc_study():
                 "contacts": [],
                 "versions": [{"number": "1", "__typename": "Version"}],
                 "__typename": "UIStudy",
-                "wrong_path": None,
             },
         },
     }
@@ -396,7 +395,6 @@ def test_get_metadata_pdc_study():
                 "contacts": [],
                 "versions": [{"number": "1", "__typename": "Version"}],
                 "__typename": "UIStudy",
-                "wrong_path": None,
             },
         },
     }

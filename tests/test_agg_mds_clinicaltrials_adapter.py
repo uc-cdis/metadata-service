@@ -1094,3 +1094,19 @@ def test_get_metadata_clinicaltrials():
         )
     except Exception as exc:
         assert isinstance(exc, RetryError) == True
+
+    respx.get(
+        "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1"
+    ).mock(side_effect=httpx.HTTPError("This is a HTTP Error"))
+
+    assert (
+        get_metadata(
+            "clinicaltrials",
+            "http://test/ok",
+            filters={"term": "should+error+timeout", "maxItems": 1, "batchSize": 1},
+            mappings=field_mappings,
+            perItemValues=item_values,
+            keepOriginalFields=True,
+        )
+        == {}
+    )
