@@ -44,8 +44,10 @@ RUN poetry install --without dev --no-interaction
 # Final stage
 FROM base
 
-COPY --from=builder /venv /venv
+COPY --from=builder /venv /env
 COPY --from=builder /src /src
+
+ENV PATH="/env/bin/:${PATH}"
 
 # install nginx
 RUN yum install nginx -y
