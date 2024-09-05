@@ -28,7 +28,7 @@ FROM base AS builder
 
 USER gen3
 
-RUN python -m venv /venv
+RUN python -m venv /env
 
 COPY poetry.lock pyproject.toml /src/
 
@@ -44,7 +44,7 @@ RUN poetry install --without dev --no-interaction
 # Final stage
 FROM base
 
-COPY --from=builder /venv /env
+COPY --from=builder /env /env
 COPY --from=builder /src /src
 
 ENV PATH="/env/bin/:${PATH}"
