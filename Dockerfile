@@ -71,7 +71,7 @@ COPY ./deployment/nginx/nginx.conf /etc/nginx/nginx.conf
 # Switch to non-root user 'gen3' for the serving process
 USER gen3
 
-RUN source /venv/bin/activate
+RUN source /env/bin/activate
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8
