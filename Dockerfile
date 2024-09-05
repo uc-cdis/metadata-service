@@ -19,35 +19,33 @@ WORKDIR /src
 # create gen3 user
 # Create a group 'gen3' with GID 1000 and a user 'gen3' with UID 1000
 RUN groupadd -g 1000 gen3 && \
+    mkdir -p /env && \
     useradd -m -s /bin/bash -u 1000 -g gen3 gen3  && \
     chown -R gen3:gen3 /src && \
-    chown -R gen3:gen3 /venv
+    chown -R gen3:gen3 /env
+
+RUN pip install --upgrade pip poetry
 
 # Builder stage
 FROM base AS builder
 
 USER gen3
 
-RUN python -m venv /env
-
 COPY poetry.lock pyproject.toml /src/
 
-RUN pip install poetry && \
-    poetry install -vv --only main --no-interaction
+RUN python -m venv /env && . /env/bin/activate && poetry install -vv --no-interaction
 
 COPY --chown=gen3:gen3 . /src
 COPY --chown=gen3:gen3 ./deployment/wsgi/wsgi.py /src/wsgi.py
 
 # Run poetry again so this app itself gets installed too
-RUN poetry install --without dev --no-interaction
+RUN python -m venv /env && . /env/bin/activate && poetry install -vv --no-interaction
 
 # Final stage
 FROM base
 
 COPY --from=builder /env /env
 COPY --from=builder /src /src
-
-ENV PATH="/env/bin/:${PATH}"
 
 # install nginx
 RUN yum install nginx -y
@@ -75,5 +73,8 @@ RUN source /env/bin/activate
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=UTF-8
+
+# Add /env/bin to PATH
+ENV PATH="/env/bin:$PATH"
 
 CMD ["/src/dockerrun.bash"]
