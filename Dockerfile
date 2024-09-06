@@ -77,4 +77,4 @@ ENV PYTHONUNBUFFERED=1 \
 # Add /env/bin to PATH
 ENV PATH="/env/bin:$PATH"
 
-CMD ["/src/dockerrun.bash"]
+CMD ["/bin/bash", "-c", "/src/dockerrun.bash"]
