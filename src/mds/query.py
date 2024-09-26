@@ -4,7 +4,7 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 from starlette.responses import JSONResponse
 
 from .models import db, Metadata, MetadataAlias
-from . import config
+from . import config, logger
 
 mod = APIRouter()
 
@@ -108,11 +108,11 @@ async def search_metadata(
     if data:
         import time
 
-        logging.info(
+        logger.info(
             f" Current time stamp -- time.time() at the beginning of the gino call"
         )
         metadata_list = await add_filter(Metadata.query).gino.all()
-        logging.info(f" Current time stamp -- time.time() at the end of the gino call")
+        logger.info(f" Current time stamp -- time.time() at the end of the gino call")
         return {metadata.guid: metadata.data for metadata in metadata_list}
     else:
         return [
@@ -161,7 +161,7 @@ async def get_metadata(guid):
 
         if not metadata:
             message = f"Alias record exists but GUID not found: {guid}"
-            logging.error(message)
+            logger.error(message)
             raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, message)
 
     return metadata.data
