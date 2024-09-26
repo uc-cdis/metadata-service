@@ -109,10 +109,10 @@ async def search_metadata(
         import time
 
         logger.info(
-            f" Current time stamp -- time.time() at the beginning of the gino call"
+            f" Current time stamp -- {time.time()} at the beginning of the gino call"
         )
         metadata_list = await add_filter(Metadata.query).gino.all()
-        logger.info(f" Current time stamp -- time.time() at the end of the gino call")
+        logger.info(f" Current time stamp -- {time.time()} at the end of the gino call")
         return {metadata.guid: metadata.data for metadata in metadata_list}
     else:
         return [
