@@ -5,6 +5,7 @@ from starlette.responses import JSONResponse
 
 from .models import db, Metadata, MetadataAlias
 from . import config, logger
+from . import test_query
 
 mod = APIRouter()
 
@@ -108,11 +109,15 @@ async def search_metadata(
     if data:
         import time
 
-        logger.info(
-            f" Current time stamp -- {time.time()} at the beginning of the gino call"
-        )
+        start = time.time()
+        logger.info(f" Current time stamp -- {start} at the beginning of the gino call")
         metadata_list = await add_filter(Metadata.query).gino.all()
-        logger.info(f" Current time stamp -- {time.time()} at the end of the gino call")
+        end = time.time()
+        logger.info(
+            f" Current time stamp -- {end} at the end of the gino call. Time spent in seconds = {end-start}"
+        )
+        if "_guid_type" in queries:
+            test_query.get_discovery_metadata()
         return {metadata.guid: metadata.data for metadata in metadata_list}
     else:
         return [
