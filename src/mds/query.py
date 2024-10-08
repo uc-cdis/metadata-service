@@ -110,6 +110,8 @@ async def search_metadata(
         import time
 
         start = time.time()
+        if "_guid_type" in queries:
+            test_metadata_list = test_query.get_discovery_metadata()
         logger.info(f" Current time stamp -- {start} at the beginning of the gino call")
         metadata_list = await add_filter(Metadata.query).gino.all()
         end = time.time()
@@ -117,7 +119,7 @@ async def search_metadata(
             f" Current time stamp -- {end} at the end of the gino call. Time spent in seconds = {end-start}"
         )
         if "_guid_type" in queries:
-            test_query.get_discovery_metadata()
+            return {row[0]: row[1] for row in test_metadata_list}
         return {metadata.guid: metadata.data for metadata in metadata_list}
     else:
         return [
