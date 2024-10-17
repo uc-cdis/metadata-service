@@ -244,7 +244,7 @@ async def main(commons_config: Commons) -> None:
         await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
         await datastore.create_indexes(commons_mapping=field_mapping)
         await datastore.clone_temp_indexes_to_real_indexes()
-        await datastore.drop_all_temp_indexes()
+        # await datastore.drop_all_temp_indexes()
     except Exception as ex:
         logger.error("Error occurred during cloning.")
         logger.error(ex)
