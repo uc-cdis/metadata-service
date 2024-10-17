@@ -1,4 +1,4 @@
 #!/bin/bash
 
 nginx
-gunicorn -c "/src/deployment/wsgi/gunicorn.conf.py"
+gunicorn -c "/src/deployment/wsgi/gunicorn.conf.py" mds.asgi:app
