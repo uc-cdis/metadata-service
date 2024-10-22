@@ -143,5 +143,5 @@ async def get_status():
             )
 
     return dict(
-        status="OK", timestamp=now, aggregate_metadata_enabled=config.USE_AGG_MDS
+        status="OK!", timestamp=now, aggregate_metadata_enabled=config.USE_AGG_MDS
     )
