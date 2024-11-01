@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mds"
-version = "4.0.1"
+version = "4.0.2"
 description = "Metadata Service"
 authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
