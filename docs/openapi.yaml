@@ -92,7 +92,7 @@ components:
       type: http
 info:
   title: Framework Services Object Management Service
-  version: 4.0.1
+  version: 4.0.2
 openapi: 3.0.2
 paths:
   /_status:

@@ -83,10 +83,10 @@ async def search_metadata(
                 query = query.where(Metadata.data[path].has_key(field))
             else:
                 values = ["*" if v == "\*" else v for v in values]
+                if "." in path:
+                    path = list(path.split("."))
                 query = query.where(
-                    db.or_(
-                        Metadata.data[list(path.split("."))].astext == v for v in values
-                    )
+                    db.or_(Metadata.data[path].astext == v for v in values)
                 )
 
         # TODO/FIXME: There's no updated date on the records, and without that
