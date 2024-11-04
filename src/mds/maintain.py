@@ -1,6 +1,6 @@
 import json
 import re
-# import redis
+import redis
 
 from asyncpg import UniqueViolationError
 from fastapi import HTTPException, APIRouter, Depends
@@ -21,8 +21,8 @@ from . import config
 from .objects import FORBIDDEN_IDS
 
 mod = APIRouter()
-# redis_client = redis.Redis(host='localhost', port=6379, db=0)
-# channel = 'my_channel'
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
+channel = 'my_channel'
 
 @mod.post("/metadata")
 async def batch_create_metadata(
@@ -70,8 +70,8 @@ async def batch_create_metadata(
                     else:
                         created.append(data["guid"])
     # Check if we created any new keys
-    # if not created:
-        # redis_client.publish(channel, "testing123")
+    if not created:
+        redis_client.publish(channel, "testing123")
     return dict(
         created=created, updated=updated, conflict=conflict, bad_input=bad_input
     )
