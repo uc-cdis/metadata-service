@@ -7,30 +7,23 @@ for naming blobs. However, in cases where you want multiple identifiers
 to point to the same blob, aliases allow that without duplicating the
 actual blob.
 """
-import json
-import re
+from typing import Union
 
 from asyncpg import UniqueViolationError, ForeignKeyViolationError
 from fastapi import HTTPException, APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import bindparam
-from sqlalchemy.dialects.postgresql import insert
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
-    HTTP_200_OK,
     HTTP_201_CREATED,
     HTTP_204_NO_CONTENT,
-    HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
 )
-import urllib.parse
 
 from .admin_login import admin_required
-from .models import db, MetadataAlias, Metadata
-from . import config, logger
-from .objects import FORBIDDEN_IDS
+from .models import MetadataAlias
+from . import logger
 
 mod = APIRouter()
 
@@ -43,7 +36,7 @@ class AliasObjInput(BaseModel):
         specified
     """
 
-    aliases: list = None
+    aliases: list[str] = None
 
 
 @mod.post("/metadata/{guid:path}/aliases")
