@@ -23,6 +23,7 @@ from .objects import FORBIDDEN_IDS
 mod = APIRouter()
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 channel = 'my_channel'
+redis_client.publish(channel, "running")
 
 @mod.post("/metadata")
 async def batch_create_metadata(
