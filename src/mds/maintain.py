@@ -1,5 +1,4 @@
 import json
-import re
 
 from asyncpg import UniqueViolationError
 from fastapi import HTTPException, APIRouter, Depends
@@ -24,7 +23,7 @@ mod = APIRouter()
 
 @mod.post("/metadata")
 async def batch_create_metadata(
-    request: Request, data_list: list, overwrite: bool = True
+    request: Request, data_list: list[dict], overwrite: bool = True
 ):
     """Create metadata in batch."""
     request.scope.get("add_close_watcher", lambda: None)()
