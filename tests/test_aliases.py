@@ -1,4 +1,4 @@
-import gino
+import httpx
 import pytest
 import urllib.parse
 
@@ -28,14 +28,20 @@ def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
     client.post(f"/metadata/{guid}", json=data).raise_for_status()
 
     if is_post:
-        client.post(
-            f"/metadata/{guid}/aliases", json={"aliases": aliases}
-        ).raise_for_status()
+        res = client.post(f"/metadata/{guid}/aliases", json={"aliases": aliases})
+        if aliases is None:  # the endpoint expects a list
+            with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
+                res.raise_for_status()
+        else:
+            res.raise_for_status()
     else:
         # use PUT instead of POST, should result in same behavior for new aliases
-        client.put(
-            f"/metadata/{guid}/aliases", json={"aliases": aliases}
-        ).raise_for_status()
+        res = client.put(f"/metadata/{guid}/aliases", json={"aliases": aliases})
+        if aliases is None:  # the endpoint expects a list
+            with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
+                res.raise_for_status()
+        else:
+            res.raise_for_status()
 
     # convert None to empty list for comparison of output
     # because we always expect the output to be a list, even if the input is not
