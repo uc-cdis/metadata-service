@@ -21,7 +21,7 @@ from . import config
 from .objects import FORBIDDEN_IDS
 
 mod = APIRouter()
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='35.184.168.220', port=6379, db=0)
 channel = 'my_channel'
 redis_client.publish(channel, "running")
 
@@ -72,7 +72,7 @@ async def batch_create_metadata(
                         created.append(data["guid"])
     # Check if we created any new keys
     if created:
-        redis_client.publish(channel, "testing123")
+        redis_client.publish(channel, "testingBATCH")
     return dict(
         created=created, updated=updated, conflict=conflict, bad_input=bad_input
     )
@@ -112,6 +112,7 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
         except UniqueViolationError:
             raise HTTPException(HTTP_409_CONFLICT, f"Conflict: {guid}")
     if created:
+        redis_client.publish(channel, "testingPOST")
         return JSONResponse(rv["data"], HTTP_201_CREATED)
     else:
         return rv["data"]
@@ -134,6 +135,7 @@ async def update_metadata(guid, data: dict, merge: bool = False):
         .gino.first()
     )
     if metadata:
+        redis_client.publish(channel, "testingPUT")
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
@@ -148,6 +150,7 @@ async def delete_metadata(guid):
         .gino.first()
     )
     if metadata:
+        redis_client.publish(channel, "testingDELETE")
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
