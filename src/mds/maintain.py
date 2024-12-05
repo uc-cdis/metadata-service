@@ -21,7 +21,7 @@ from . import config
 from .objects import FORBIDDEN_IDS
 
 mod = APIRouter()
-redis_client = redis.Redis(host='data-one.dev.planx-pla.net', port=6379, db=0)
+redis_client = redis.Redis(host='34.171.224.50', port=6379, db=0)
 channel = 'my_channel'
 redis_client.publish(channel, "running")
 
@@ -72,7 +72,8 @@ async def batch_create_metadata(
                         created.append(data["guid"])
     # Check if we created any new keys
     if created:
-        redis_client.publish(channel, "testingBATCH")
+        for created_metadata_guid in created:
+            redis_client.publish(channel, created_metadata_guid)
     return dict(
         created=created, updated=updated, conflict=conflict, bad_input=bad_input
     )
