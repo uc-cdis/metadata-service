@@ -113,7 +113,8 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
         except UniqueViolationError:
             raise HTTPException(HTTP_409_CONFLICT, f"Conflict: {guid}")
     if created:
-        redis_client.publish(channel, "testingPOST")
+        # redis_client.publish(channel, "testingPOST-GUID")
+        redis_client.publish(channel, guid)
         return JSONResponse(rv["data"], HTTP_201_CREATED)
     else:
         return rv["data"]
