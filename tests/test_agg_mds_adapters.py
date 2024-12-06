@@ -9,6 +9,8 @@ from mds.agg_mds.adapters import (
     add_icpsr_source_url,
     FieldFilters,
     get_json_path_value,
+    add_clinical_trials_source_url,
+    uppercase,
 )
 import httpx
 
@@ -136,3 +138,13 @@ def test_json_path_expression():
         ["results1.csv", "results2.csv", "results3.csv"],
         ["results4.csv", "results5.csv", "results6.csv"],
     ]
+
+
+def test_add_clinical_trials_source_url():
+    integer = 1
+    assert add_clinical_trials_source_url(integer) == 1
+
+
+def test_uppercase():
+    interger = 1
+    assert uppercase(interger) == 1
