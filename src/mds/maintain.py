@@ -21,7 +21,7 @@ from . import config
 from .objects import FORBIDDEN_IDS
 
 mod = APIRouter()
-redis_client = redis.Redis(host='34.171.224.50', port=6379, db=0)
+redis_client = redis.Redis(host='34.122.191.194', port=6379, db=0)
 channel = 'my_channel'
 redis_client.publish(channel, "running")
 
