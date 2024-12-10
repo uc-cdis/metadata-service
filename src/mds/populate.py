@@ -1,5 +1,6 @@
 import asyncio
 from argparse import Namespace
+from pathvalidate import ValidationError, sanitize_filepath, validate_filepath
 from typing import Any, Dict, List, Optional
 from mds.agg_mds import datastore, adapters
 from mds.agg_mds.mds import pull_mds
@@ -19,17 +20,11 @@ def parse_args(argv: List[str]) -> Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="config file to use", type=str, required=True)
-    parser.add_argument(
-        "--offset", help="offset for mds", type=int, default=0, required=False
-    )
-    parser.add_argument("--append", help="append mode for indices", action="store_true")
     known_args, unknown_args = parser.parse_known_args(argv)
     return known_args
 
 
-async def populate_metadata(
-    name: str, common, results, use_temp_index=False, append=False
-):
+async def populate_metadata(name: str, common, results, use_temp_index=False):
     mds_arr = [{k: v} for k, v in results.items()]
 
     total_items = len(mds_arr)
@@ -38,9 +33,6 @@ async def populate_metadata(
         logger.warning(f"populating {name} aborted as there are no items to add")
         return
 
-    logger.info(
-        f"{'Appending' if append else 'Populating'} {name} with {total_items} items."
-    )
     # prefilter to remove entries not matching a certain field.
     if hasattr(common, "select_field") and common.select_field is not None:
         mds_arr = await filter_entries(common, mds_arr)
@@ -49,6 +41,7 @@ async def populate_metadata(
 
     # inject common_name field into each entry
     for x in mds_arr:
+        key = next(iter(x.keys()))
         entry = next(iter(x.values()))
 
         def normalize(entry: dict) -> Any:
@@ -112,10 +105,7 @@ async def populate_metadata(
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
 
-    if append:
-        await datastore.add_metadata(name, mds_arr, use_temp_index)
-    else:
-        await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
+    await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 
 
 async def populate_info(commons_config: Commons, use_temp_index=False) -> None:
@@ -155,67 +145,7 @@ async def populate_config(commons_config: Commons, use_temp_index=False) -> None
     await datastore.update_config_info(array_definition, use_temp_index)
 
 
-async def add_commons_metadata(commons_config: Commons) -> None:
-    """ """
-    if not config.USE_AGG_MDS:
-        logger.info(config)
-        logger.info("aggregate MDS disabled")
-        exit(1)
-
-    url_parts = urlparse(config.ES_ENDPOINT)
-
-    await datastore.init(
-        hostname=url_parts.hostname, port=url_parts.port, support_search=False
-    )
-
-    # build mapping table for commons index
-
-    mdsCount = 0
-    try:
-        for name, common in commons_config.gen3_commons.items():
-            logger.info(f"Populating {name} using Gen3 MDS connector")
-            results = pull_mds(common.mds_url, common.guid_type)
-            logger.info(f"Received {len(results)} from {name}")
-            if len(results) > 0:
-                mdsCount += len(results)
-                await populate_metadata(
-                    name, common, results, use_temp_index=False, append=True
-                )
-
-        for name, common in commons_config.adapter_commons.items():
-            logger.info(f"Populating {name} using adapter: {common.adapter}")
-            results = adapters.get_metadata(
-                common.adapter,
-                common.mds_url,
-                common.filters,
-                common.config,
-                common.field_mappings,
-                common.per_item_values,
-                common.keep_original_fields,
-                common.global_field_filters,
-                schema=commons_config.configuration.schema,
-            )
-            logger.info(f"Received {len(results)} from {name}")
-            if len(results) > 0:
-                mdsCount += len(results)
-                await populate_metadata(
-                    name, common, results, use_temp_index=False, append=True
-                )
-
-        if mdsCount == 0:
-            logger.info(
-                "Could not obtain any metadata from any adapters. Existing indexes are left in place."
-            )
-            return
-    except Exception as ex:
-        logger.error(
-            "Error occurred during mds population. Existing indexes are left in place."
-        )
-        logger.error(ex)
-        raise ex
-
-
-async def main(commons_config: Commons, offset=0, append=False) -> None:
+async def main(commons_config: Commons) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
@@ -234,15 +164,14 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
         "..." : {
         }
     """
+
     if not config.USE_AGG_MDS:
         logger.info("aggregate MDS disabled")
         exit(1)
 
     url_parts = urlparse(config.ES_ENDPOINT)
 
-    await datastore.init(
-        hostname=url_parts.hostname, port=url_parts.port, support_search=False
-    )
+    await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
 
     # build mapping table for commons index
 
@@ -260,28 +189,18 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
         }
     }
 
-    if (
-        append is False
-    ):  # create temp indexes and populate them only if not in append mode
-        await datastore.drop_all_temp_indexes()
-        await datastore.create_temp_indexes(commons_mapping=field_mapping)
+    await datastore.drop_all_temp_indexes()
+    await datastore.create_temp_indexes(commons_mapping=field_mapping)
 
     mdsCount = 0
     try:
         for name, common in commons_config.gen3_commons.items():
             logger.info(f"Populating {name} using Gen3 MDS connector")
-            results = pull_mds(common.mds_url, common.guid_type, offset=offset)
+            results = pull_mds(common.mds_url, common.guid_type)
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
-                if append:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=False, append=True
-                    )
-                else:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=True, append=False
-                    )
+                await populate_metadata(name, common, results, use_temp_index=True)
 
         for name, common in commons_config.adapter_commons.items():
             logger.info(f"Populating {name} using adapter: {common.adapter}")
@@ -295,20 +214,11 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
                 common.keep_original_fields,
                 common.global_field_filters,
                 schema=commons_config.configuration.schema,
-                offset=offset,
             )
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
-                print("Populating metadata for %s" % name)
-                if append:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=False, append=True
-                    )
-                else:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=True, append=False
-                    )
+                await populate_metadata(name, common, results, use_temp_index=True)
 
         if mdsCount == 0:
             logger.info(
@@ -316,11 +226,10 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
             )
             return
 
-        if append is False:
-            # populate global information index
-            await populate_info(commons_config, use_temp_index=True)
-            # populate array index information to support guppy
-            await populate_config(commons_config, use_temp_index=True)
+        # populate global information index
+        await populate_info(commons_config, use_temp_index=True)
+        # populate array index information to support guppy
+        await populate_config(commons_config, use_temp_index=True)
 
     except Exception as ex:
         logger.error(
@@ -329,21 +238,20 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
         logger.error(ex)
         raise ex
 
-    if append is False:
-        logger.info(f"Temp indexes populated successfully. Proceeding to clone")
-        # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
-        try:
-            await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
-            await datastore.create_indexes(commons_mapping=field_mapping)
-            await datastore.clone_temp_indexes_to_real_indexes()
-            await datastore.drop_all_temp_indexes()
-        except Exception as ex:
-            logger.error("Error occurred during cloning.")
-            logger.error(ex)
-            raise ex
+    logger.info(f"Temp indexes populated successfully. Proceeding to clone")
+    # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
+    try:
+        await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
+        await datastore.create_indexes(commons_mapping=field_mapping)
+        await datastore.clone_temp_indexes_to_real_indexes()
+        await datastore.drop_all_temp_indexes()
+    except Exception as ex:
+        logger.error("Error occurred during cloning.")
+        logger.error(ex)
+        raise ex
 
     res = await datastore.get_status()
-    logger.info(f"datastore.get_status: {res}")
+    print(res)
     await datastore.close()
 
 
@@ -392,13 +300,24 @@ def parse_config_from_file(path: Path) -> Optional[Commons]:
         raise ex
 
 
+def is_valid_path(path: str) -> bool:
+    try:
+        validate_filepath(path, platform="auto")
+    except ValidationError as e:
+        logger.error(f"Validation error in config file path: {e}")
+        raise e
+    if path != sanitize_filepath(path):
+        logger.error(f"Unsafe config file path: {path}")
+        return False
+    return True
+
+
 if __name__ == "__main__":
     """
     Runs a "populate" procedure. Assumes the datastore is ready.
     """
     args: Namespace = parse_args(sys.argv)
-    offset = args.offset
-    append = args.append
-
+    if not is_valid_path(args.config):
+        exit()
     commons = parse_config_from_file(Path(args.config))
-    asyncio.run(main(commons_config=commons, offset=offset, append=append))
+    asyncio.run(main(commons_config=commons))
