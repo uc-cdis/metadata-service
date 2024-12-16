@@ -128,7 +128,7 @@ async def do_work():
 
     # Setup connection to Redis
     # Gonna hard-code one ip address for now, will fix with config later
-    redis_client = redis.Redis(host='data-one.dev.planx-pla.net', port=6379, db=0)
+    redis_client = redis.Redis(host='alt.data-one.dev.planx-pla.net', port=6379, db=0)
     channel = 'my_channel'
 
     # 2. Make redis spin
@@ -144,7 +144,7 @@ async def do_work():
             guid = message_array[1]
             # post
             if rest_route == "POST":
-                print(f"Getting data-one.dev.planx-pla.net/mds/metadata/{guid}")
+                print(f"Getting https://data-one.dev.planx-pla.net/mds/metadata/{guid}")
 
                 # 3. Make switch statement to update ES according to redis updates
                 # POST
