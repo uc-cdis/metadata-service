@@ -128,7 +128,7 @@ async def do_work():
 
     # Setup connection to Redis
     # Gonna hard-code one ip address for now, will fix with config later
-    redis_client = redis.Redis(host='alt.data-one.dev.planx-pla.net', port=6379, db=0)
+    redis_client = redis.Redis(host='data-one.dev.planx-pla.net', port=6379, db=0)
     channel = 'my_channel'
 
     # 2. Make redis spin
