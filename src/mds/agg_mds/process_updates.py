@@ -3,14 +3,28 @@ import redis
 from mds.agg_mds import datastore
 from mds import config, logger
 from urllib.parse import urlparse
-from mds.agg_mds.commons import ColumnsToFields
+from mds.agg_mds.commons import MDSInstance, ColumnsToFields, Commons, parse_config
+from pathlib import Path
 import requests
 import json
-from typing import Any
-
+from typing import Any, Optional
+import argparse
+import sys
 
 # Okay, so what I need to do in this file is create a redis subscription
 # Every time there is an upate on it, use it to update ES
+
+def parse_config_from_file(path: Path) -> Optional[Commons]:
+    if not path.exists():
+        logger.error(f"configuration file: {path} does not exist")
+        return None
+    try:
+        return parse_config(path.read_text())
+    except IOError as ex:
+        logger.error(f"cannot read configuration file {path}: {ex}")
+        raise ex
+
+commons = parse_config_from_file(Path("./agg_mds_config.json"))
 
 if not config.USE_AGG_MDS:
     logger.info("aggregate MDS disabled")
@@ -21,38 +35,6 @@ if not config.USE_AGG_MDS:
 # Might need to be worried about config?
 # Not sure, but I know populate runs inside the pod right, so this should be okay
 url_parts = urlparse(config.ES_ENDPOINT)
-
-async def do_work():
-    await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
-
-    # Setup connection to Redis
-    # Gonna hard-code one ip address for now, will fix with config later
-    redis_client = redis.Redis(host='data-one.dev.planx-pla.net', port=6379, db=0)
-    channel = 'my_channel'
-
-    # 2. Make redis spin
-    pubsub = redis_client.pubsub()
-    pubsub.subscribe(channel)
-    print(f"Subscribed to {channel}. Waiting for messages...")
-    for message in pubsub.listen():
-        if message['type'] == 'message':
-            message_data = message['data'].decode('utf-8')
-            print(f"Received: {message_data}")
-            print(f"Getting data-one.dev.planx-pla.net/mds/metadata/{message_data}")
-
-            # 3. Make switch statement to update ES according to redis updates
-            # POST
-            # get the data
-            response = requests.get(f"https://data-one.dev.planx-pla.net/mds/metadata/{message_data}")
-            json_data = json.loads(response.text)
-
-            # Add to ES
-            await populate_metadata(message_data, "data-one", json_data, False)
-            
-            # put
-            # delete
-
-asyncio.run(do_work())
 
 # Copied this function from populate.py, need to modify it to work for my needs
 async def populate_metadata(name: str, common, results, use_temp_index=False):
@@ -140,6 +122,52 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
     # print(use_temp_index)
 
     await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
+
+async def do_work():
+    await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
+
+    # Setup connection to Redis
+    # Gonna hard-code one ip address for now, will fix with config later
+    redis_client = redis.Redis(host='data-one.dev.planx-pla.net', port=6379, db=0)
+    channel = 'my_channel'
+
+    # 2. Make redis spin
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe(channel)
+    print(f"Subscribed to {channel}. Waiting for messages...")
+    for message in pubsub.listen():
+        if message['type'] == 'message':
+            message_data = message['data'].decode('utf-8')
+            print(f"Received: {message_data}")
+            message_array = message_data.split()
+            rest_route = message_array[0]
+            guid = message_array[1]
+            # post
+            if rest_route == "POST":
+                print(f"Getting data-one.dev.planx-pla.net/mds/metadata/{guid}")
+
+                # 3. Make switch statement to update ES according to redis updates
+                # POST
+                # get the data
+                response = requests.get(f"https://data-one.dev.planx-pla.net/mds/metadata/{guid}")
+                json_data = json.loads(response.text)
+
+                # Add to ES
+                for name, common in commons.adapter_commons.items():
+                    await populate_metadata(message_data, common, json_data, False)
+                
+            # put
+            elif rest_route == "PUT":
+                print("PUT not implemented")
+                pass
+
+            # delete
+            elif rest_route == "DELETE":
+                print("DELETE not implemented")
+                pass
+
+asyncio.run(do_work())
+
 # do_work() should never stop, right?
 
 # (not code, note to self) 4. Verify the updates are working on ES as expected
