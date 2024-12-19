@@ -75,7 +75,7 @@ def test_get_metadata_tcia():
                 "_unique_id": "study_id_1",
                 "commons": "TCIA",
                 "description": "TCIA data from collection: Collection1.",
-                "program_name": "Collection2",
+                "program_name": "Collection1",
                 "study_title": "Collection One.",
                 "tags": [{"category": "program_name", "name": "Collection1"}],
             },
