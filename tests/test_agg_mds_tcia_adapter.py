@@ -6,7 +6,7 @@ from mds.agg_mds.adapters import get_metadata
 
 @respx.mock
 def test_get_metadata_tcia():
-    pid_response = """
+    tcia_response = """
     [
         {
             "StudyInstanceUID": "study_id_1",
@@ -47,11 +47,13 @@ def test_get_metadata_tcia():
         "tags": [],
     }
 
-    respx.post(
+    respx.get(
         "http://test/ok",
-    ).mock(return_value=httpx.Response(status_code=200, content=pid_response))
+    ).mock(return_value=httpx.Response(status_code=200, content=tcia_response))
 
     filters = {"size": 5}
+
+    assert get_metadata("tcia", "http://test/ok", filters=None, config=None) == {}
 
     assert get_metadata(
         "tcia", "http://test/ok", filters=filters, mappings=field_mappings
