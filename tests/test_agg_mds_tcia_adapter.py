@@ -40,6 +40,7 @@ def test_get_metadata_tcia():
     """
 
     field_mappings = {
+        "_unique_id": "StudyInstanceUID",
         "commons": "TCIA",
         "study_title": "path:StudyDescription",
         "program_name": "path:Collection",

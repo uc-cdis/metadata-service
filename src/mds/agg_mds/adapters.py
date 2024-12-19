@@ -1672,9 +1672,7 @@ class TCIAAdapter(RemoteMetadataAdapter):
                 for tag in ["program_name"]
             ]
 
-            unique_id_field = "SeriesInstanceUID" if "SeriesInstanceUID" in normalized_item else "SeriesInstanceUID"
-
-            results[normalized_item[unique_id_field]] = {
+            results[normalized_item["_unique_id"]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
