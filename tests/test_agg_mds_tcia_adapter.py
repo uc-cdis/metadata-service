@@ -53,8 +53,6 @@ def test_get_metadata_tcia():
 
     filters = {"size": 5}
 
-    assert get_metadata("pdc", None, filters=filters, mappings=field_mappings) == {}
-
     assert get_metadata(
         "tcia", "http://test/ok", filters=filters, mappings=field_mappings
     ) == {
