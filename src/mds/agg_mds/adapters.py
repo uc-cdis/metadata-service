@@ -1662,17 +1662,19 @@ class TCIAAdapter(RemoteMetadataAdapter):
 
             normalized_item[
                 "description"
-            ] = f"TCIA data from collection: {normalized_item['Collection']}."
+            ] = f"TCIA data from collection: {normalized_item['Collection']}, study: {normalized_item['StudyDesc']}."
 
             normalized_item["tags"] = [
                 {
                     "name": normalized_item[tag] if normalized_item[tag] else "",
                     "category": tag,
                 }
-                for tag in ["disease_type", "data_type", "primary_site"]
+                for tag in ["Collection", "StudyDesc", "StudyDate"]
             ]
 
-            results[normalized_item["_unique_id"]] = {
+            unique_id_field = "SeriesInstanceUID" if "SeriesInstanceUID" in normalized_item else "SeriesInstanceUID"
+
+            results[normalized_item[unique_id_field]] = {
                 "_guid_type": "discovery_metadata",
                 "gen3_discovery": normalized_item,
             }
