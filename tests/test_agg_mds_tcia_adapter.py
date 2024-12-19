@@ -11,7 +11,7 @@ def test_get_metadata_tcia():
         {
             "StudyInstanceUID": "study_id_1",
             "StudyDate": "",
-            "StudyDescription": "",
+            "StudyDescription": "Collection One.",
             "PatientAge": "",
             "PatientID": "",
             "PatientName": "",
@@ -25,7 +25,7 @@ def test_get_metadata_tcia():
         {
             "StudyInstanceUID": "study_id_2",
             "StudyDate": "",
-            "StudyDescription": "",
+            "StudyDescription": "Collection Two.",
             "PatientAge": "",
             "PatientID": "",
             "PatientName": "",
@@ -40,7 +40,7 @@ def test_get_metadata_tcia():
     """
 
     field_mappings = {
-        "_unique_id": "StudyInstanceUID",
+        "_unique_id": "path:StudyInstanceUID",
         "commons": "TCIA",
         "study_title": "path:StudyDescription",
         "program_name": "path:Collection",
@@ -68,39 +68,29 @@ def test_get_metadata_tcia():
 
     assert get_metadata(
         "tcia", "http://test/ok", filters=filters, mappings=field_mappings
-    ) == {
-        "data": {
-            "study_id_1": [
-                {
-                    "StudyInstanceUID": "study_id_1",
-                    "StudyDate": "",
-                    "StudyDescription": "",
-                    "PatientAge": "",
-                    "PatientID": "",
-                    "PatientName": "",
-                    "PatientSex": "",
-                    "EthnicGroup": "",
-                    "Collection": "Collection1",
-                    "SeriesCount": 1,
-                    "LongitudinalTemporalEventType": "",
-                    "LongitudinalTemporalOffsetFromEvent": 0,
-                }
-            ],
-            "study_id_2": [
-                {
-                    "StudyInstanceUID": "study_id_1",
-                    "StudyDate": "",
-                    "StudyDescription": "",
-                    "PatientAge": "",
-                    "PatientID": "",
-                    "PatientName": "",
-                    "PatientSex": "",
-                    "EthnicGroup": "",
-                    "Collection": "Collection2",
-                    "SeriesCount": 2,
-                    "LongitudinalTemporalEventType": "",
-                    "LongitudinalTemporalOffsetFromEvent": 1,
-                }
-            ],
+    ) == [
+        {
+            "study_id_1": {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": {
+                    "_unique_id": "study_id_1",
+                    "commons": "TCIA",
+                    "description": "TCIA data from collection: Collection1.",
+                    "program_name": "Collection2",
+                    "study_title": "Collection One.",
+                    "tags": [{"category": "program_name", "name": "Collection1"}],
+                },
+            },
+            "study_id_2": {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": {
+                    "_unique_id": "study_id_2",
+                    "commons": "TCIA",
+                    "description": "TCIA data from collection: Collection2.",
+                    "program_name": "Collection2",
+                    "study_title": "Collection Two.",
+                    "tags": [{"category": "program_name", "name": "Collection2"}],
+                },
+            },
         }
-    }
+    ]
