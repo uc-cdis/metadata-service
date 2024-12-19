@@ -47,13 +47,23 @@ def test_get_metadata_tcia():
         "tags": [],
     }
 
+    respx.get("http://test/ok").mock(side_effect=httpx.HTTPError)
+    assert (
+        get_metadata("tcia", "http://test/ok", filters=None, mappings=field_mappings)
+        == {}
+    )
+
+    respx.get("http://test/ok").mock(side_effect=Exception)
+    assert (
+        get_metadata("tcia", "http://test/ok", filters=None, mappings=field_mappings)
+        == {}
+    )
+
     respx.get(
         "http://test/ok",
     ).mock(return_value=httpx.Response(status_code=200, content=tcia_response))
 
     filters = {"size": 5}
-
-    assert get_metadata("tcia", "http://test/ok", filters=None, config=None) == {}
 
     assert get_metadata(
         "tcia", "http://test/ok", filters=filters, mappings=field_mappings
