@@ -68,29 +68,27 @@ def test_get_metadata_tcia():
 
     assert get_metadata(
         "tcia", "http://test/ok", filters=filters, mappings=field_mappings
-    ) == [
-        {
-            "study_id_1": {
-                "_guid_type": "discovery_metadata",
-                "gen3_discovery": {
-                    "_unique_id": "study_id_1",
-                    "commons": "TCIA",
-                    "description": "TCIA data from collection: Collection1.",
-                    "program_name": "Collection2",
-                    "study_title": "Collection One.",
-                    "tags": [{"category": "program_name", "name": "Collection1"}],
-                },
+    ) == {
+        "study_id_1": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "_unique_id": "study_id_1",
+                "commons": "TCIA",
+                "description": "TCIA data from collection: Collection1.",
+                "program_name": "Collection2",
+                "study_title": "Collection One.",
+                "tags": [{"category": "program_name", "name": "Collection1"}],
             },
-            "study_id_2": {
-                "_guid_type": "discovery_metadata",
-                "gen3_discovery": {
-                    "_unique_id": "study_id_2",
-                    "commons": "TCIA",
-                    "description": "TCIA data from collection: Collection2.",
-                    "program_name": "Collection2",
-                    "study_title": "Collection Two.",
-                    "tags": [{"category": "program_name", "name": "Collection2"}],
-                },
+        },
+        "study_id_2": {
+            "_guid_type": "discovery_metadata",
+            "gen3_discovery": {
+                "_unique_id": "study_id_2",
+                "commons": "TCIA",
+                "description": "TCIA data from collection: Collection2.",
+                "program_name": "Collection2",
+                "study_title": "Collection Two.",
+                "tags": [{"category": "program_name", "name": "Collection2"}],
             },
-        }
-    ]
+        },
+    }
