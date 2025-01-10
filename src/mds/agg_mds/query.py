@@ -144,10 +144,10 @@ async def get_aggregate_metadata(
 @mod.get("/aggregate/metadata/{name}")
 async def get_aggregate_metadata_for_commons(
     name: str = Path(
-        description="Return the results without grouping items by commons."
+        default="", description="Return the results without grouping items by commons."
     ),
 ):
-    """et all metadata records from a commons by name
+    """get all metadata records from a commons by name
 
     Returns an array containing all the metadata entries for a single commons.
     There are no limit/offset parameters.
