@@ -12,6 +12,8 @@ WORKDIR /${appname}
 # Builder stage
 FROM base AS builder
 
+RUN pipx install 'poetry<2.0'
+
 USER gen3
 
 COPY poetry.lock pyproject.toml /${appname}/
