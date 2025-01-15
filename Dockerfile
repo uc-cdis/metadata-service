@@ -1,4 +1,4 @@
-ARG AZLINUX_BASE_VERSION=master
+ARG AZLINUX_BASE_VERSION=m0nhawk-patch-1
 
 # Base stage with python-build-base
 FROM quay.io/cdis/python-nginx-al:${AZLINUX_BASE_VERSION} AS base
@@ -11,8 +11,6 @@ WORKDIR /${appname}
 
 # Builder stage
 FROM base AS builder
-
-RUN pipx install 'poetry<2.0'
 
 USER gen3
 
