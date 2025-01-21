@@ -144,7 +144,7 @@ async def get_aggregate_metadata(
 @mod.get("/aggregate/metadata/{name}")
 async def get_aggregate_metadata_for_commons(
     name: str = Path(
-        default="", description="Return the results without grouping items by commons."
+        description="Return the results without grouping items by commons."
     ),
 ):
     """get all metadata records from a commons by name
