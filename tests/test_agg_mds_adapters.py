@@ -11,6 +11,8 @@ from mds.agg_mds.adapters import (
     add_icpsr_source_url,
     FieldFilters,
     get_json_path_value,
+    add_clinical_trials_source_url,
+    uppercase,
 )
 import httpx
 
@@ -298,3 +300,13 @@ def test_normalize_tags_empty_input_tags():
     """
     result = normalize_tags([], mapping={"cat1": {"tag1": "tag1_updated"}})
     assert result == []
+
+
+def test_add_clinical_trials_source_url():
+    integer = 1
+    assert add_clinical_trials_source_url(integer) == 1
+
+
+def test_uppercase():
+    interger = 1
+    assert uppercase(interger) == 1
