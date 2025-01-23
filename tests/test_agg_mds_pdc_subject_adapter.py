@@ -9,9 +9,10 @@ def test_get_metadata_pdc_subject():
     json_response = r"""
     {
         "data": {
-            "getPaginatedUICase": {
+        "getPaginatedUICase" : { "total": 2 },
+            "getPaginatedUIClinical": {
             "total": 2,
-            "uiCases": [
+            "uiClinical": [
                 {
                 "aliquot_id": "test_aliquot_id_0",
                 "sample_id": "test_sample_id_0",
@@ -260,16 +261,14 @@ def test_get_metadata_pdc_subject():
         "getAll": False,
     }
 
-    respx.post(
-        "http://test/ok",
-        json={"query": query, "variables": variables},
-    ).mock(return_value=httpx.Response(status_code=200, content=json_response))
+    respx.post("http://test/ok").mock(
+        return_value=httpx.Response(status_code=200, content=json_response)
+    )
 
     filters = {"size": 5}
 
-    assert (
-        get_metadata("pdcsubject", None, filters=filters, mappings=field_mappings) == {}
-    )
+    results = get_metadata("pdcsubject", None, filters=filters, mappings=field_mappings)
+    assert results == {}
 
     expected_result = {
         "test_case_id_0": {
@@ -386,12 +385,10 @@ def test_get_metadata_pdc_subject():
         },
     }
 
-    assert (
-        get_metadata(
-            "pdcsubject", "http://test/ok", filters=filters, mappings=field_mappings
-        )
-        == expected_result
+    results = get_metadata(
+        "pdcsubject", "http://test/ok", filters=filters, mappings=field_mappings
     )
+    assert results == expected_result
 
     expected_result = {
         "test_case_id_0": {
@@ -523,7 +520,6 @@ def test_get_metadata_pdc_subject():
 
     respx.post(
         "http://test/ok",
-        json={"query": query, "variables": variables},
     ).mock(side_effect=httpx.TimeoutException)
 
     assert (
@@ -533,10 +529,9 @@ def test_get_metadata_pdc_subject():
         == {}
     )
 
-    respx.post(
-        "http://test/ok",
-        json={"query": query, "variables": variables},
-    ).mock(side_effect=httpx.HTTPError("This is a HTTP Error"))
+    respx.post("http://test/ok").mock(
+        side_effect=httpx.HTTPError("This is a HTTP Error")
+    )
 
     assert (
         get_metadata(
@@ -545,10 +540,7 @@ def test_get_metadata_pdc_subject():
         == {}
     )
 
-    respx.post(
-        "http://test/ok",
-        json={"query": query, "variables": variables},
-    ).mock(side_effect=Exception)
+    respx.post("http://test/ok").mock(side_effect=Exception)
 
     assert (
         get_metadata(

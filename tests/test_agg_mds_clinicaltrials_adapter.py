@@ -1097,7 +1097,7 @@ def test_get_metadata_clinicaltrials():
 
     respx.get(
         "http://test/ok?expr=should+error+timeout&fmt=json&min_rnk=1&max_rnk=1"
-    ).mock(side_effect=httpx.HTTPError("This is a HTTP Error"))
+    ).mock(side_effect=httpx.TimeoutException("This is a HTTP Error"))
 
     assert (
         get_metadata(

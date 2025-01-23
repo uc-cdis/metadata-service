@@ -1367,7 +1367,7 @@ class CIDCAdapter(RemoteMetadataAdapter):
         except httpx.TimeoutException as exc:
             logger.error(f"An timeout error occurred while requesting {mds_url}.")
             raise
-        except httpx.HTTPError as exc:
+        except httpx.HTTPStatusError as exc:
             logger.error(
                 f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
             )
