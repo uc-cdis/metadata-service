@@ -275,15 +275,15 @@ paths:
       - Aggregate
   /aggregate/metadata/{name}:
     get:
-      description: "et all metadata records from a commons by name\n\nReturns an array\
-        \ containing all the metadata entries for a single commons.\nThere are no\
-        \ limit/offset parameters.\n\nExample:\n\n    [\n        {\n            \"\
-        gen3_discovery\": {\n                \"name\": \"bear\",\n               \
-        \ \"type\": \"study\",\n                ...\n            },\n            \"\
-        data_dictionaries\": {\n                ...\n            }\n        },\n \
-        \       {\n            \"gen3_discovery\": {\n                \"name\": \"\
-        cat\",\n                \"type\": \"study\",\n                ...\n      \
-        \      }\n        },\n        ...\n    ]"
+      description: "get all metadata records from a commons by name\n\nReturns an\
+        \ array containing all the metadata entries for a single commons.\nThere are\
+        \ no limit/offset parameters.\n\nExample:\n\n    [\n        {\n          \
+        \  \"gen3_discovery\": {\n                \"name\": \"bear\",\n          \
+        \      \"type\": \"study\",\n                ...\n            },\n       \
+        \     \"data_dictionaries\": {\n                ...\n            }\n     \
+        \   },\n        {\n            \"gen3_discovery\": {\n                \"name\"\
+        : \"cat\",\n                \"type\": \"study\",\n                ...\n  \
+        \          }\n        },\n        ...\n    ]"
       operationId: get_aggregate_metadata_for_commons_aggregate_metadata__name__get
       parameters:
       - description: Return the results without grouping items by commons.

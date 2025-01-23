@@ -295,6 +295,44 @@ The filters are applied to the text value of the remote field. Furthermore, the 
 * **strip_email**: remove email addresses from a text field
 * **add_icpsr_source_url**: creates an url to the study data on ICPSR
 * **add_clinical_trials_source_url**: creates an url to the study on clinicaltrials.gov
+* **normalize_value**: normalized a value by mapping from one value to another. This uses a mapping object passed as a filter parameter.
+For example:
+```json
+ "subject_cancerStage: {
+          "path": "cancerStage",
+          "filters": [
+            "normalize_value"
+          ],
+          "filterParams": {
+            "normalize_value": {
+              "2": "Stage 2",
+              "3": "Stage 3"
+            }
+          },
+          "default": ""
+        },
+```
+Will map values of '2" to 'Stage 2' and '3' to 'Stage 3. This can be used to normalize data values from different data sources.
+
+* **normalize_tags**: normalizes tag values by defining a mapping of category names to new name values.
+Example:
+```json
+"tags": {
+  "path": "tags",
+  "filters": [
+    "normalize_tags"
+  ],
+  "filterParams": {
+    "normalize_tags": {
+      "CancerStage": {
+          "Stage II": "Stage 2",
+          "Stage III": "Stage 3"
+      }
+    }
+  }
+},
+```
+Will normalize the tage category 'CancerStage' to Stage 2 and Stage 3.
 
 You can add your own filters, and register them by creating a python function with the signature:
 ```python

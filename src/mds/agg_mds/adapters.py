@@ -1,6 +1,6 @@
 import collections.abc
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 from jsonpath_ng import parse, JSONPathError
 import httpx
 import xmltodict
@@ -66,6 +66,63 @@ def aggregate_pdc_file_count(record: list):
     return file_count
 
 
+def normalize_value(value: str, mapping: Optional[Dict[str, str]] = None):
+    """
+    Normalizes the input value based on the given mapping.
+
+    This function checks if the input `value` is a string, and if a `mapping`
+    dictionary is provided. If both conditions are met, the function attempts
+    to find the `value` in the given `mapping`. If a match is found, it returns
+    the corresponding mapped value. If no match is found, or if `value` is not
+    a string or no mapping is provided, it returns the original value.
+
+    Args:
+        value: str
+            The input value to be normalized.
+        mapping: Optional[Dict[str, str]]
+            An optional dictionary that maps specific values to their desired
+            normalized equivalents.
+
+    Returns:
+        str
+            The normalized value if a mapping is provided and the value is found
+            in the mapping; otherwise, the original input value.
+    """
+    return mapping.get(value, value) if isinstance(value, str) and mapping else value
+
+
+def normalize_tags(
+    tags: List[Dict[str, str]], mapping: Optional[Dict[str, str]] = None
+):
+    """
+    Maps the 'name' field of dictionaries in a list based on matching 'category' using a mapping.
+
+    Args:
+        items: A list of dictionaries, each containing 'name' and 'category' keys.
+        mapping: A dictionary where the key is a category and the value is another dictionary
+                 mapping old names to new names.
+
+    Returns:
+        A new list of dictionaries with updated 'name' values where mappings are applied.
+    """
+    if not mapping:
+        return tags
+
+    updated_tags = []
+    for tag in tags:
+        if "name" in tag and "category" in tag:
+            category = tag["category"]
+            name = tag["name"]
+            # Update name if category and name are in the mapping
+            new_name = mapping.get(category, {}).get(name, name)
+            updated_tags.append({**tag, "name": new_name})
+        else:
+            # If tag does not contain 'name' or 'category', keep it unchanged
+            updated_tags.append(tag)
+
+    return updated_tags
+
+
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
@@ -75,13 +132,17 @@ class FieldFilters:
         "uppercase": uppercase,
         "prepare_cidc_description": prepare_cidc_description,
         "aggregate_pdc_file_count": aggregate_pdc_file_count,
+        "normalize_value": normalize_value,
+        "normalize_tags": normalize_tags,
     }
 
     @classmethod
-    def execute(cls, name, value):
+    def execute(cls, name, value, params=None):
         if name not in FieldFilters.filters:
             logger.warning(f"filter {name} not found: returning original value.")
             return value
+        if params is not None:
+            return FieldFilters.filters[name](value, params)
         return FieldFilters.filters[name](value)
 
 
@@ -220,8 +281,14 @@ class RemoteMetadataAdapter(ABC):
                 )
 
                 filters = value.get("filters", [])
+                filterParams = value.get("filterParams", {})
                 for flt in filters:
-                    field_value = FieldFilters.execute(flt, field_value)
+                    if flt in filterParams:
+                        field_value = FieldFilters.execute(
+                            flt, field_value, filterParams[flt]
+                        )
+                    else:
+                        field_value = FieldFilters.execute(flt, field_value)
 
             elif isinstance(value, str) and "path:" in value:
                 # process as json path
