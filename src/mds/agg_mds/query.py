@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Query, APIRouter, Request
+from fastapi import HTTPException, Path, Query, APIRouter, Request
 from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
@@ -143,9 +143,9 @@ async def get_aggregate_metadata(
 
 @mod.get("/aggregate/metadata/{name}")
 async def get_aggregate_metadata_for_commons(
-    name: str = Query(
-        False, description="Return the results without grouping items by commons."
-    )
+    name: str = Path(
+        description="Return the results without grouping items by commons."
+    ),
 ):
     """et all metadata records from a commons by name
 

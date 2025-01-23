@@ -574,7 +574,7 @@ class ClinicalTrials(RemoteMetadataAdapter):
                 raise
             except httpx.HTTPError as exc:
                 logger.error(
-                    f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+                    f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
                 )
                 break  # need to break here as cannot be assured of leaving while loop
             except ValueError as exc:
@@ -1948,7 +1948,9 @@ query FilteredClinicalDataPaginated($offset_value: Int, $limit_value: Int, $sort
             )
             response.raise_for_status()
             response_data = response.json()
-            results["results"] = response_data["data"]["getPaginatedUIClinical"]["uiClinical"]
+            results["results"] = response_data["data"]["getPaginatedUIClinical"][
+                "uiClinical"
+            ]
             logger.info(
                 f"Fetched {response_data['data']['getPaginatedUICase']['total']} records from PDC)"
             )
@@ -2271,6 +2273,105 @@ class PDCStudyAdapter(RemoteMetadataAdapter):
         return results
 
 
+class TCIAAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for TCIA (cancerimagingarchive.net)
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        try:
+            response = httpx.get(mds_url)
+            response.raise_for_status()
+
+            response_data = response.json()
+            results["results"] = response_data
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = TCIAAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+
+            normalized_item[
+                "description"
+            ] = f"TCIA data from collection: {normalized_item['program_name']}."
+
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["program_name"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
 def gather_metadata(
     gather,
     mds_url,
@@ -2317,6 +2418,7 @@ adapters = {
     "gdc": GDCAdapter,
     "cidc": CIDCAdapter,
     "pdc": PDCAdapter,
+    "tcia": TCIAAdapter,
     "pdcsubject": PDCSubjectAdapter,
     "pdcstudy": PDCStudyAdapter,
 }

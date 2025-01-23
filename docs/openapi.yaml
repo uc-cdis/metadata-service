@@ -5,7 +5,8 @@ components:
         \ using in place of whatever GUID\n    specified"
       properties:
         aliases:
-          items: {}
+          items:
+            type: string
           title: Aliases
           type: array
       title: AliasObjInput
@@ -68,7 +69,9 @@ components:
       properties:
         loc:
           items:
-            type: string
+            anyOf:
+            - type: string
+            - type: integer
           title: Location
           type: array
         msg:
@@ -92,8 +95,8 @@ components:
       type: http
 info:
   title: Framework Services Object Management Service
-  version: 4.0.1
-openapi: 3.0.2
+  version: 4.0.2
+openapi: 3.1.0
 paths:
   /_status:
     get:
@@ -283,10 +286,12 @@ paths:
         \      }\n        },\n        ...\n    ]"
       operationId: get_aggregate_metadata_for_commons_aggregate_metadata__name__get
       parameters:
-      - in: path
+      - description: Return the results without grouping items by commons.
+        in: path
         name: name
         required: true
         schema:
+          description: Return the results without grouping items by commons.
           title: Name
           type: string
       responses:
@@ -434,7 +439,8 @@ paths:
         content:
           application/json:
             schema:
-              items: {}
+              items:
+                type: object
               title: Data List
               type: array
         required: true

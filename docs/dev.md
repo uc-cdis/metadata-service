@@ -172,3 +172,12 @@ helm upgrade --install gen3/metadata
 You can also store your images in a local registry. Kind and Minikube are popular for their local registries:
 - https://kind.sigs.k8s.io/docs/user/local-registry/
 - https://minikube.sigs.k8s.io/docs/handbook/registry/#enabling-insecure-registries
+
+
+## Additional Notes
+
+When using the Metadata Service as a backend to retrieve results for the Discovery Page, query response times can increase if the database contains a large number of records. To improve performance in such cases, one recommended approach is to manually add an index on the `data->>_guid_type` field in the PostgreSQL database.
+
+```SQL
+create index metadata_guid_type on public.metadata((data->>'_guid_type'));
+```
