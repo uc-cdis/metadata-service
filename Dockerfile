@@ -1,4 +1,4 @@
-ARG AZLINUX_BASE_VERSION=master
+ARG AZLINUX_BASE_VERSION=chore_testing_python_nginx
 
 # Base stage with python-build-base
 FROM quay.io/cdis/python-nginx-al:${AZLINUX_BASE_VERSION} AS base
