@@ -5,6 +5,7 @@ on: push
 jobs:
   ci:
     name: Build Image and Push to Registries
+    # test branch
     uses: uc-cdis/.github/.github/workflows/image_build_push.yaml@test/pin_runner_os_version
     secrets:
       ECR_AWS_ACCESS_KEY_ID: ${{ secrets.ECR_AWS_ACCESS_KEY_ID }}
