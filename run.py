@@ -4,8 +4,8 @@ Usage:
 - Generate openapi docs: python run.py openapi
 """
 
-import copy
 import os
+from pathlib import Path
 import sys
 import uvicorn
 import yaml
@@ -54,7 +54,7 @@ def _get_schema_with_clean_descriptions():
 if __name__ == "__main__":
     if sys.argv[-1] == "openapi":
         schema = _get_schema_with_clean_descriptions()
-        path = os.path.join(CURRENT_DIR, "docs/openapi.yaml")
+        path = Path(CURRENT_DIR, "docs/openapi.yaml")
         yaml.Dumper.ignore_aliases = lambda *args: True
         with open(path, "w+") as f:
             yaml.dump(schema, f, default_flow_style=False)
