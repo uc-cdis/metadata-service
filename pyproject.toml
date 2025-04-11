@@ -1,4 +1,4 @@
-[tool.poetry]
+[tool.poetry] 
 name = "mds"
 version = "4.0.5"
 description = "Metadata Service"
