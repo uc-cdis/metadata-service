@@ -1,12 +1,12 @@
-[tool.poetry]
+[tool.poetry] 
 name = "mds"
-version = "4.0.2"
+version = "4.0.5"
 description = "Metadata Service"
 authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9.2, <3.10"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version="^0.18.2"}
 gunicorn = ">=22.0.0"
@@ -18,7 +18,7 @@ psycopg2-binary = "^2.8"
 gen3authz = "^2.0"
 indexclient = "^2.1.0"
 httpx = "^0.23.0"
-authutils = "^6.0.0"
+authutils = ">=6.2.7"
 cdislogging = "^1.0"
 click = "==7.1.*,>=7.1.2"
 pyyaml = "^6.0"
@@ -32,6 +32,7 @@ tenacity = ">=8.0.0"
 pydash = "^5.1.0"
 pathvalidate = "^3.2.0"
 python-multipart = "<1"
+cryptography = "^44.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.3"
