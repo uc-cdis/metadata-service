@@ -1128,6 +1128,40 @@ class Gen3Adapter(RemoteMetadataAdapter):
         return results
 
 
+class JSONFileAdapter(Gen3Adapter):
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": {}}
+
+        file_path = kwargs.get("mds_filename", None)
+        if file_path is None:
+            return results
+
+        config = kwargs.get("config", {})
+        guid_type = config.get("guid_type", "discovery_metadata")
+        field_name = config.get("field_name", None)
+        field_value = config.get("field_value", None)
+        filters = config.get("filters", None)
+        maxItems = config.get("maxItems", None)
+
+        # offset = 0
+        # limit = min(maxItems, batchSize) if maxItems is not None else batchSize
+
+        # load json file into Dict
+        try:
+            with open(file_path, "r") as file:
+                response = json.load(file)
+            data = response
+            results["results"].update(data)
+        except FileNotFoundError:
+            print(f"Error: The file '{file_path}' was not found.")
+            return results
+        except json.JSONDecodeError:
+            print(f"Error: The file '{file_path}' does not contain valid JSON.")
+            return results
+
+        return results
+
+
 class DRSIndexdAdapter(RemoteMetadataAdapter):
     """
     Pulls the DRS hostname from a ga4gh (indexd) server to cache
@@ -2488,6 +2522,7 @@ adapters = {
     "tcia": TCIAAdapter,
     "pdcsubject": PDCSubjectAdapter,
     "pdcstudy": PDCStudyAdapter,
+    "jsonFile": JSONFileAdapter,
 }
 
 
