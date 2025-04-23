@@ -12,6 +12,23 @@ import argparse
 import sys
 
 
+def count_until_leaf(data):
+    count = 0
+    if isinstance(data, dict):
+        for value in data.values():
+            if isinstance(value, (dict, list)):
+                count += count_until_leaf(value)
+            else:
+                count += 1
+    elif isinstance(data, list):
+        for item in data:
+            if isinstance(item, (dict, list)):
+                count += count_until_leaf(item)
+            else:
+                count += 1
+    return count
+
+
 def parse_args(argv: List[str]) -> Namespace:
     """
     Parse argument from command line in this case the input file to read from
@@ -104,6 +121,11 @@ async def populate_metadata(name: str, common, results, use_temp_index=False):
 
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
+
+    for data in mds_arr:
+        total = 0
+        total += count_until_leaf(data)
+        print("total", total)
 
     await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 

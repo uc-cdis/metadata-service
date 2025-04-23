@@ -1,0 +1,106 @@
+{
+        "configuration": {
+                "schema": {
+                        "__manifest": {
+                                "type": "array",
+                                "properties": {
+                                        "file_name": {
+                                                "type": "string"
+                                        },
+                                        "file_size": {
+                                                "type": "integer"
+                                        }
+                                }
+                        },
+                        "filters": {
+                                "type": "array",
+                                 "properties": {
+                                        "key": {
+                                                "type": "string"
+                                        },
+                                        "value": {
+                                                "type": "string"
+                                        }
+                                },
+                                "default": []
+                            },
+                        "tags": {
+                                "type": "array"
+                        },
+                        "Modality": {
+                                "type": "string"
+                        },
+                        "PatientID": {
+                                "type": "string"
+                        },
+                        "PatientSex": {
+                                "type": "string"
+                        },
+                        "Manufacturer": {
+                                "type": "string"
+                        },
+                        "primary_site": {
+                                "type": "string"
+                        },
+                        "collection_id": {
+                                "type": "string"
+                        },
+                        "disease_type": {
+                                "type": "string"
+                        },
+                        "BodyPartExamined": {
+                                "type": "string"
+                        },
+                        "StudyInstanceUID": {
+                                "type": "string"
+                        },
+                        "SeriesDescription": {
+                                "type": "text"
+                        },
+                        "SeriesInstanceUID": {
+                                "type": "string"
+                        },
+                        "ManufacturerModelName": {
+                                "type": "text"
+                        },
+                        "commons": {
+                                "type": "string"
+                        },
+                        "race": {
+                                "type": "string"
+                        },
+                        "authz": {
+                                "type": "string"
+                        },
+                        "dicom_viewer_url": {
+                                "type": "string"
+                        },
+                        "EthnicGroup": {
+                                "type": "string"
+                        },
+                         "auth_resource_path": {
+                                 "type": "string"
+                         }
+                },
+                "settings": {
+                        "cache_drs": false
+                }
+        },
+        "adapter_commons": {
+                "BiHData": {
+                        "mds_url": "https://gen3.datacommons.io/",
+                        "commons_url": "gen3.datacommons.io",
+                        "adapter": "gen3",
+                        "config": {
+                                "guid_type": "discovery_metadata",
+                                "study_field": "gen3_discovery",
+                                "batchSize": 1000,
+                                "maxItems": 1000
+                        },
+                        "keep_original_fields": true,
+                        "field_mappings" : {
+                                "auth_resource_path": "/programs/external/projects/test"
+                        }
+                }
+        }
+}
