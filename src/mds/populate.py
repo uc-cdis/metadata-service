@@ -197,14 +197,17 @@ async def main(commons_config: Commons) -> None:
 
     # using node cards for agg mds
     node_adapters = {}
-    node_card_url = "revproxy-service/meshcard/nodecard"
-    response = requests.get(node_card_url, verify=False)
-    if response.status_code == 200:
-        nodes = response.json()
-        for n in nodes:
-            adapter = n["metadata_adapters"]["BRH"]
-            commons = n["id"]
-            node_adapters[commons] = adapter
+    try:
+        node_card_url = "https://revproxy-service/meshcard/nodecard"
+        response = requests.get(node_card_url, verify=False)
+        if response.status_code == 200:
+            nodes = response.json()
+            for n in nodes:
+                adapter = n["metadata_adapters"]["BRH"]
+                commons = n["id"]
+                node_adapters[commons] = adapter
+    except Exception as e:
+        pass
 
     try:
         for name, common in commons_config.gen3_commons.items():
