@@ -198,7 +198,8 @@ async def main(commons_config: Commons) -> None:
     # using node cards for agg mds
     node_adapters = {}
     try:
-        node_card_url = "https://revproxy-service/meshcard/nodecard"
+        logger.info("now grabbing all of the node cards")
+        node_card_url = "http://revproxy-service/meshcard/nodecard"
         response = requests.get(node_card_url, verify=False)
         if response.status_code == 200:
             nodes = response.json()
@@ -206,8 +207,9 @@ async def main(commons_config: Commons) -> None:
                 adapter = n["metadata_adapters"]["BRH"]
                 commons = n["id"]
                 node_adapters[commons] = adapter
+        logger.info(node_adapters)
     except Exception as e:
-        pass
+        logger.info("WE got nothing from the node cards!!")
 
     try:
         for name, common in commons_config.gen3_commons.items():
@@ -236,6 +238,7 @@ async def main(commons_config: Commons) -> None:
                 mdsCount += len(results)
                 await populate_metadata(name, common, results, use_temp_index=True)
 
+        logger.info("now going through the node_cards")
         for name, common in node_adapters.items():
             a = common.get("adapter", None)
             logger.info(f"Populating {name} using adapter: {a}")
