@@ -1,5 +1,6 @@
 import asyncio
 import requests
+import json
 from argparse import Namespace
 from pathvalidate import ValidationError, sanitize_filepath, validate_filepath
 from typing import Any, Dict, List, Optional
@@ -352,7 +353,7 @@ def parse_config_from_file(path: Path) -> Optional[Commons]:
         logger.error(f"configuration file: {path} does not exist")
         return None
     try:
-        agg_config = dict(path.read_text())
+        agg_config = json.loads(path.read_text())
 
         node_adapters = {}
         try:
@@ -372,7 +373,7 @@ def parse_config_from_file(path: Path) -> Optional[Commons]:
         for n in node_adapters:
             agg_config["adapter_commons"][n] = node_adapters[n]
 
-        return parse_config(str(agg_config))
+        return parse_config(json.dumps(agg_config))
     except IOError as ex:
         logger.error(f"cannot read configuration file {path}: {ex}")
         raise ex
