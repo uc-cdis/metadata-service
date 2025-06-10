@@ -196,22 +196,6 @@ async def main(commons_config: Commons) -> None:
 
     mdsCount = 0
 
-    # using node cards for agg mds
-    # node_adapters = {}
-    # try:
-    #     logger.info("now grabbing all of the node cards")
-    #     node_card_url = "http://revproxy-service/meshcard/nodecard"
-    #     response = requests.get(node_card_url, verify=False)
-    #     if response.status_code == 200:
-    #         nodes = response.json()
-    #         for n in nodes:
-    #             adapter = n["metadata_adapters"]["BRH"]
-    #             commons = n["id"]
-    #             node_adapters[commons] = adapter
-    #     logger.info(node_adapters)
-    # except Exception as e:
-    #     logger.info("WE got nothing from the node cards!!")
-
     try:
         for name, common in commons_config.gen3_commons.items():
             logger.info(f"Populating {name} using Gen3 MDS connector")
@@ -238,46 +222,6 @@ async def main(commons_config: Commons) -> None:
             if len(results) > 0:
                 mdsCount += len(results)
                 await populate_metadata(name, common, results, use_temp_index=True)
-
-        # logger.info("now going through the node_cards")
-        # for name, common in node_adapters.items():
-        #     a = common.get("adapter", None)
-        #     logger.info(f"Populating {name} using adapter: {a}")
-        #     results = adapters.get_metadata(
-        #         common.get("adapter"),
-        #         common.get("mds_url"),
-        #         common.get("filters", None),
-        #         common.get("config"),
-        #         common.get("field_mappings", None),
-        #         common.get("per_item_values", None),
-        #         common.get("keep_original_fields", True),
-        #         common.get("global_field_filters", None),
-        #         schema=commons_config.configuration.schema,
-        #     )
-        #     logger.info(f"Received {len(results)} from {name}")
-        #     if len(results) > 0:
-        #         mdsCount += len(results)
-        #         await populate_metadata(name, common, results, use_temp_index=True)
-
-        # logger.info("now going through the node_cards")
-        # for name, common in node_adapters.items():
-        #     # a = common.get("adapter", None)
-        #     # logger.info(f"Populating {name} using adapter: {a}")
-        #     results = adapters.get_metadata(
-        #         common.adapter,
-        #         common.mds_url,
-        #         common.filters,
-        #         common.config,
-        #         common.field_mappings,
-        #         common.per_item_values,
-        #         common.keep_original_fields,
-        #         common.global_field_filters,
-        #         schema=commons_config.configuration.schema,
-        #     )
-        #     logger.info(f"Received {len(results)} from {name}")
-        #     if len(results) > 0:
-        #         mdsCount += len(results)
-        #         await populate_metadata(name, common, results, use_temp_index=True)
 
         if mdsCount == 0:
             logger.info(
