@@ -2440,10 +2440,6 @@ class TCIAAdapter(RemoteMetadataAdapter):
 
 
 class WindberSubjectAdapter(RemoteMetadataAdapter):
-    """
-    Simple adapter for TCIA (cancerimagingarchive.net)
-    """
-
     @retry(
         stop=stop_after_attempt(5),
         retry=retry_if_exception_type(httpx.TimeoutException),
