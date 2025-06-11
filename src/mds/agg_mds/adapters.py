@@ -2514,16 +2514,14 @@ class WindberSubjectAdapter(RemoteMetadataAdapter):
                 schema,
             )
 
-            normalized_item[
-                "description"
-            ] = f"Windber data from collection: {normalized_item['program_name']}."
+            normalized_item["description"] = "Windber data from collection "
 
             normalized_item["tags"] = [
                 {
                     "name": normalized_item[tag] if normalized_item[tag] else "",
                     "category": tag,
                 }
-                for tag in ["program_name"]
+                for tag in ["primary_disease", "cancer_type"]
             ]
 
             results[normalized_item["_unique_id"]] = {
