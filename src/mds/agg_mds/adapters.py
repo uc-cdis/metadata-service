@@ -2514,8 +2514,6 @@ class WindberSubjectAdapter(RemoteMetadataAdapter):
                 schema,
             )
 
-            normalized_item["description"] = "Windber data from collection"
-
             normalized_item["tags"] = [
                 {
                     "name": normalized_item[tag] if normalized_item[tag] else "",

@@ -110,7 +110,10 @@ def test_get_metadata_windbersubject():
                 "cancer_grade": None,
                 "exposure_type": "",
                 "chemicals_exposed_to": None,
-                "tags": [{"category": "gender", "name": "Male"}],
+                "tags": [
+                    {"category": "primary_disease", "name": None},
+                    {"category": "cancer_type", "name": ""},
+                ],
             },
         },
         "PR-HIJKLM": {
@@ -130,7 +133,10 @@ def test_get_metadata_windbersubject():
                 "cancer_grade": None,
                 "exposure_type": "",
                 "chemicals_exposed_to": None,
-                "tags": [{"category": "gender", "name": "Female"}],
+                "tags": [
+                    {"category": "primary_disease", "name": None},
+                    {"category": "cancer_type", "name": ""},
+                ],
             },
         },
     }
