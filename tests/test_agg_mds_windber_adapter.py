@@ -6,7 +6,7 @@ from mds.agg_mds.adapters import get_metadata
 
 @respx.mock
 def test_get_metadata_windbersubject():
-    windber_response_study = """
+    windber_response_subject = """
     [
         {
             "external_windber_id": "PR-ABCDEFG",
@@ -41,7 +41,7 @@ def test_get_metadata_windbersubject():
     ]
     """
 
-    field_mappings_study = {
+    field_mappings_subject = {
         "_unique_id": "path:external_windber_id",
         "apollo_id": "path:apollo_id",
         "commons": "Windber",
@@ -62,7 +62,10 @@ def test_get_metadata_windbersubject():
     respx.get("http://test/ok").mock(side_effect=httpx.HTTPError)
     assert (
         get_metadata(
-            "tcia", "http://test/ok", filters=None, mappings=field_mappings_study
+            "windbersubject",
+            "http://test/ok",
+            filters=None,
+            mappings=field_mappings_subject,
         )
         == {}
     )
@@ -70,37 +73,43 @@ def test_get_metadata_windbersubject():
     respx.get("http://test/ok").mock(side_effect=Exception)
     assert (
         get_metadata(
-            "tcia", "http://test/ok", filters=None, mappings=field_mappings_study
+            "windbersubject",
+            "http://test/ok",
+            filters=None,
+            mappings=field_mappings_subject,
         )
         == {}
     )
 
+    filters = {"size": 5}
     respx.get(
         "http://test/ok",
-    ).mock(return_value=httpx.Response(status_code=200, content=windber_response_study))
+    ).mock(
+        return_value=httpx.Response(status_code=200, content=windber_response_subject)
+    )
     assert get_metadata(
         "windbersubject",
         "http://test/ok",
         filters=filters,
-        mappings=field_mappings_series,
+        mappings=field_mappings_subject,
     ) == {
         "PR-ABCDEFG": {
             "_guid_type": "Windber_subject_metadata",
             "gen3_discovery": {
                 "_unique_id": "PR-ABCDEFG",
-                "apollo_id": null,
-                "age_at_index": null,
-                "age_at_index_gt89": null,
+                "apollo_id": "",
+                "age_at_index": "",
+                "age_at_index_gt89": "",
                 "commons": "Windber",
                 "gender": "Male",
                 "race": "White",
                 "ethnicity": "Not Spanish/Hispanic/Latino",
-                "primary_disease": null,
+                "primary_disease": "",
                 "cancer_type": "",
-                "metastasis": null,
-                "cancer_grade": null,
+                "metastasis": "",
+                "cancer_grade": "",
                 "exposure_type": "",
-                "chemicals_exposed_to": null,
+                "chemicals_exposed_to": "",
                 "tags": [{"category": "gender", "name": "Male"}],
             },
         },
@@ -109,18 +118,18 @@ def test_get_metadata_windbersubject():
             "gen3_discovery": {
                 "_unique_id": "PR-HIJKLM",
                 "apollo_id": "AP-1234",
-                "age_at_index": null,
-                "age_at_index_gt89": null,
+                "age_at_index": "",
+                "age_at_index_gt89": "",
                 "commons": "Windber",
                 "gender": "Female",
                 "race": "",
                 "ethnicity": "",
-                "primary_disease": null,
+                "primary_disease": "",
                 "cancer_type": "",
-                "metastasis": null,
-                "cancer_grade": null,
+                "metastasis": "",
+                "cancer_grade": "",
                 "exposure_type": "",
-                "chemicals_exposed_to": null,
+                "chemicals_exposed_to": "",
                 "tags": [{"category": "gender", "name": "Female"}],
             },
         },
