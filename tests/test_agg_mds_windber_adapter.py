@@ -77,18 +77,14 @@ def test_get_metadata_windbersubject():
 
     respx.get(
         "http://test/ok",
-    ).mock(
-        return_value=httpx.Response(
-            status_code=200, content=windbersubject_response_study
-        )
-    )
+    ).mock(return_value=httpx.Response(status_code=200, content=windber_response_study))
     assert get_metadata(
         "windbersubject",
         "http://test/ok",
         filters=filters,
         mappings=field_mappings_series,
     ) == {
-        "study_id_1": {
+        "PR-ABCDEFG": {
             "_guid_type": "Windber_subject_metadata",
             "gen3_discovery": {
                 "_unique_id": "PR-ABCDEFG",
@@ -108,7 +104,7 @@ def test_get_metadata_windbersubject():
                 "tags": [{"category": "gender", "name": "Male"}],
             },
         },
-        "study_id_2": {
+        "PR-HIJKLM": {
             "_guid_type": "Windber_subject_metadata",
             "gen3_discovery": {
                 "_unique_id": "PR-HIJKLM",
