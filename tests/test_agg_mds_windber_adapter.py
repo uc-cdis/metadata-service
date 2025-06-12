@@ -56,7 +56,6 @@ def test_get_metadata_windbersubject():
         "cancer_grade": "path:cancer_grade",
         "exposure_type": "path:exposure_type",
         "chemicals_exposed_to": "path:chemicals_exposed_to",
-        "tags": [],
     }
 
     respx.get("http://test/ok").mock(side_effect=httpx.HTTPError)
