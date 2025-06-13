@@ -2516,7 +2516,7 @@ class WindberSubjectAdapter(RemoteMetadataAdapter):
 
             normalized_item["tags"] = [
                 {
-                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "name": normalized_item.get(tag, ""),
                     "category": tag,
                 }
                 for tag in ["primary_disease", "cancer_type"]
