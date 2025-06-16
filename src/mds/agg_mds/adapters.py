@@ -66,6 +66,41 @@ def aggregate_pdc_file_count(record: list):
     return file_count
 
 
+def rename_double_underscore_keys(d):
+    """
+    Rename dictionary keys that start with '__' to start with '_' instead.
+    Can handle a single dictionary or a list of dictionaries.
+
+    Args:
+        d (dict or list): A dictionary or list of dictionaries to modify
+
+    Returns:
+        dict or list: A new dictionary/list with renamed keys
+    """
+    if isinstance(d, list):
+        return [
+            rename_single_dict(item) if isinstance(item, dict) else item for item in d
+        ]
+    elif isinstance(d, dict):
+        return rename_single_dict(d)
+    else:
+        return d
+
+
+def rename_single_dict(d):
+    """Helper function to rename keys in a single dictionary."""
+    result = {}
+    for key, value in d.items():
+        if isinstance(key, str) and key.startswith("__"):
+            new_key = (
+                "_" + key[2:]
+            )  # Remove first two characters and add single underscore
+            result[new_key] = value
+        else:
+            result[key] = value
+    return result
+
+
 def normalize_value(value: str, mapping: Optional[Dict[str, str]] = None):
     """
     Normalizes the input value based on the given mapping.
@@ -127,6 +162,7 @@ class FieldFilters:
     filters = {
         "strip_html": strip_html,
         "strip_email": strip_email,
+        "strip_leading_double_underscore": rename_double_underscore_keys,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
         "uppercase": uppercase,
@@ -2439,97 +2475,6 @@ class TCIAAdapter(RemoteMetadataAdapter):
         return results
 
 
-class WindberSubjectAdapter(RemoteMetadataAdapter):
-    @retry(
-        stop=stop_after_attempt(5),
-        retry=retry_if_exception_type(httpx.TimeoutException),
-        wait=wait_random_exponential(multiplier=1, max=10),
-    )
-    def getRemoteDataAsJson(self, **kwargs) -> Dict:
-        results = {"results": []}
-
-        mds_url = kwargs.get("mds_url", None)
-        if mds_url is None:
-            return results
-
-        try:
-            response = httpx.get(mds_url)
-            response.raise_for_status()
-
-            response_data = response.json()
-            results["results"] = response_data
-
-        except httpx.TimeoutException as exc:
-            logger.error(f"An timeout error occurred while requesting {mds_url}.")
-            raise
-        except httpx.HTTPError as exc:
-            logger.error(
-                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
-            )
-        except Exception as exc:
-            logger.error(
-                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
-            )
-
-        return results
-
-    @staticmethod
-    def addGen3ExpectedFields(
-        item, mappings, keepOriginalFields, globalFieldFilters, schema
-    ):
-        """
-        Map item fields to gen3 normalized fields
-        using the mapping and adding the location
-        """
-        results = item
-        if mappings is not None:
-            mapped_fields = RemoteMetadataAdapter.mapFields(
-                item, mappings, globalFieldFilters, schema
-            )
-            if keepOriginalFields:
-                results.update(mapped_fields)
-            else:
-                results = mapped_fields
-
-        return results
-
-    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
-        """
-        Iterates over the response.
-        :param data:
-        :return:
-        """
-        mappings = kwargs.get("mappings", None)
-        keepOriginalFields = kwargs.get("keepOriginalFields", False)
-        globalFieldFilters = kwargs.get("globalFieldFilters", [])
-        schema = kwargs.get("schema", {})
-
-        results = {}
-        for item in data["results"]:
-            normalized_item = WindberSubjectAdapter.addGen3ExpectedFields(
-                item,
-                mappings,
-                keepOriginalFields,
-                globalFieldFilters,
-                schema,
-            )
-
-            normalized_item["tags"] = [
-                {
-                    "name": normalized_item[tag] if normalized_item[tag] else "",
-                    "category": tag,
-                }
-                for tag in ["primary_disease", "cancer_type"]
-            ]
-
-            results[normalized_item["_unique_id"]] = {
-                "_guid_type": "Windber_subject_metadata",
-                "gen3_discovery": normalized_item,
-            }
-
-        return results
-
-
 def gather_metadata(
     gather,
     mds_url,
@@ -2579,7 +2524,6 @@ adapters = {
     "tcia": TCIAAdapter,
     "pdcsubject": PDCSubjectAdapter,
     "pdcstudy": PDCStudyAdapter,
-    "windbersubject": WindberSubjectAdapter,
 }
 
 
