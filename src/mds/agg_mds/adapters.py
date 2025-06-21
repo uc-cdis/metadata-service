@@ -91,7 +91,8 @@ def rename_single_dict(d):
     """Helper function to rename keys in a single dictionary."""
     result = {}
     for key, value in d.items():
-        if isinstance(key, str) and key.startswith("__"):
+        # ensure keys is a string and is only leading with __
+        if isinstance(key, str) and len(key) > 2 and key[:2] == "__" and key[2] != "_":
             new_key = (
                 "_" + key[2:]
             )  # Remove first two characters and add single underscore
