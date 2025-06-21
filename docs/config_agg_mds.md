@@ -346,11 +346,23 @@ Example:
 ```
 Will remove all ```__``` (double underscores) from any child object in the field ``filesCount`. For example:
 ```json
-
+    "filesCount": [
+        {
+            "data_category": "Peptide Spectral Matches",
+            "file_type": "Open Standard",
+            "files_count": 419,
+            "__typename": "File"
+        },
 ```
 is converted to:
 ```json
-
+    "filesCount": [
+        {
+            "data_category": "Peptide Spectral Matches",
+            "file_type": "Open Standard",
+            "files_count": 419,
+            "_typename": "File"
+        },
 ```
 
 You can add your own filters and register them by creating a python function with the signature:
