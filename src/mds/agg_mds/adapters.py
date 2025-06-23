@@ -1,12 +1,21 @@
 import collections.abc
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Union, Optional
-from jsonpath_ng import parse, JSONPathError
+from jsonpath_ng import parse  # , JSONPathError
 import httpx
 import xmltodict
 import bleach
 import logging
 import re
+
+import requests
+import datetime
+import json
+import os
+import httpx
+import logging
+import pandas as pd
+
 from tenacity import (
     retry,
     RetryError,
@@ -2564,6 +2573,391 @@ def gather_metadata(
     return {}
 
 
+class VPODCIndexdAdapter(RemoteMetadataAdapter):
+    """
+    Gen3 adapter with the addition of pulling indexd data from VPODC
+    """
+
+    @retry(
+        stop=stop_after_attempt(10),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=20),
+        before_sleep=before_sleep_log(logger, logging.DEBUG),
+    )
+    def query_indexd(self, endpoint, limit=100, page=0, uploader=None, args=None):
+        """Queries indexd with given records limit and page number.
+        For example:
+            records = query_indexd(api='https://icgc.bionimbus.org/',limit=1000,page=0)
+            https://icgc.bionimbus.org/index/index/?limit=1000&page=0
+        """
+        data, records = {}, []
+
+        if uploader == None:
+            index_url = "{}/index/index/?limit={}&page={}".format(endpoint, limit, page)
+        else:
+            index_url = "{}/index/index/?limit={}&page={}&uploader={}".format(
+                endpoint, limit, page, uploader
+            )
+
+        if args != None:
+            index_url = "{}&{}".format(index_url, args)
+
+        print(index_url)
+
+        try:
+            response = requests.get(index_url).text
+            data = json.loads(response)
+        except Exception as e:
+            print(
+                "\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(
+                    type(e), e
+                )
+            )
+
+        if "records" in data:
+            records = data["records"]
+        else:
+            print(
+                "\tNo records found in data from '{}':\n\t\t{}".format(index_url, data)
+            )
+
+        return records
+
+    def get_indexd(
+        self, endpoint, limit=1000, page=0, format="JSON", uploader=None, args=None
+    ):
+        """get all the records in indexd
+            api = "https://icgc.bionimbus.org/"
+            args = lambda: None
+            setattr(args, 'api', api)
+            setattr(args, 'limit', 100)
+            page = 0
+
+        Usage:
+            i = exp.get_indexd(format="TSV", uploader=orcid)
+            i = exp.get_indexd(format="TSV", args="authz=/programs/TCIA/projects/COVID-19-AR")
+        """
+        if format in ["JSON", "TSV"]:
+            dc_regex = re.compile(r"https:\/\/(.+)\/?$")
+            dc = dc_regex.match(endpoint).groups()[0]
+            dc = dc.strip("/")
+        else:
+            print(
+                "\n\n'{}' != a valid output format. Please provide a format of either 'JSON' or 'TSV'.\n\n".format(
+                    format
+                )
+            )
+
+        stats_url = "{}/index/_stats".format(endpoint)
+        try:
+            response = requests.get(stats_url).text
+            stats = json.loads(response)
+            print("Stats for '{}': {}".format(endpoint, stats))
+        except Exception as e:
+            print(
+                "\tUnable to parse indexd response as JSON!\n\t\t{} {}".format(
+                    type(e), e
+                )
+            )
+
+        print(
+            "Getting all records in indexd (limit: {}, starting at page: {})".format(
+                limit, page
+            )
+        )
+
+        all_records = []
+
+        done = False
+        while done == False:
+            records = self.query_indexd(
+                endpoint=endpoint, limit=limit, page=page, uploader=uploader, args=args
+            )
+            all_records.extend(records)
+
+            if len(records) != limit:
+                print(
+                    "\tLength of returned records ({}) does not equal limit ({}).".format(
+                        len(records), limit
+                    )
+                )
+                if len(records) == 0:
+                    done = True
+
+            print(
+                "\tPage {}: {} records ({} total)".format(
+                    page, len(records), len(all_records)
+                )
+            )
+            page += 1
+
+        print(
+            "\t\tScript finished. Total records retrieved: {}".format(len(all_records))
+        )
+
+        now = datetime.datetime.now()
+        date = "{}-{}-{}_{}.{}".format(
+            now.year, now.month, now.day, now.minute, now.second
+        )
+
+        if format == "JSON":
+            outname = "{}_indexd_records_{}.json".format(dc, date)
+            with open(outname, "w") as output:
+                output.write(json.dumps(all_records))
+
+        if format == "TSV":
+            outname = "{}_indexd_records_{}.tsv".format(dc, date)
+            all_records = pd.DataFrame(all_records)
+            all_records["md5sum"] = [hashes.get("md5") for hashes in all_records.hashes]
+            all_records.to_csv(outname, sep="\t", index=False)
+
+        return all_records
+
+    def file_name_2_patientid(self, filename):
+        if not isinstance(filename, str):
+            return None
+        match = re.search(r"([A-Za-z]+\d+)_", filename)
+        if match:
+            return match.group(1)
+        return None
+
+    def extract_patient_from_indexd(self, indexd_record):
+        if not isinstance(indexd_record, dict):
+            return None
+        file_name = indexd_record.get("file_name")
+        if not isinstance(file_name, str):
+            return None
+        try:
+            patient_id = self.file_name_2_patientid(file_name)
+            return patient_id
+        except Exception:
+            return None
+
+    def construct_data_object(self, indexd_record):
+        if not isinstance(indexd_record, dict):
+            return None
+
+        # Attempt to retrieve all required fields safely; default to None if missing
+        did = indexd_record.get("did")
+        file_name = indexd_record.get("file_name")
+        urls = indexd_record.get("urls")
+        authz = indexd_record.get("authz")
+        md5sum = None
+
+        hashes = indexd_record.get("hashes", {})
+        if isinstance(hashes, dict):
+            md5sum = hashes.get("md5")
+
+        patient_id = self.extract_patient_from_indexd(indexd_record)
+
+        data_object = {
+            did: {
+                "file_name": file_name,
+                "urls": urls,
+                "authz": authz,
+                "md5sum": md5sum,
+                "patient_id": patient_id,
+            }
+        }
+        return data_object
+
+    def vcf_check(self, filename):
+        if not isinstance(filename, str):
+            return None
+
+        filename_stripped = filename.strip()
+        if filename_stripped.lower().endswith(".vcf"):
+            return filename_stripped
+        return None
+
+    def clean_to_vcf(self, indexd):
+        clean_indexd = []
+        for record in indexd:
+            filename = None
+
+            if isinstance(record, dict):
+                filename = record.get("file_name")
+            # If the record is a string, treat it directly as a filename
+            elif isinstance(record, str):
+                filename = record
+
+            # Pass the filename (if found) to vcf_check
+            try:
+                if self.vcf_check(filename):
+                    clean_indexd.append(record)
+            except Exception:
+                continue  # skip malformed records
+
+        return clean_indexd
+
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": {}}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        if mds_url[-1] != "/":
+            mds_url += "/"
+
+        config = kwargs.get("config", {})
+        guid_type = config.get("guid_type", "discovery_metadata")
+        field_name = config.get("field_name", None)
+        field_value = config.get("field_value", None)
+        filters = config.get("filters", None)
+        batchSize = config.get("batchSize", 1000)
+        maxItems = config.get("maxItems", None)
+
+        offset = 0
+        limit = min(maxItems, batchSize) if maxItems is not None else batchSize
+        moreData = True
+        # extend httpx timeout
+        # timeout = httpx.Timeout(connect=60, read=120, write=5, pool=60)
+        while moreData:
+            try:
+                url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
+                if filters:
+                    url += f"&{filters}"
+                if field_name is not None and field_value is not None:
+                    url += f"&{guid_type}.{field_name}={field_value}"
+                response = httpx.get(url, timeout=60)
+                response.raise_for_status()
+
+                data = response.json()
+                results["results"].update(data)
+                numReturned = len(data)
+
+                if numReturned == 0 or numReturned <= limit:
+                    moreData = False
+                offset += numReturned
+
+            except httpx.TimeoutException:
+                logger.error(f"An timeout error occurred while requesting {url}.")
+                raise
+            except httpx.HTTPError as exc:
+                logger.error(
+                    f"An HTTP error {exc if exc is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results."
+                )
+                break
+
+        indexd_filename = "VPODC_indexd.json"
+
+        if os.path.exists(indexd_filename):
+            # File exists: read it into the indexd object
+            with open(indexd_filename, "r") as infile:
+                indexd = json.load(infile)
+        else:
+            # File does NOT exist: download and save
+            indexd = self.get_indexd(endpoint=mds_url, args=args)
+            with open(indexd_filename, "w") as outfile:
+                json.dump(indexd, outfile, indent=4)
+
+        clean_indexd = self.clean_to_vcf(indexd)
+        # print("clean_indexd: ", clean_indexd)
+
+        data_objects = {}
+
+        for record in clean_indexd:
+            patient_id = self.extract_patient_from_indexd(record)
+            data_object = self.construct_data_object(record)
+
+            if patient_id not in data_objects:
+                data_objects[patient_id] = {}
+
+            # merge from construct_data_object
+            data_objects[patient_id].update(data_object)
+
+        for res_key, result_dict in results.items():
+            # print("result_dict: ", result_dict)
+            for patient_id, mds_record in result_dict.items():
+                # print("patient_id: ", patient_id)
+                data_object = data_objects.get(patient_id)
+                # print("data_object: ", data_object)
+                if data_object:
+                    result_dict[patient_id]["data_objects"] = data_object
+                # print(data_object)
+
+        print("dan results: ", results)
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ) -> Dict[str, Any]:
+        """
+        Given an item (metadata as a dict), map the item's keys into
+        the fields defined in mappings. If the original fields should
+        be preserved set keepOriginalFields to setPerItemValues.
+        * item: metadata to map fields from -> to
+        * mapping: dict to map field_name (possible a JSON Path) to a  normalize_name
+        * keepOriginalFields: if True keep all data in the item, if False only those fields in mappings
+                              will be in the returned item
+        * globalFieldFilters: filters to apply to all fields
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        print(
+            "about to use addGen3ExpectedFields: ",
+        )
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        * data: input metadata to normalize
+        * kwargs: key value parameters passed as a dict
+        return: dict of results where the keys are identifiers in the Gen3 metadata format:
+                "GUID" : {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": normalize_item_metadata
+                    }
+        """
+
+        mappings = kwargs.get("mappings", None)
+        config = kwargs.get("config", {})
+        study_field = config.get("study_field", "gen3_discovery")
+        data_dict_field = config.get("data_dict_field", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for guid, record in data["results"].items():
+            if study_field not in record:
+                logger.error("Study field not in record. Skipping")
+                continue
+            item = Gen3Adapter.addGen3ExpectedFields(
+                record[study_field],
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            results[guid] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": item,
+            }
+            # for VLMD, bring it into AggMDS records
+            if data_dict_field is not None and data_dict_field in record:
+                results[guid][data_dict_field] = record[data_dict_field]
+
+        perItemValues = kwargs.get("perItemValues", None)
+        if perItemValues is not None:
+            RemoteMetadataAdapter.setPerItemValues(results, perItemValues)
+
+        return results
+
+
 adapters = {
     "icpsr": ISCPSRDublin,
     "clinicaltrials": ClinicalTrials,
@@ -2580,6 +2974,7 @@ adapters = {
     "pdcsubject": PDCSubjectAdapter,
     "pdcstudy": PDCStudyAdapter,
     "windbersubject": WindberSubjectAdapter,
+    "vpodcindexd": VPODCIndexdAdapter,
 }
 
 

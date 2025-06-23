@@ -1,1 +1,1 @@
-from .query import init_app
+# from .query import init_app

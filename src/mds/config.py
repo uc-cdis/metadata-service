@@ -40,18 +40,18 @@ if TESTING:
     DB_DATABASE = "test_" + (DB_DATABASE or "metadata")
     TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
 
-DB_DSN = config(
-    "DB_DSN",
-    cast=make_url,
-    default=URL(
-        drivername=DB_DRIVER,
-        username=DB_USER,
-        password=DB_PASSWORD,
-        host=DB_HOST,
-        port=DB_PORT,
-        database=DB_DATABASE,
-    ),
-)
+# DB_DSN = config(
+#     "DB_DSN",
+#     cast=make_url,
+#     default=URL(
+#         drivername=DB_DRIVER,
+#         username=DB_USER,
+#         password=DB_PASSWORD,
+#         host=DB_HOST,
+#         port=DB_PORT,
+#         database=DB_DATABASE
+#     ),
+# )
 DB_MIN_SIZE = config("DB_MIN_SIZE", cast=int, default=1)  # deprecated
 DB_POOL_MIN_SIZE = config("DB_POOL_MIN_SIZE", cast=int, default=DB_MIN_SIZE)
 DB_MAX_SIZE = config("DB_MAX_SIZE", cast=int, default=10)  # deprecated
