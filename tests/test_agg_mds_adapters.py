@@ -13,7 +13,7 @@ from mds.agg_mds.adapters import (
     get_json_path_value,
     add_clinical_trials_source_url,
     uppercase,
-    rename_leading_double_underscore_keys,
+    strip_leading_double_underscore,
 )
 import httpx
 
@@ -317,7 +317,7 @@ def test_single_dict_with_double_underscore_keys():
     """Test renaming double underscore keys in a single dictionary."""
     input_dict = {"__private": "secret", "__name": "test", "normal": "value"}
     expected = {"_private": "secret", "_name": "test", "normal": "value"}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected
 
 
@@ -325,7 +325,7 @@ def test_single_dict_no_double_underscore_keys():
     """Test dictionary with no double underscore keys remains unchanged."""
     input_dict = {"normal": "value", "_single": "underscore", "no_underscore": "test"}
     expected = {"normal": "value", "_single": "underscore", "no_underscore": "test"}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected
 
 
@@ -333,7 +333,7 @@ def test_empty_dict():
     """Test empty dictionary."""
     input_dict = {}
     expected = {}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected
 
 
@@ -341,7 +341,7 @@ def test_dict_with_non_string_keys():
     """Test dictionary with non-string keys."""
     input_dict = {123: "number", ("a", "b"): "tuple", "__string": "value"}
     expected = {123: "number", ("a", "b"): "tuple", "_string": "value"}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected
 
 
@@ -349,7 +349,7 @@ def test_dict_with_only_double_underscores():
     """Test dictionary with key that is exactly '__'"""
     input_dict = {"__": "double_underscore_only"}
     expected = {"__": "double_underscore_only"}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected
 
 
@@ -365,7 +365,7 @@ def test_list_of_dicts():
         {"_id": 2, "_type": "admin", "name": "Bob"},
         {"normal_key": "no change needed"},
     ]
-    result = rename_leading_double_underscore_keys(input_list)
+    result = strip_leading_double_underscore(input_list)
     assert result == expected
 
 
@@ -373,7 +373,7 @@ def test_empty_list():
     """Test empty list."""
     input_list = []
     expected = []
-    result = rename_leading_double_underscore_keys(input_list)
+    result = strip_leading_double_underscore(input_list)
     assert result == expected
 
 
@@ -381,7 +381,7 @@ def test_mixed_list():
     """Test list with dictionaries and other types."""
     input_list = [{"__test": "value"}, "string_item", 123, {"__another": "dict"}, None]
     expected = [{"_test": "value"}, "string_item", 123, {"_another": "dict"}, None]
-    result = rename_leading_double_underscore_keys(input_list)
+    result = strip_leading_double_underscore(input_list)
     assert result == expected
 
 
@@ -389,7 +389,7 @@ def test_list_with_empty_dicts():
     """Test list containing empty dictionaries."""
     input_list = [{}, {"__key": "value"}, {}]
     expected = [{}, {"_key": "value"}, {}]
-    result = rename_leading_double_underscore_keys(input_list)
+    result = strip_leading_double_underscore(input_list)
     assert result == expected
 
 
@@ -397,7 +397,7 @@ def test_non_dict_non_list_input():
     """Test input that is neither dict nor list."""
     inputs = ["string", 123, None, ("tuple",), {"set"}]
     for input_val in inputs:
-        result = rename_leading_double_underscore_keys(input_val)
+        result = strip_leading_double_underscore(input_val)
         assert result == input_val
 
 
@@ -406,13 +406,13 @@ def test_original_not_modified():
     original_dict = {"__private": "secret", "normal": "value"}
     original_copy = original_dict.copy()
 
-    rename_leading_double_underscore_keys(original_dict)
+    strip_leading_double_underscore(original_dict)
     assert original_dict == original_copy
 
     original_list = [{"__id": 1}, {"normal": "value"}]
     original_list_copy = [d.copy() for d in original_list]
 
-    rename_leading_double_underscore_keys(original_list)
+    strip_leading_double_underscore(original_list)
     assert original_list == original_list_copy
 
 
@@ -420,7 +420,7 @@ def test_keys_starting_with_triple_underscore():
     """Test keys that start with more than two underscores."""
     input_dict = {"___private": "secret", "____name": "test"}
     expected = {"___private": "secret", "____name": "test"}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected
 
 
@@ -428,5 +428,5 @@ def test_keys_with_underscore_not_at_start():
     """Test keys with underscores not at the beginning."""
     input_dict = {"my__private": "secret", "test__name": "value"}
     expected = {"my__private": "secret", "test__name": "value"}
-    result = rename_leading_double_underscore_keys(input_dict)
+    result = strip_leading_double_underscore(input_dict)
     assert result == expected

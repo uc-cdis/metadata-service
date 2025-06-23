@@ -66,7 +66,7 @@ def aggregate_pdc_file_count(record: list):
     return file_count
 
 
-def rename_leading_double_underscore_keys(d):
+def strip_leading_double_underscore(d):
     """
     Rename dictionary keys that start with '__' to start with '_' instead.
     Can handle a single dictionary or a list of dictionaries.
@@ -76,12 +76,6 @@ def rename_leading_double_underscore_keys(d):
 
     Returns:
         dict or list: A new dictionary/list with renamed keys
-
-    Examples:
-        >>> rename_single_dict({'__name': 'value', 'normal': 'value2'})
-        {'_name': 'value', 'normal': 'value2'}
-        >>> rename_single_dict({'___name': 'value'})  # Won't change as third char is '_'
-        {'___name': 'value'}
     """
     if isinstance(d, list):
         return [
@@ -94,21 +88,10 @@ def rename_leading_double_underscore_keys(d):
 
 
 def rename_single_dict(d):
-    """
-    Renames the keys of a dictionary that start with a double underscore '__'. Keys
-    with a double underscore '__' followed by a character other than an underscore
-    are modified by replacing the initial double underscore with a single underscore.
-    All other keys are kept unchanged.
-
-    Parameters:
-        d (dict): The dictionary whose keys are to be renamed.
-
-    Returns:
-        dict: A new dictionary with renamed keys based on the above criteria.
-    """
+    """Helper function to rename keys in a single dictionary."""
     result = {}
     for key, value in d.items():
-        # ensure keys is a string and is only keys leading with __ note this will not affect a key of __
+        # ensure keys is a string and is only leading with __
         if isinstance(key, str) and len(key) > 2 and key[:2] == "__" and key[2] != "_":
             new_key = (
                 "_" + key[2:]
@@ -123,7 +106,7 @@ def normalize_value(value: str, mapping: Optional[Dict[str, str]] = None):
     """
     Normalizes the input value based on the given mapping.
 
-    This function checks if the input `value` is a string and if a `mapping`
+    This function checks if the input `value` is a string, and if a `mapping`
     dictionary is provided. If both conditions are met, the function attempts
     to find the `value` in the given `mapping`. If a match is found, it returns
     the corresponding mapped value. If no match is found, or if `value` is not
@@ -180,7 +163,7 @@ class FieldFilters:
     filters = {
         "strip_html": strip_html,
         "strip_email": strip_email,
-        "strip_leading_double_underscore": rename_double_underscore_keys,
+        "strip_leading_double_underscore": strip_leading_double_underscore,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
         "uppercase": uppercase,
