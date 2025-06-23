@@ -134,7 +134,7 @@ def test_get_metadata_windbersubject():
                 "chemicals_exposed_to": None,
                 "tags": [
                     {"category": "primary_disease", "name": "PDB"},
-                    {"category": "cancer_type", "name": ""},
+                    {"category": "cancer_type", "name": None},
                 ],
             },
         },
