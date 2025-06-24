@@ -594,8 +594,8 @@ this will the look for metadata entries such as:
 ### Advanced filtering
 
 The Gen3 metadata-service supports filtering as described in the documentation. The Gen3 Adapter
-allows a filter option to be configed which is passed to the MDS. Specific studies can
-be pulled from the MDS by defining the filters.
+supports a filtering option which is passed to the MDS. This way, specific studies that match only the
+filters will be pulled from the MDS.
 The filters are part of the config setting:
 ```json lines
       "config": {
