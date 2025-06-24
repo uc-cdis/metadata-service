@@ -334,7 +334,38 @@ Example:
 ```
 Will normalize the tage category 'CancerStage' to Stage 2 and Stage 3.
 
-You can add your own filters, and register them by creating a python function with the signature:
+* **strip_leading_double_underscore** will remove __ from data field keys for all objects and sub-objects.
+Example:
+```json
+"filesCount": {
+          "path": "filesCount",
+          "filters": [
+            "strip_leading_double_underscore"
+          ]
+        },
+```
+Will remove all ```__``` (double underscores) from any child object in the field ``filesCount`. For example:
+```json
+    "filesCount": [
+        {
+            "data_category": "Peptide Spectral Matches",
+            "file_type": "Open Standard",
+            "files_count": 419,
+            "__typename": "File"
+        },
+```
+is converted to:
+```json
+    "filesCount": [
+        {
+            "data_category": "Peptide Spectral Matches",
+            "file_type": "Open Standard",
+            "files_count": 419,
+            "_typename": "File"
+        },
+```
+
+You can add your own filters and register them by creating a python function with the signature:
 ```python
 def filter_function(s:str) -> str:
   ...
@@ -563,8 +594,8 @@ this will the look for metadata entries such as:
 ### Advanced filtering
 
 The Gen3 metadata-service supports filtering as described in the documentation. The Gen3 Adapter
-allows a filter option to be configs which is passed to the MDS. Specific studies can
-be pulled from the MDS by defining the filters.
+supports a filtering option which is passed to the MDS. This way, specific studies that match only the
+filters will be pulled from the MDS.
 The filters are part of the config setting:
 ```json lines
       "config": {
