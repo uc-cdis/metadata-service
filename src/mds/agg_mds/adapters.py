@@ -2740,6 +2740,7 @@ class VPODCIndexdAdapter(RemoteMetadataAdapter):
         # Attempt to retrieve all required fields safely; default to None if missing
         did = indexd_record.get("did")
         file_name = indexd_record.get("file_name")
+        file_size = indexd_record.get("size")
         urls = indexd_record.get("urls")
         authz = indexd_record.get("authz")
         md5sum = None
@@ -2751,13 +2752,13 @@ class VPODCIndexdAdapter(RemoteMetadataAdapter):
         patient_id = self.extract_patient_from_indexd(indexd_record)
 
         data_object = {
-            did: {
-                "file_name": file_name,
-                "urls": urls,
-                "authz": authz,
-                "md5sum": md5sum,
-                "patient_id": patient_id,
-            }
+            "file_name": file_name,
+            "file_size": file_size,
+            "object_id": did,
+            "urls": urls,
+            "authz": authz,
+            "md5sum": md5sum,
+            "patient_id": patient_id,
         }
         return data_object
 
@@ -2802,6 +2803,7 @@ class VPODCIndexdAdapter(RemoteMetadataAdapter):
 
         config = kwargs.get("config", {})
         guid_type = config.get("guid_type", "discovery_metadata")
+        study_field = config.get("study_field", "gen3_discovery")
         field_name = config.get("field_name", None)
         field_value = config.get("field_value", None)
         filters = config.get("filters", None)
@@ -2841,7 +2843,7 @@ class VPODCIndexdAdapter(RemoteMetadataAdapter):
                 break
 
         indexd_filename = "VPODC_indexd.json"
-
+        args = "authz=/programs/VA/projects/PODR-COHORT-A"  # pragma: allowlist secret
         if os.path.exists(indexd_filename):
             # File exists: read it into the indexd object
             with open(indexd_filename, "r") as infile:
@@ -2874,7 +2876,7 @@ class VPODCIndexdAdapter(RemoteMetadataAdapter):
                 data_object = data_objects.get(patient_id)
                 # print("data_object: ", data_object)
                 if data_object:
-                    result_dict[patient_id]["data_objects"] = data_object
+                    result_dict[patient_id][study_field]["data_objects"] = data_object
                 # print(data_object)
 
         print("dan results: ", results)
