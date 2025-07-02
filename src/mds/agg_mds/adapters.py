@@ -2559,7 +2559,7 @@ class WindberSubjectAdapter(RemoteMetadataAdapter):
                 for tag in ["primary_disease", "cancer_type"]
             ]
 
-            results[normalized_item["external_windber_id"]] = {
+            results[normalized_item["_unique_id"]] = {
                 "_guid_type": "Windber_subject_metadata",
                 "gen3_discovery": normalized_item,
             }
