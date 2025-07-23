@@ -66,6 +66,42 @@ def aggregate_pdc_file_count(record: list):
     return file_count
 
 
+def strip_leading_double_underscore(d):
+    """
+    Rename dictionary keys that start with '__' to start with '_' instead.
+    Can handle a single dictionary or a list of dictionaries.
+
+    Args:
+        d (dict or list): A dictionary or list of dictionaries to modify
+
+    Returns:
+        dict or list: A new dictionary/list with renamed keys
+    """
+    if isinstance(d, list):
+        return [
+            rename_single_dict(item) if isinstance(item, dict) else item for item in d
+        ]
+    elif isinstance(d, dict):
+        return rename_single_dict(d)
+    else:
+        return d
+
+
+def rename_single_dict(d):
+    """Helper function to rename keys in a single dictionary."""
+    result = {}
+    for key, value in d.items():
+        # ensure keys is a string and is only leading with __
+        if isinstance(key, str) and re.match(r"^__[^_]", key):
+            new_key = (
+                "_" + key[2:]
+            )  # Remove first two characters and add single underscore
+            result[new_key] = value
+        else:
+            result[key] = value
+    return result
+
+
 def normalize_value(value: str, mapping: Optional[Dict[str, str]] = None):
     """
     Normalizes the input value based on the given mapping.
@@ -127,6 +163,7 @@ class FieldFilters:
     filters = {
         "strip_html": strip_html,
         "strip_email": strip_email,
+        "strip_leading_double_underscore": strip_leading_double_underscore,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
         "uppercase": uppercase,
@@ -2516,7 +2553,7 @@ class WindberSubjectAdapter(RemoteMetadataAdapter):
 
             normalized_item["tags"] = [
                 {
-                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "name": normalized_item.get(tag, ""),
                     "category": tag,
                 }
                 for tag in ["primary_disease", "cancer_type"]
