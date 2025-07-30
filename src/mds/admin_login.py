@@ -21,6 +21,7 @@ async def admin_required(
 ):
     if config.DEBUG:
         logger.debug("Skipping authorization check")
+        return
 
     if credentials:
         logger.info("Received Basic Auth credentials")
