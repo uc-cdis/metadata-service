@@ -22,12 +22,15 @@ async def admin_required(
     if not config.DEBUG:
         if credentials:
             logger.info("Received Basic Auth credentials")
-        for username, password in config.ADMIN_LOGINS:
-            if credentials.username == username and credentials.password == password:
-                break
-            logger.warning(
-                "Invalid Basic Auth credentials. Attempting fallback to JWT token..."
-            )
+            for username, password in config.ADMIN_LOGINS:
+                if (
+                    credentials.username == username
+                    and credentials.password == password
+                ):
+                    break
+                logger.warning(
+                    "Invalid Basic Auth credentials. Attempting fallback to JWT token..."
+                )
         else:
             service = "mds_gateway"
             method = "access"
