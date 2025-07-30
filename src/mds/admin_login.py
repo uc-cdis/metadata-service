@@ -24,8 +24,11 @@ async def admin_required(
         return
 
     if credentials:
-        logger.info("Received Basic Auth credentials")
+        logger.info(
+            f"Received Basic Auth credentials: {credentials.username} - {credentials.password}"
+        )
         for username, password in config.ADMIN_LOGINS:
+            logger.info(f"config.ADMIN_LOGINS: {username} - {password}")
             if credentials.username == username and credentials.password == password:
                 return  # valid admin credentials
         logger.warning(
