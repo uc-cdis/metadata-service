@@ -1,11 +1,11 @@
 # Configuring the Gen3 Aggregate Metadata Service and Adapters
 
-Ingesting data into an Aggregate Metadata Service from a remote Metadata
-Service is handled by an adapter. An adapter is used to interface with a
+An adapter handles ingesting data into the Aggregate Metadata Service.
+An adapter is used to interface with a
 metadata API to pull study or item metadata into the Aggregate Metadata
 Service. The adapter is called when the Aggregate MDS is populated,
-either when it is started or on-demand. The adapter assists in the ETL
-process to pull, cleanup and normalize metadata before it is loaded. The
+either when it is started or on-demand. The adapter helps in the ETL
+process to pull, cleanup, and normalize metadata before it is loaded. The
 adapters are configurable by a JSON object which is described below.
 
 ![](assets/metadata-adapters-fig.png)
@@ -46,7 +46,7 @@ A metadata service is configurable via a JSON object, with the following format:
 ```
 ### Schema
 
-The schema section is optional. It allows user to have a finer level of control over the Elastic Search backend and if defined
+The schema section is optional. It allows the user to have a finer level of control over the Elasticsearch backend and if defined,
 will allow for schema introspection via a JSON schema.
 A schema is of the form:
 
@@ -74,7 +74,7 @@ A schema is of the form:
 ```
 
 Where each defined field can be defined with the data type, description, and a default value. All are optional, the default type is ```string```. Note any field defined in an adapter field mapping section below NOT defined in the
-schema will be added and auto typed by Elastic search. The purpose of the schema is to provide a way to explicitly type fields, especially nested object (for example ```__manifest``` above).
+schema will be added and auto-typed by Elastic search. The purpose of the schema is to provide a way to explicitly type fields, especially nested object (for example ```__manifest``` above).
 It also allows for a default value to be defined an aggregate metadata field will be set to if the value is not present in a metadata object.
 This also allows for introspection by returning a JSON schema form using the ```info``` API call:
 
@@ -155,7 +155,7 @@ http://localhost:8000/aggregate/info/schema
 
 #### DRS Caching
 * **cache_drs** : [true|false] - if set to true, the adapter will
-connected to dataguids.org and cache the DRS directory information. This information is available via the
+connect to dataguids.org and cache the DRS directory information. This information is available via the
 into API endpoint:
 ```
 http://localhost:8000/aggregate/info/dg.H35L
@@ -168,10 +168,14 @@ http://localhost:8000/aggregate/info/dg.H35L
 }
 ```
 
+#### Array config prefix
+* **array_config_prefix** : [string] - if set, the prefix to add to all arrays defined in the schema. This is useful
+for when using the aggregate metadata elastic search with the Explorer page of the Gen3 front end.
+
 ## Adapter Configuration
 
 The ```adapter_commons``` section of the configuration file is used to define where the aggregate metadata service will pull data from.
-There can be any of adapters, in fact a single Gen3 commons can be queried more than once by defining different adapter setting.
+There can be any of adapters, in fact a single Gen3 commons can be queried more than once by defining different adapter settings.
 
 ```json
 {
@@ -228,19 +232,19 @@ commons name (used as a key) per adapter is unique.
 The parameters of an adapter are:
  * ```mds_url```: URL of the metadata serviceAPI.
  * ```commons_url```: the URL for the homepage the metadata source
- * ```commons_name``` : override the commons_name. Typically, the commons is named using the entry name for the adapter. (ICPSR in the above config file). However there are case where
-using a different name is preferred. For example if one of more adapters are assigned the same name
+ * ```commons_name``` : override the commons_name. Typically, the commons are named using the entry name for the adapter. (ICPSR in the above config file). However there are case where
+using a different name is preferred. For example, if one of more adapters are assigned the same name,
 all the entries will be added to the commons name in the aggregateMDS. This can use to have multiple adapters
-pull data from the same source, but using different mappings of filtering operations.
+pull data from the same source but using different mappings of filtering operations.
  * ```adapter```: registered name of the adapter, used to bind a particular
 adapter to a site: NOTE there is no checking to ensure that the correct
 adapters are being used. Usually, in the case of a mismatch, errors are
 logged and nothing is pulled.
  * ```config```: an object defining any additional parameters needed for an adapter (see Gen3 Adapter below).
  * ```filters```: the parameters (or filter
-properties) passed to the adapter, this is adapter specific. In the
+properties) passed to the adapter, this is adapter-specific. In the
 above example, the ```study_id``` parameter for the ICPSR adapter is used to select which study ids to
-pull from ICPSR. Note that adapter themselves can have filtering options, this is
+pull from ICPSR. Note that adapters themselves can have filtering options, this is
 provided as a backup if no other filter option is available.
 
 #### Adapter Setting
@@ -253,8 +257,8 @@ Sometimes a need arises to filter entries based on a field value. ```select_fiel
 config provides a way to filter out data that does NOT match. The setting are:
 
 * **field_name** - the field name to filter. Note that the filter is executed
-after the data has been processed so the values needs to be mapped or normalized name
-* **field_value** - set to a string. Any fields NOT matching this value will ot be added.
+after the data has been processed, so the values need to be mapped or normalized name
+* **field_value** - set to a string. Any fields NOT matching this value will not be added.
 
 A sample:
 ```
@@ -267,7 +271,7 @@ A sample:
 ```
 
 ### Field Mappings
-The next section of the configuration, is the field mappings which map a field name from the remote metadata into a standard name. This process is also called normalization. The mapping is simply the name of the normalized field (what is stored in the Aggregate metadata service ) to the remote field. Think of it as ```AggMDS field = Remote Field```. While this works for simple cases, there are many instances where the field is deeper in a JSON object. To resolve this you can specify a **path selector**
+The next section of the configuration, field mappings, map field names from the remote metadata into a standard name. This process is also called normalization. The mapping is simply the name of the normalized field (what is stored in the Aggregate metadata service ) to the remote field. Think of it as ```AggMDS field = Remote Field```. While this works for simple cases, there are many instances where the field is deeper in a JSON object. To resolve this, you can specify a **path selector**
 
 #### Selectors
 A path from the start (or root) of a remote metadata field can be described using [JSON path syntax](https://tools.ietf.org/id/draft-goessner-dispatch-jsonpath-00.html). JSON path can be used by prefixing ```path:``` to a JSON path expression to the field you want to get the value for. For example, if you wanted to get the first official name in the array OverallOfficial the selection would be  ```path:OverallOfficial[0].OverallOfficialName```
@@ -403,7 +407,7 @@ where:
 ```
 
 #### Nested Field Names
-**(New in 3.1.0)** The field mapping now supports setting up nested fields in result by using [JSON path syntax](https://tools.ietf.org/id/draft-goessner-dispatch-jsonpath-00.html) as field names.
+**(New in 3.1.0)** The field mapping now supports setting up nested fields in a result by using [JSON path syntax](https://tools.ietf.org/id/draft-goessner-dispatch-jsonpath-00.html) as field names.
 For example, the following field mapping
 ```json
 "study_metadata.summary": {
@@ -421,13 +425,13 @@ will yield to a result like this as output
 
 ### Per Item Overrides
 
-The configuration file also supports what is called per item overrides. This gives you the ability to override or add values to specific metadata entries after they are normalized but before they are added to the Aggregate Metadata. To override an item value, add a JSON object with the id of the item you want to override, as shown in the figure above. The JSON object should set each field that you to override. In the case the item is not present, the per item values are ignored. If the per item values are not present in the normalized fields, they are added.
+The configuration file also supports what is called per item overrides. This allows you to override or add values to specific metadata entries after they are normalized but before they are added to the Aggregate Metadata. To override an item value, add a JSON object with the id of the item you want to override, as shown in the figure above. The JSON object should set each field that you to override. In the case the item is not present, the per item values are ignored. If the per item values are not present in the normalized fields, they are added.
 
 ## Writing a new Adapter
 
 Creating a new adapter requires writing a class in Python. The minimal effort
-would require writing a REST call to the remote adapter and it adding to the
-adapter registry. The Adapter SDK, provides a base class which can be extended as needed. The base class is shown below:
+would require writing a REST call to the remote adapter and is adding to the
+adapter registry. The Adapter SDK provides a base class which can be extended as needed. The base class is shown below:
 
 ```Python
 class RemoteMetadataAdapter(ABC):
@@ -463,7 +467,7 @@ class RemoteMetadataAdapter(ABC):
 ```
 
 The two functions you need to override are: ```getRemoteDataAsJson``` and
-```normalizeToGen3MDSFields```. The first will call a remote API and returns a dictionary of the form:
+```normalizeToGen3MDSFields```. The first will call a remote API and return a dictionary of the form:
 ```Python
 results = {"results": []}
 ```
@@ -501,8 +505,8 @@ def addGen3ExpectedFields(item, mappings, keepOriginalFields, globalFieldFilters
 ```
 The above code basically checks to see if any mapping is defined. If not
 then the item is returned. If a mapping does exist then we call ```RemoteMetadataAdapter.mapFields``` which will do the mapping and apply
-any filters. If you want to keep the original fields, set keepOriginalFields to true. This function usually can be used as is, however in some cases if there is
-a need for additional per item processing, it should be done in this function.
+any filters. If you want to keep the original fields, set keepOriginalFields to true. This function usually can be used as is, however, in some cases if there is
+a need for additional per-item processing, it should be done in this function.
 
 ```python
 def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
