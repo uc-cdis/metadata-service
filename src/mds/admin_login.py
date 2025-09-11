@@ -8,7 +8,7 @@ from fastapi.security import (
 from gen3authz.client.arborist.async_client import ArboristClient
 from starlette.status import HTTP_403_FORBIDDEN
 
-from . import config
+from . import config, logger
 
 security = HTTPBasic(auto_error=False)
 bearer = HTTPBearer(auto_error=False)
@@ -19,16 +19,26 @@ async def admin_required(
     credentials: HTTPBasicCredentials = Depends(security),
     token: HTTPAuthorizationCredentials = Security(bearer),
 ):
-    if not config.DEBUG:
+    if config.DEBUG:
+        logger.warning("Skipping authorization check")
+        return
+
+    if credentials:
+        logger.info("Received Basic Auth credentials")
         for username, password in config.ADMIN_LOGINS:
-            if (
-                credentials
-                and credentials.username == username
-                and credentials.password == password
-            ):
-                break
-        else:
-            if not token or not await arborist.auth_request(
-                token.credentials, "mds_gateway", "access", "/mds_gateway"
-            ):
-                raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+            if credentials.username == username and credentials.password == password:
+                return  # valid admin credentials
+        logger.warning(
+            "Invalid Basic Auth credentials. Attempting fallback to JWT token..."
+        )
+
+    service = "mds_gateway"
+    method = "access"
+    resource = "/mds_gateway"
+    if not token or not await arborist.auth_request(
+        token.credentials, service, method, resource
+    ):
+        logger.error(
+            f"Authorization error: token must have '{method}' access on {resource} for service '{service}'."
+        )
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
