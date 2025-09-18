@@ -133,15 +133,23 @@ async def populate_drs_info(commons_config: Commons, use_temp_index=False) -> No
                 await datastore.update_global_info(id, entry, use_temp_index)
 
 
-async def populate_config(commons_config: Commons, use_temp_index=False) -> None:
-    array_definition = {
-        "array": [
-            field
-            for field, value in commons_config.configuration.schema.items()
-            if value.type == "array"
-        ]
-    }
+def extract_array_fields(commons_config: Commons, prefix: str = None) -> list:
+    """Extract array type fields from configuration schema, optionally with prefix."""
+    array_fields = [
+        field
+        for field, value in commons_config.configuration.schema.items()
+        if value.type == "array"
+    ]
 
+    if prefix:
+        return [f"{prefix}.{field}" for field in array_fields]
+    return array_fields
+
+
+async def populate_config(commons_config: Commons, use_temp_index=False) -> None:
+    prefix = commons_config.configuration.settings.array_config_prefix
+    array_fields = extract_array_fields(commons_config, prefix)
+    array_definition = {"array": array_fields}
     await datastore.update_config_info(array_definition, use_temp_index)
 
 
