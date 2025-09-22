@@ -9,6 +9,7 @@ jobs:
     with:
       # Tag used in tests that depend on this repo (https://github.com/uc-cdis/gen3-code-vigil/blob/master/gen3-integration-tests/pyproject.toml)
       SERVICE_TO_TEST: mds
+      HELM_BRANCH: master
     secrets:
       CI_AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
       CI_AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
