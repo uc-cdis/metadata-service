@@ -115,10 +115,8 @@ async def clone_temp_indexes_to_real_indexes():
         print(
             [
                 doc["_source"]
-                for doc in (
-                    await elastic_search_client.search(
-                        index=source_index, body={"query": {"match_all": {}}}, size=10
-                    )
+                for doc in elastic_search_client.search(
+                    index=source_index, body={"query": {"match_all": {}}}, size=10
                 )["hits"]["hits"]
             ]
         )
