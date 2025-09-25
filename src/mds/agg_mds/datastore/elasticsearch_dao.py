@@ -36,11 +36,7 @@ CONFIG = {
         "index": {
             "number_of_shards": 1,
             "number_of_replicas": 0,
-            "mapping": {
-                "nested_objects": {
-                    "limit": 200000
-                }
-            }
+            "mapping": {"nested_objects": {"limit": 200000}},
         }
     },
     "mappings": {"properties": {"array": {"type": "keyword"}}},
@@ -115,6 +111,17 @@ async def drop_all_temp_indexes():
 async def clone_temp_indexes_to_real_indexes():
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         source_index = index + "-temp"
+        # Log 10 docs for debugging
+        print(
+            [
+                doc["_source"]
+                for doc in (
+                    await elastic_search_client.search(
+                        index=source_index, body={"query": {"match_all": {}}}, size=10
+                    )
+                )["hits"]["hits"]
+            ]
+        )
         reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
         logger.debug(f"Cloning index: {source_index} to {index}...")
         res = Elasticsearch.reindex(elastic_search_client, reqBody)
