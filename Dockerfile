@@ -3,7 +3,13 @@ ARG AZLINUX_BASE_VERSION=master
 # Base stage with python-build-base
 FROM quay.io/cdis/python-nginx-al:${AZLINUX_BASE_VERSION} AS base
 
-ENV appname=mds
+ENV appname=mds \
+    OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true \
+    OTEL_SERVICE_NAME=metadata-service \
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.monitoring:4318 \
+    OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
+    OTEL_LOG_LEVEL=debug
+
 
 COPY --chown=gen3:gen3 /src/${appname} /${appname}
 
@@ -23,6 +29,8 @@ COPY --chown=gen3:gen3 . /${appname}
 COPY --chown=gen3:gen3 ./deployment/wsgi/wsgi.py /${appname}/wsgi.py
 
 RUN poetry install -vv --no-interaction --without dev
+
+RUN poetry run opentelemetry-bootstrap -a install
 
 ENV  PATH="$(poetry env info --path)/bin:$PATH"
 
