@@ -6,8 +6,8 @@ FROM quay.io/cdis/python-nginx-al:${AZLINUX_BASE_VERSION} AS base
 ENV appname=mds \
     OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true \
     OTEL_SERVICE_NAME=metadata-service \
-    OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.monitoring:4318 \
-    OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.monitoring:4317 \
+    OTEL_EXPORTER_OTLP_PROTOCOL=grpc \
     OTEL_LOG_LEVEL=debug \
     OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=sqlalchemy,asyncpg,psycopg2
 
