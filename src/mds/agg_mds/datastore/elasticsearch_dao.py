@@ -139,15 +139,6 @@ async def create_indexes(common_mapping: dict):
             pass  # Index already exists. Ignore.
         else:  # Other exception - raise it
             raise ex
-    logger.debug("Printing one document after creation for debugging ...")
-    logger.debug(
-        [
-            doc["_source"]
-            for doc in elastic_search_client.search(
-                index=AGG_MDS_INDEX, body={"query": {"match_all": {}}}, size=1
-            )["hits"]["hits"]
-        ]
-    )
     try:
         res = elastic_search_client.indices.create(
             index=AGG_MDS_INFO_INDEX, body=INFO_MAPPING
@@ -246,6 +237,17 @@ async def update_metadata(
         except Exception as ex:
             print(f"Failed to index document in index: {index_to_update}")
             raise (ex)
+    logger.debug(
+        f"Printing one document after creation for debugging from index {index_to_update} ..."
+    )
+    logger.debug(
+        [
+            doc["_source"]
+            for doc in elastic_search_client.search(
+                index=index_to_update, body={"query": {"match_all": {}}}, size=1
+            )["hits"]["hits"]
+        ]
+    )
 
 
 async def update_global_info(key, doc, use_temp_index: bool = False) -> None:
