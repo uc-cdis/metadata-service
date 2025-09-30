@@ -9,7 +9,9 @@ ENV appname=mds \
     OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.monitoring:4318 \
     OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
     OTEL_LOG_LEVEL=debug \
-    OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=sqlalchemy
+    OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=sqlalchemy \
+    OTEL_PYTHON_INSTRUMENTATION_HTTP_SERVER_EXCLUDED_URLS=/(_status)(/.*)?$
+
 
 
 COPY --chown=gen3:gen3 /src/${appname} /${appname}
