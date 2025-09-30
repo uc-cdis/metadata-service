@@ -111,12 +111,12 @@ async def drop_all_temp_indexes():
 async def clone_temp_indexes_to_real_indexes():
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         source_index = index + "-temp"
-        # Log 10 docs for debugging
-        print(
+        logger.debug("Printing one document from source for debugging ...")
+        logger.debug(
             [
                 doc["_source"]
                 for doc in elastic_search_client.search(
-                    index=source_index, body={"query": {"match_all": {}}}, size=10
+                    index=source_index, body={"query": {"match_all": {}}}, size=1
                 )["hits"]["hits"]
             ]
         )
@@ -139,7 +139,15 @@ async def create_indexes(common_mapping: dict):
             pass  # Index already exists. Ignore.
         else:  # Other exception - raise it
             raise ex
-
+    logger.debug("Printing one document after creation for debugging ...")
+    logger.debug(
+        [
+            doc["_source"]
+            for doc in elastic_search_client.search(
+                index=AGG_MDS_INDEX, body={"query": {"match_all": {}}}, size=1
+            )["hits"]["hits"]
+        ]
+    )
     try:
         res = elastic_search_client.indices.create(
             index=AGG_MDS_INFO_INDEX, body=INFO_MAPPING
