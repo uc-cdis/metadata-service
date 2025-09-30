@@ -10,10 +10,6 @@ jobs:
       # Tag used in tests that depend on this repo (https://github.com/uc-cdis/gen3-code-vigil/blob/master/gen3-integration-tests/pyproject.toml)
       SERVICE_TO_TEST: mds
     secrets:
-      CI_AWS_ACCESS_KEY_ID: ${{ secrets.CI_AWS_ACCESS_KEY_ID }}
-      CI_AWS_SECRET_ACCESS_KEY: ${{ secrets.CI_AWS_SECRET_ACCESS_KEY }}
-      JENKINS_API_TOKEN: ${{ secrets.JENKINS_API_TOKEN }}
-      QA_DASHBOARD_S3_PATH: ${{ secrets.QA_DASHBOARD_S3_PATH }}
       CI_TEST_ORCID_USERID: ${{ secrets.CI_TEST_ORCID_USERID }}
       CI_TEST_ORCID_PASSWORD: ${{ secrets.CI_TEST_ORCID_PASSWORD }}
       CI_TEST_RAS_EMAIL: ${{ secrets.CI_TEST_RAS_EMAIL }}
