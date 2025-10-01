@@ -129,7 +129,6 @@ async def clone_temp_indexes_to_real_indexes():
                 time.sleep(30)
             i += 1
 
-        logger.debug(f"Cloning index: {source_index} to {index}...")
         reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
         logger.debug(f"Cloning index: {source_index} to {index}...")
         res = Elasticsearch.reindex(elastic_search_client, reqBody)
