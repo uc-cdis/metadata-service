@@ -114,7 +114,7 @@ async def clone_temp_indexes_to_real_indexes():
         source_index = index + "-temp"
         source_index_ready = False
         i = 0
-        while not source_index_ready and i < 3:
+        while not source_index_ready and i <= 4:
             try:
                 doc_count = elastic_search_client.count(index=source_index).get(
                     "count", 0
@@ -123,9 +123,14 @@ async def clone_temp_indexes_to_real_indexes():
                 if doc_count > 0:
                     source_index_ready = True
                 else:
+                    logger.error(
+                        f"Attempt {i} - Temp index empty, waiting 30 seconds and retrying ..."
+                    )
                     time.sleep(30)
             except Exception as e:
-                logger.error(f"Error checking index '{source_index}': {e}")
+                logger.error(
+                    f"Attempt {i} - Error checking index '{source_index}': {e}"
+                )
                 time.sleep(30)
             i += 1
 
