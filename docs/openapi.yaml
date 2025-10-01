@@ -25,6 +25,7 @@ components:
           title: File Name
           type: string
         metadata:
+          additionalProperties: true
           title: Metadata
           type: object
       required:
@@ -43,12 +44,14 @@ components:
           title: Aliases
           type: array
         authz:
+          additionalProperties: true
           title: Authz
           type: object
         file_name:
           title: File Name
           type: string
         metadata:
+          additionalProperties: true
           title: Metadata
           type: object
       required:
@@ -440,6 +443,7 @@ paths:
           application/json:
             schema:
               items:
+                additionalProperties: true
                 type: object
               title: Data List
               type: array
@@ -534,6 +538,7 @@ paths:
         content:
           application/json:
             schema:
+              additionalProperties: true
               title: Data
               type: object
         required: true
@@ -587,6 +592,7 @@ paths:
         content:
           application/json:
             schema:
+              additionalProperties: true
               title: Data
               type: object
         required: true
