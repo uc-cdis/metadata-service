@@ -124,12 +124,12 @@ async def clone_temp_indexes_to_real_indexes():
                     source_index_ready = True
                 else:
                     logger.error(
-                        f"Attempt {i} - Temp index empty, waiting 30 seconds and retrying ..."
+                        f"Attempt {i} - Temp index empty, wait 30 seconds and retry"
                     )
                     time.sleep(30)
             except Exception as e:
                 logger.error(
-                    f"Attempt {i} - Error checking index '{source_index}': {e}"
+                    f"Attempt {i} - Error checking index '{source_index}', wait 30 seconds and retry: {e}"
                 )
                 time.sleep(30)
             i += 1
