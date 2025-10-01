@@ -10,6 +10,7 @@ from mds.config import (
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
 import json
+import time
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -36,11 +37,7 @@ CONFIG = {
         "index": {
             "number_of_shards": 1,
             "number_of_replicas": 0,
-            "mapping": {
-                "nested_objects": {
-                    "limit": 200000
-                }
-            }
+            "mapping": {"nested_objects": {"limit": 200000}},
         }
     },
     "mappings": {"properties": {"array": {"type": "keyword"}}},
@@ -115,11 +112,25 @@ async def drop_all_temp_indexes():
 async def clone_temp_indexes_to_real_indexes():
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         source_index = index + "-temp"
-        reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
+        source_index_ready = False
+        i = 0
+        while not source_index_ready and i < 3:
+            try:
+                doc_count = elastic_search_client.count(index=source_index).get(
+                    "count", 0
+                )
+                logger.debug(f"Index {source_index} has {doc_count} documents")
+                if doc_count > 0:
+                    source_index_ready = True
+                else:
+                    time.sleep(30)
+            except Exception as e:
+                logger.error(f"Error checking index '{source_index}': {e}")
+                time.sleep(30)
+            i += 1
+
         logger.debug(f"Cloning index: {source_index} to {index}...")
-        res = Elasticsearch.reindex(elastic_search_client, reqBody)
-        # Elasticsearch >7.4 introduces the clone api we could use later on
-        # res = elastic_search_client.indices.clone(index=source_index, target=index)
+        res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
 
 
