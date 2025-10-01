@@ -130,7 +130,11 @@ async def clone_temp_indexes_to_real_indexes():
             i += 1
 
         logger.debug(f"Cloning index: {source_index} to {index}...")
-        res = elastic_search_client.indices.clone(index=source_index, target=index)
+        reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
+        logger.debug(f"Cloning index: {source_index} to {index}...")
+        res = Elasticsearch.reindex(elastic_search_client, reqBody)
+        # Elasticsearch >7.4 introduces the clone api we could use later on
+        # res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
 
 
