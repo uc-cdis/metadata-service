@@ -183,32 +183,28 @@ cryptography = "*"
 
 [[package]]
 name = "authutils"
-version = "7.0.0"
+version = "7.1.0"
 description = "Gen3 auth utility functions"
 optional = false
-python-versions = ">=3.9.2, <4.0"
+python-versions = "<4.0,>=3.9.2"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "authutils-7.1.0-py3-none-any.whl", hash = "sha256:66587c01a57973da742c9d54930894e97b642e8a2ea8e2d1a0d217a916027af8"},
+    {file = "authutils-7.1.0.tar.gz", hash = "sha256:55ddff02bdd0de0df95ea0a7be46b263ec616519b2892b3f2621941af024bf7e"},
+]
 
 [package.dependencies]
-authlib = "1.6.4"
-cached-property = "~=1.4"
+authlib = ">=1.6.4"
+cached-property = ">=1.4,<2.0"
 cdiserrors = "<2.0.0"
-cryptography = "^44.0.1"
+cryptography = ">=44.0.1,<45.0.0"
 httpx = ">=0.23.0,<1.0.0"
 pyjwt = {version = ">=2.4.0,<3.0", extras = ["crypto"]}
-xmltodict = "~=0.9"
+xmltodict = ">=0.9,<1.0"
 
 [package.extras]
 fastapi = ["fastapi (>=0.65.2,<0.66.0)"]
 flask = ["Flask (<=2.3.3)"]
-
-[package.source]
-type = "git"
-url = "https://github.com/uc-cdis/authutils.git"
-reference = "chore/bump-authlib"
-resolved_reference = "473dc7048f743a82e490264ea627ff97871f61ae"
 
 [[package]]
 name = "backoff"
@@ -2171,4 +2167,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9.2, <3.10"
-content-hash = "ec5cf15a6ed7fb51e433fede6e69212fe762119d16aa47d4828b18342953ad03"
+content-hash = "988c0140b89e27569b19b52df3e89781db571289f2a0e999d39bdb024226dde3"
