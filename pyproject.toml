@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mds"
-version = "4.0.5"
+version = "4.0.6"
 description = "Metadata Service"
 authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ psycopg2-binary = "^2.8"
 alembic = "^1.3"
 gen3authz = "^2.0"
 httpx = "^0.23.0"
-authutils = ">=6.2.7"
+authutils = ">=7.1.0"
 cdislogging = "^1.0"
 pyyaml = "^6.0"
 setuptools = "*"
