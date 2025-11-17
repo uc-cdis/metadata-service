@@ -1,6 +1,5 @@
 import asyncio
 
-import click
 import pkg_resources
 from fastapi import FastAPI, APIRouter, HTTPException
 import httpx
@@ -104,11 +103,7 @@ def load_modules(app=None):
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
         msg = "Loaded module: "
-        logger.info(
-            msg + "%s",
-            ep.name,
-            extra={"color_message": msg + click.style("%s", fg="cyan")},
-        )
+        logger.info(msg + "%s", ep.name)
 
 
 router = APIRouter()
