@@ -14,7 +14,7 @@ db = Gino(
     retry_interval=config.DB_RETRY_INTERVAL,
 )
 
-
+# Test
 class Metadata(db.Model):
     __tablename__ = "metadata"
 
