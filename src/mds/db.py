@@ -29,15 +29,18 @@ What do we do in this file?
     - This is what gets injected into endpoint code using FastAPI's dep injections
 """
 from typing import Any, AsyncGenerator
-from sqlalchemy import text
+
+from sqlalchemy import select, text, or_
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.dialects.postgresql import insert
 
 from . import config
+from .models_new import Metadata, MetadataAlias
 from cdislogging import get_logger
 
 logger = get_logger(__name__)
@@ -108,31 +111,214 @@ class DataAccessLayer:
     # =========================================================================
     # Metadata CRUD Operations
     # =========================================================================
-    # TODO
 
-    # async def get_metadata(self, guid: str) -> dict | None:
-    #     """Get single metadata by GUID."""
-    #     pass
+    async def get_metadata(self, guid: str) -> dict | None:
+        """
+        Get single metadata by GUID.
 
-    # async def get_metadata_by_alias(self, alias: str) -> dict | None:
-    #     """Resolve alias to metadata."""
-    #     pass
+        Args:
+            guid: The GUID to look up
 
-    # async def create_metadata(self, guid: str, data: dict, authz: dict) -> dict:
-    #     """Insert new metadata."""
-    #     pass
+        Returns:
+            Dictionary with guid, data, and authz keys, or None if not found
+        """
+        result = await self.db_session.execute(
+            select(Metadata).where(Metadata.guid == guid)
+        )
+        metadata = result.scalar_one_or_none()
+        if metadata:
+            return metadata.to_dict()
+        return None
 
-    # async def update_metadata(self, guid: str, data: dict, merge: bool = True) -> dict | None:
-    #     """Update existing metadata."""
-    #     pass
+    async def get_metadata_by_alias(self, alias: str) -> dict | None:
+        """
+        Resolve alias to metadata.
 
-    # async def delete_metadata(self, guid: str) -> dict | None:
-    #     """Delete metadata by GUID."""
-    #     pass
+        Args:
+            alias: The alias to look up
 
-    # async def search_metadata(self, filters: dict, limit: int, offset: int, return_data: bool) -> list:
-    #     """Query with filters."""
-    #     pass
+        Returns:
+            Dictionary with guid, data, and authz keys, or None if alias not found
+        """
+        result = await self.db_session.execute(
+            select(MetadataAlias).where(MetadataAlias.alias == alias)
+        )
+        alias_record = result.scalar_one_or_none()
+        if alias_record:
+            return await self.get_metadata(alias_record.guid)
+        return None
+
+    async def create_metadata(
+        self, guid: str, data: dict | None, authz: dict, overwrite: bool = False
+    ) -> tuple[dict, bool]:
+        """
+        Insert new metadata. Optionally overwrites existing record if overwrite=True.
+
+        Args:
+            guid: The GUID for the new metadata
+            data: The metadata content (can be None)
+            authz: Authorization info (required)
+            overwrite: If True, update existing record on conflict
+
+        Returns:
+            Tuple of (metadata dict, was_created boolean)
+            - was_created is True if a new record was inserted
+            - was_created is False if an existing record was updated (when overwrite=True)
+
+        Raises:
+            IntegrityError: If guid already exists and overwrite=False
+        """
+        if overwrite:
+            stmt = (
+                insert(Metadata)
+                .values(guid=guid, data=data, authz=authz)
+                .on_conflict_do_update(
+                    index_elements=[Metadata.guid],
+                    set_={"data": data},
+                )
+                .returning(Metadata.guid, Metadata.data, Metadata.authz, text("xmax"))
+            )
+            result = await self.db_session.execute(stmt)
+            row = result.one()
+            # xmax = 0 means new row was inserted, xmax != 0 means row was updated
+            was_created = row.xmax == 0
+            return {"guid": row.guid, "data": row.data, "authz": row.authz}, was_created
+        else:
+            # Simple insert will raise IntegrityError on conflict
+            # let the exception bubble up like audit-service
+            metadata = Metadata(guid=guid, data=data, authz=authz)
+            self.db_session.add(metadata)
+            await self.db_session.flush()
+            return metadata.to_dict(), True
+
+    async def update_metadata(
+        self, guid: str, data: dict, merge: bool = False
+    ) -> dict | None:
+        """
+        Update existing metadata.
+
+        If `merge` is True, then any top-level keys that are not in the new data will be
+        kept, and those that also exist in the new data will be replaced completely. This
+        is also known as the shallow merge. The metadata service currently doesn't support
+        deep merge.
+
+        Args:
+            guid: The GUID of the record to update
+            data: New metadata content
+            merge: If True, merge with existing data (shallow merge at top-level keys).
+                   If False, replace existing data entirely.
+
+        Returns:
+            Updated metadata dict, or None if GUID not found
+        """
+        result = await self.db_session.execute(
+            select(Metadata).where(Metadata.guid == guid)
+        )
+        metadata = result.scalar_one_or_none()
+
+        if not metadata:
+            return None
+
+        if merge and metadata.data:
+            merged_data = {**metadata.data, **data}
+            metadata.data = merged_data
+        else:
+            metadata.data = data
+
+        await self.db_session.flush()
+        return metadata.to_dict()
+
+    async def delete_metadata(self, guid: str) -> dict | None:
+        """
+        Delete metadata by GUID.
+
+        Args:
+            guid: The GUID to delete
+
+        Returns:
+            Deleted metadata dict, or None if GUID not found
+        """
+        result = await self.db_session.execute(
+            select(Metadata).where(Metadata.guid == guid)
+        )
+        metadata = result.scalar_one_or_none()
+
+        if not metadata:
+            return None
+
+        deleted_data = metadata.to_dict()
+        await self.db_session.delete(metadata)
+        await self.db_session.flush()
+        return deleted_data
+
+    async def search_metadata(
+        self,
+        filters: dict[str, list[str]],
+        limit: int = 10,
+        offset: int = 0,
+        return_data: bool = False,
+    ) -> dict[str, dict] | list[str]:
+        """
+        Search metadata with filters.
+
+        Args:
+            filters: Dict of path -> list of values to match.
+                     Path can use dot notation for nested keys, e.g. "a.b.c".
+            limit: Maximum number of records to return
+            offset: Number of records to skip
+            return_data: If True, return dict of guid -> data.
+                         If False, return list of guids only.
+
+        Returns:
+            Either dict[guid, data] or list[guid] depending on return_data flag
+        """
+        # When return_data=False, only fetch guids
+        if return_data:
+            query = select(Metadata.guid, Metadata.data)
+        else:
+            query = select(Metadata.guid)
+
+        # Apply filters
+        for path, values in filters.items():
+            if "*" in values:
+                path_parts = path.split(".")
+                field = path_parts.pop()
+                if path_parts:
+                    query = query.where(Metadata.data[path_parts].has_key(field))
+                else:
+                    query = query.where(Metadata.data.has_key(field))
+            else:
+                values = ["*" if v == "\\*" else v for v in values]
+                path_parts = path.split(".") if "." in path else path
+
+                conditions = []
+                for v in values:
+                    conditions.append(Metadata.data[path_parts].astext == v)
+
+                if conditions:
+                    query = query.where(or_(*conditions))
+
+        # TODO/FIXME: There's no updated date on the records, and without that
+        # this "pagination" is prone to produce inconsistent results if someone is
+        # trying to paginate using offset WHILE data is being added
+        #
+        # The only real way to try and reduce that risk
+        # is to order by updated date (so newly added stuff is
+        # at the end and new records don't end up in a page earlier on)
+        # This is how our indexing service handles this situation.
+        #
+        # But until we have an updated_date, we can't do that, so naively order by
+        # GUID for now and accept this inconsistency risk.
+        query = query.order_by(Metadata.guid)
+        query = query.offset(offset).limit(limit)
+
+        result = await self.db_session.execute(query)
+        rows = result.all()
+
+        if return_data:
+            return {row.guid: row.data for row in rows}
+        else:
+            return [row.guid for row in rows]
 
     # =========================================================================
     # Alias Operations
