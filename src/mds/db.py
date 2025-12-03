@@ -30,7 +30,7 @@ What do we do in this file?
 """
 from typing import Any, AsyncGenerator
 
-from sqlalchemy import select, text, or_
+from sqlalchemy import delete, select, text, or_
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -323,27 +323,145 @@ class DataAccessLayer:
     # =========================================================================
     # Alias Operations
     # =========================================================================
-    # TODO
 
-    # async def get_aliases_for_guid(self, guid: str) -> list[str]:
-    #     """Get all aliases for a GUID."""
-    #     pass
+    async def get_aliases_for_guid(self, guid: str) -> list[str]:
+        """
+        Get all aliases for a GUID.
 
-    # async def create_aliases(self, guid: str, aliases: list[str]) -> list[str]:
-    #     """Create new aliases."""
-    #     pass
+        Args:
+            guid: The GUID to look up aliases for
 
-    # async def update_aliases(self, guid: str, aliases: list[str], merge: bool = True) -> list[str]:
-    #     """Update aliases."""
-    #     pass
+        Returns:
+            List of alias strings
+        """
+        result = await self.db_session.execute(
+            select(MetadataAlias.alias).where(MetadataAlias.guid == guid)
+        )
+        rows = result.scalars().all()
+        return list(rows)
 
-    # async def delete_alias(self, guid: str, alias: str) -> str | None:
-    #     """Delete single alias."""
-    #     pass
+    async def create_aliases(self, guid: str, aliases: list[str]) -> list[str]:
+        """
+        Create new metadata aliases for a GUID.
 
-    # async def delete_all_aliases(self, guid: str) -> int:
-    #     """Delete all aliases for GUID."""
-    #     pass
+        Args:
+            guid: The GUID to create aliases for
+            aliases: List of alias strings to create
+
+        Returns:
+            List of created alias strings
+
+        Raises:
+            IntegrityError: If GUID doesn't exist (ForeignKeyViolation) or
+                           alias already exists (UniqueViolation)
+        """
+        unique_aliases = list(dict.fromkeys(aliases))
+
+        for alias in unique_aliases:
+            logger.debug(f"inserting MetadataAlias(alias={alias}, guid={guid})")
+            alias_record = MetadataAlias(alias=alias, guid=guid)
+            self.db_session.add(alias_record)
+
+        await self.db_session.flush()
+        return unique_aliases
+
+    async def update_aliases(
+        self, guid: str, aliases: list[str], merge: bool = False
+    ) -> list[str]:
+        """
+        Update metadata aliases for a GUID.
+
+        If `merge` is True, existing aliases not in the new list are kept.
+        If `merge` is False (default), existing aliases not in the new list are deleted.
+
+        Args:
+            guid: The GUID to update aliases for
+            aliases: New list of alias strings
+            merge: If True, keep existing aliases not in new list.
+                   If False, remove existing aliases not in new list.
+
+        Returns:
+            Final list of alias strings after update
+
+        Raises:
+            IntegrityError: If GUID doesn't exist (ForeignKeyViolation) or
+                           alias already belongs to different GUID (UniqueViolation)
+        """
+        requested_aliases = set(aliases)
+        logger.debug(f"requested_aliases: {requested_aliases}")
+
+        result = await self.db_session.execute(
+            select(MetadataAlias).where(MetadataAlias.guid == guid)
+        )
+        existing_alias_records = result.scalars().all()
+        existing_aliases = {record.alias for record in existing_alias_records}
+        aliases_to_add = requested_aliases - existing_aliases
+
+        # If not merging, delete aliases that are not in requested set
+        if not merge:
+            for record in existing_alias_records:
+                if record.alias not in requested_aliases:
+                    logger.debug(
+                        f"deleting MetadataAlias(alias={record.alias}, guid={guid})"
+                    )
+                    await self.db_session.delete(record)
+            final_aliases = requested_aliases
+        else:
+            final_aliases = requested_aliases | existing_aliases
+
+        # Add new aliases
+        for alias in aliases_to_add:
+            logger.debug(f"inserting MetadataAlias(alias={alias}, guid={guid})")
+            alias_record = MetadataAlias(alias=alias, guid=guid)
+            self.db_session.add(alias_record)
+
+        await self.db_session.flush()
+        return sorted(list(final_aliases))
+
+    async def delete_alias(self, guid: str, alias: str) -> dict | None:
+        """
+        Delete a single metadata alias for a GUID.
+
+        Args:
+            guid: The GUID the alias belongs to
+            alias: The alias to delete
+
+        Returns:
+            Dictionary with alias and guid if deleted, None if not found
+        """
+        result = await self.db_session.execute(
+            select(MetadataAlias).where(
+                MetadataAlias.guid == guid, MetadataAlias.alias == alias
+            )
+        )
+        alias_record = result.scalar_one_or_none()
+
+        if not alias_record:
+            return None
+
+        deleted_data = alias_record.to_dict()
+        logger.debug(f"deleting MetadataAlias(alias={alias}, guid={guid})")
+        await self.db_session.delete(alias_record)
+        await self.db_session.flush()
+        return deleted_data
+
+    async def delete_all_aliases(self, guid: str) -> int:
+        """
+        Delete all aliases for a GUID.
+
+        Issues a bulk DELETE without selecting rows first, so it cannot log the aliases removed.
+        Loading them would require a SELECT and negate the performance benefit.
+
+        Args:
+            guid: The GUID to delete all aliases for
+
+        Returns:
+            Number of aliases deleted
+        """
+        result = await self.db_session.execute(
+            delete(MetadataAlias).where(MetadataAlias.guid == guid)
+        )
+        return result.rowcount
 
     # =========================================================================
     # Batch and Index Operations
