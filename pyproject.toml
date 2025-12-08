@@ -52,3 +52,6 @@ pytest-asyncio = "^0.23.0"
 [build-system]
 requires = ["poetry>=2.0"]
 build-backend = "poetry.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

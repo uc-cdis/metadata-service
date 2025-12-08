@@ -28,9 +28,13 @@ What do we do in this file?
   a fresh session from the session maker factory
     - This is what gets injected into endpoint code using FastAPI's dep injections
 """
+import hashlib
+import re
+
 from typing import Any, AsyncGenerator
 
-from sqlalchemy import delete, select, text, or_
+from sqlalchemy import delete, select, text, or_, literal_column
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -42,6 +46,8 @@ from sqlalchemy.dialects.postgresql import insert
 from . import config
 from .models_new import Metadata, MetadataAlias
 from cdislogging import get_logger
+
+INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 
 logger = get_logger(__name__)
 
@@ -176,7 +182,9 @@ class DataAccessLayer:
                     index_elements=[Metadata.guid],
                     set_={"data": data},
                 )
-                .returning(Metadata.guid, Metadata.data, Metadata.authz, text("xmax"))
+                .returning(
+                    Metadata.guid, Metadata.data, Metadata.authz, literal_column("xmax")
+                )
             )
             result = await self.db_session.execute(stmt)
             row = result.one()
@@ -384,8 +392,9 @@ class DataAccessLayer:
             Final list of alias strings after update
 
         Raises:
-            IntegrityError: If GUID doesn't exist (ForeignKeyViolation) or
-                           alias already belongs to different GUID (UniqueViolation)
+            IntegrityError: If GUID doesn't exist (asyncpg ForeignKeyViolation) or
+                           alias already belongs to different GUID (asyncpg UniqueViolation).
+                           Sqlalchemy IntegrityError wraps both
         """
         requested_aliases = set(aliases)
         logger.debug(f"requested_aliases: {requested_aliases}")
@@ -466,23 +475,191 @@ class DataAccessLayer:
     # =========================================================================
     # Batch and Index Operations
     # =========================================================================
-    # TODO
 
-    # async def batch_create_metadata(self, data_list: list, overwrite: bool = False) -> dict:
-    #     """Batch upsert."""
-    #     pass
+    async def batch_create_metadata(
+        self,
+        data_list: list[dict],
+        overwrite: bool = False,
+        default_authz: dict | None = None,
+        forbidden_ids: set[str] | None = None,
+    ) -> dict[str, list[str]]:
+        """
+        Batch create/update metadata records.
 
-    # async def list_metadata_indexes(self) -> list[dict]:
-    #     """List custom indexes on data column."""
-    #     pass
+        TODO: evaluate efficiency compared to old GINO implementation
+        The old GINO implementation explicitly cached the statement in postgres
+        This current implentation depends on implicit sqlalchemy caching, and asyncpg caching prepared statments
+        We should definitely do batch creation benchmarking
 
-    # async def create_metadata_index(self, path: str) -> None:
-    #     """Create index on JSON path."""
-    #     pass
+        Additional changes from previous GINO implmentation:
+        - Old: `overwrite=True` by default
+        - New: `overwrite=False` by default (here at DAL layer)
 
-    # async def drop_metadata_index(self, path: str) -> None:
-    #     """Drop index on JSON path."""
-    #     pass
+        Args:
+            data_list: List of dicts with 'guid' and 'data' keys
+            overwrite: If True, update existing records on conflict.
+                       If False, skip existing records (report as conflict).
+            default_authz: Default authz value to use for new records.
+            forbidden_ids: Set of GUIDs that are not allowed (e.g., 'upload').
+
+        Returns:
+            Dict with keys: 'created', 'updated', 'conflict', 'bad_input'
+            Each value is a list of GUIDs in that category.
+        """
+        created = []
+        updated = []
+        conflict = []
+        bad_input = []
+
+        if forbidden_ids is None:
+            forbidden_ids = set()
+
+        if default_authz is None:
+            default_authz = {}
+
+        for item in data_list:
+            guid = item.get("guid")
+            data = item.get("data")
+
+            if guid in forbidden_ids:
+                bad_input.append(guid)
+                continue
+
+            if overwrite:
+                stmt = (
+                    insert(Metadata)
+                    .values(guid=guid, data=data, authz=default_authz)
+                    .on_conflict_do_update(
+                        index_elements=[Metadata.guid],
+                        set_={"data": data},
+                    )
+                    .returning(literal_column("xmax"))
+                )
+                result = await self.db_session.execute(stmt)
+                row = result.one()
+                if row.xmax == 0:
+                    created.append(guid)
+                else:
+                    updated.append(guid)
+            else:
+                # Use a savepoint so we can catch duplicates without
+                # rolling back the entire transaction
+                async with self.db_session.begin_nested():
+                    try:
+                        metadata = Metadata(guid=guid, data=data, authz=default_authz)
+                        self.db_session.add(metadata)
+                        await self.db_session.flush()
+                        created.append(guid)
+                    except IntegrityError as e:
+                        # Check for unique violation (duplicate key)
+                        if "duplicate key" in str(e).lower():
+                            conflict.append(guid)
+                        else:
+                            raise
+
+        return {
+            "created": created,
+            "updated": updated,
+            "conflict": conflict,
+            "bad_input": bad_input,
+        }
+
+    async def list_metadata_indexes(self) -> list[str]:
+        """
+        List all the metadata key paths indexed in the database.
+
+        Returns:
+            List of key paths
+        """
+        oid_result = await self.db_session.execute(
+            text(
+                """
+                SELECT c.oid
+                FROM pg_catalog.pg_class c
+                LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE pg_catalog.pg_table_is_visible(c.oid)
+                AND c.relname = :table_name AND c.relkind in
+                ('r', 'v', 'm', 'f', 'p')
+                """
+            ).bindparams(table_name=Metadata.__tablename__)
+        )
+        oid = oid_result.scalar()
+
+        # return early if table doesn't exist
+        if oid is None:
+            return []
+
+        indexes_result = await self.db_session.execute(
+            text(
+                """
+                SELECT
+                    i.relname as relname,
+                    pg_get_expr(ix.indexprs, :table_oid) as indexprs
+                FROM
+                    pg_class t
+                    join pg_index ix on t.oid = ix.indrelid
+                    join pg_class i on i.oid = ix.indexrelid
+                WHERE
+                    t.relkind IN ('r', 'v', 'f', 'm', 'p')
+                    and t.oid = :table_oid
+                    and ix.indisprimary = 'f'
+                ORDER BY
+                    t.relname,
+                    i.relname
+                """
+            ).bindparams(table_oid=oid)
+        )
+        indexes = indexes_result.all()
+
+        rv = []
+        for name, prs in indexes:
+            if name.startswith("path_idx_"):
+                matches = INDEX_REGEXP.findall(prs)
+                if matches:
+                    rv.append(".".join(matches[0].split(",")))
+        return rv
+
+    async def create_metadata_index(self, path: str) -> str:
+        """
+        Create a database index on the given metadata key path.
+
+        Args:
+            path: Key path
+
+        Returns:
+            The path that was indexed
+
+        Raises:
+            sqlalchemy.exc.ProgrammingError: If an index already exists for this path
+                (wraps asyncpg.exceptions.DuplicateTableError)
+        """
+        import hashlib
+
+        path = ",".join(path.split(".")).strip()
+        name = hashlib.sha256(path.encode()).hexdigest()[:8]
+        await self.db_session.execute(
+            text(
+                f"CREATE INDEX path_idx_{name} ON {Metadata.__tablename__} ((data #>> '{{%s}}'))"
+                % path
+            )
+        )
+
+        rv = ".".join(path.split(","))
+        return rv
+
+    async def drop_metadata_index(self, path: str) -> None:
+        """
+        Drop the database index on the given metadata key path.
+
+        Args:
+            path: Key path
+
+        Raises:
+            sqlalchemy.exc.ProgrammingError: If no index exists for this path
+        """
+        path = ",".join(path.split(".")).strip()
+        name = hashlib.sha256(path.encode()).hexdigest()[:8]
+        await self.db_session.execute(text(f"DROP INDEX path_idx_{name}"))
 
 
 async def get_data_access_layer() -> AsyncGenerator[DataAccessLayer, Any]:
