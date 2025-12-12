@@ -43,10 +43,10 @@ if TESTING:
 DB_DSN = config(
     "DB_DSN",
     cast=make_url,
-    default=URL(
+    default=URL.create(
         drivername=DB_DRIVER,
         username=DB_USER,
-        password=DB_PASSWORD,
+        password=str(DB_PASSWORD) if DB_PASSWORD else None,
         host=DB_HOST,
         port=DB_PORT,
         database=DB_DATABASE,
