@@ -29,7 +29,7 @@ ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
 # Database
 
-DB_DRIVER = config("DB_DRIVER", default="postgresql")
+DB_DRIVER = config("DB_DRIVER", default="postgresql+asyncpg")
 DB_HOST = config("DB_HOST", default=None)
 DB_PORT = config("DB_PORT", cast=int, default=None)
 DB_USER = config("DB_USER", default=None)
