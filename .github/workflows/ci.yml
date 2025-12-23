@@ -17,12 +17,12 @@ jobs:
         - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Set up Python 3.13
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v6
       with:
-        python-version: 3.13
-    - uses: actions/cache@preview
+        python-version: '3.13'
+    - uses: actions/cache@v4
       with:
         path: ~/.cache/pypoetry/virtualenvs
         key: ${{ runner.os }}-poetry-${{ hashFiles(format('{0}{1}', github.workspace, '/poetry.lock')) }}
@@ -40,6 +40,8 @@ jobs:
         DB_USER: metadata_user
         DB_PASSWORD: metadata_pass
         PGPASSWORD: metadata_pass
+        DB_DATABASE: test_metadata
+        TESTING: true
       run: |
         poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=93 --cov-report xml
     - name: Submit coverage report
