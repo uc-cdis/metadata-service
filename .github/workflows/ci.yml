@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:9.6
+        image: postgres:latest
         env:
           POSTGRES_USER: metadata_user
           POSTGRES_PASSWORD: metadata_pass
