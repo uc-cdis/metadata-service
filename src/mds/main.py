@@ -1,9 +1,11 @@
 import asyncio
 
-import pkg_resources
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 import httpx
 from urllib.parse import urlparse
+from contextlib import asynccontextmanager
 from starlette.status import (
     HTTP_500_INTERNAL_SERVER_ERROR,
 )
@@ -11,43 +13,54 @@ from starlette.status import (
 from mds.agg_mds import datastore as aggregate_datastore
 
 try:
-    from importlib.metadata import entry_points
+    from importlib.metadata import entry_points, version
 except ImportError:
-    from importlib_metadata import entry_points
+    from importlib_metadata import entry_points, version
 
 from . import logger, config
-from .models import db
+from mds.db import initiate_db, get_db_engine_and_sessionmaker, get_session
 
 
 def get_app():
-    app = FastAPI(
-        title="Framework Services Object Management Service",
-        version=pkg_resources.get_distribution("mds").version,
-        debug=config.DEBUG,
-        root_path=config.URL_PREFIX,
-    )
-    app.include_router(router)
-    db.init_app(app)
-    app.add_middleware(ClientDisconnectMiddleware)
-    load_modules(app)
-    app.async_client = httpx.AsyncClient()
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        if config.USE_AGG_MDS:
-            logger.info("Closing aggregate datastore.")
-            await aggregate_datastore.close()
-        logger.info("Closing async client.")
-        await app.async_client.aclose()
-
-    @app.on_event("startup")
-    async def startup_event():
+    async def setup_aggregate_datastore(app):
         if config.USE_AGG_MDS:
             logger.info("Creating aggregate datastore.")
             url_parts = urlparse(config.ES_ENDPOINT)
             await aggregate_datastore.init(
                 hostname=url_parts.hostname, port=url_parts.port
             )
+
+    async def close_aggregate_datastore(app):
+        if config.USE_AGG_MDS:
+            logger.info("Closing aggregate datastore.")
+            await aggregate_datastore.close()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        # Startup actions
+        await initiate_db()
+        engine, session_maker = get_db_engine_and_sessionmaker()
+        app.state.engine = engine
+        app.state.async_sessionmaker = session_maker
+        app.async_client = httpx.AsyncClient()
+        await setup_aggregate_datastore(app)
+        yield
+        # Shutdown actions
+        await close_aggregate_datastore(app)
+        logger.info("Closing async client.")
+        await app.async_client.aclose()
+        await engine.dispose()
+
+    app = FastAPI(
+        title="Framework Services Object Management Service",
+        version=version("mds"),
+        debug=config.DEBUG,
+        root_path=config.URL_PREFIX,
+        lifespan=lifespan,
+    )
+    app.include_router(router)
+    app.add_middleware(ClientDisconnectMiddleware)
+    load_modules(app)
 
     return app
 
@@ -98,7 +111,8 @@ def load_modules(app=None):
     """
     logger.info("Start to load modules.")
     # sorted set ensures deterministic loading order
-    for ep in sorted(set(entry_points()["mds.modules"])):
+    eps = entry_points(group="mds.modules")
+    for ep in eps:
         mod = ep.load()
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
@@ -111,18 +125,19 @@ router = APIRouter()
 
 @router.get("/version")
 def get_version():
-    return pkg_resources.get_distribution("mds").version
+    return version("mds")
 
 
 @router.get("/_status")
-async def get_status():
+async def get_status(session: AsyncSession = Depends(get_session)):
     """
     Returns the status of the MDS:
      * error: if there was no error this will be "none"
      * last_update: timestamp of the last data pull from the commons
      * count: number of entries
     """
-    now = await db.scalar("SELECT now()")
+    result = await session.execute(text("SELECT now()"))
+    now = result.scalar()
 
     if config.USE_AGG_MDS:
         try:

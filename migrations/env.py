@@ -20,7 +20,8 @@ fileConfig(config.config_file_name)
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
-from mds.main import db as target_metadata, load_modules
+from mds.main import load_modules
+from mds.models import Base
 from mds.config import DB_DSN, DB_CONNECT_RETRIES
 
 load_modules()
@@ -49,7 +50,7 @@ def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
-        target_metadata=target_metadata,
+        target_metadata=Base.metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -87,7 +88,7 @@ def run_migrations_online():
             break
 
     with connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(connection=connection, target_metadata=Base.metadata)
 
         with context.begin_transaction():
             context.run_migrations()

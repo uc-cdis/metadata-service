@@ -13,7 +13,7 @@
 Install required software:
 
 * [PostgreSQL](PostgreSQL) 9.6 or above
-* [Python](https://www.python.org/downloads/) 3.9 or above
+* [Python](https://www.python.org/downloads/) 3.13 or above
 * [Poetry](https://poetry.eustace.io/docs/#installation)
 
 Then use `poetry install` to install the dependencies. Before that,

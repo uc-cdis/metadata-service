@@ -84,10 +84,8 @@ elastic_search_client = None
 async def init(hostname: str = "0.0.0.0", port: int = 9200):
     global elastic_search_client
     elastic_search_client = Elasticsearch(
-        [hostname],
-        scheme="http",
-        port=port,
-        timeout=ES_RETRY_INTERVAL,
+        [f"http://{hostname}:{port}"],
+        request_timeout=ES_RETRY_INTERVAL,
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )

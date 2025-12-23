@@ -19,7 +19,7 @@ import os
 # Set TESTING early, before importing mds modules.
 # Otherwise config.py uses DB_DATABASE="metadata" instead of "test_metadata".
 # TODO: move this part to conftest.py after GINO stuff is removed
-os.environ["TESTING"] = "TRUE"
+# os.environ["TESTING"] = "TRUE"
 
 import pytest
 import pytest_asyncio
@@ -32,7 +32,7 @@ from mds.db import (
     get_db_engine_and_sessionmaker,
     DataAccessLayer,
 )
-from mds.models_new import Metadata, MetadataAlias, Base
+from mds.models import Metadata, MetadataAlias, Base
 
 
 # =============================================================================

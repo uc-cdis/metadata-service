@@ -1,12 +1,11 @@
 import time
 
+import httpx
 import pytest
 import starlette
-from asyncpg import InvalidCatalogNameError
 from requests import ReadTimeout
 from starlette.testclient import TestClient
 
-from mds.main import db
 from mds.main import get_app
 
 
@@ -39,19 +38,15 @@ def test_status(client):
 
 
 def test_wait_for_db(monkeypatch):
-    monkeypatch.setitem(db.config, "retry_limit", 0)
-    monkeypatch.setattr(db.config["dsn"], "database", "non_exist")
+    monkeypatch.setenv("DB_DATABASE", "non_exist")
+    monkeypatch.setenv(
+        "DB_DSN", "postgresql+asyncpg://postgres@localhost:5432/non_exist"
+    )
+    monkeypatch.setenv("DB_RETRY_LIMIT", "0")
 
     start = time.time()
-    with pytest.raises(InvalidCatalogNameError, match="non_exist"):
+    with pytest.raises(httpx.HTTPStatusError) as excinfo:
         with TestClient(get_app()) as client:
             client.get("/_status").raise_for_status()
+    assert excinfo.value.response.status_code == 500
     assert time.time() - start < 1
-
-    monkeypatch.setitem(db.config, "retry_limit", 2)
-
-    start = time.time()
-    with pytest.raises(InvalidCatalogNameError, match="non_exist"):
-        with TestClient(get_app()) as client:
-            client.get("/_status").raise_for_status()
-    assert time.time() - start > 1

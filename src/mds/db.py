@@ -42,9 +42,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.dialects.postgresql import insert
+from fastapi import Request
 
 from . import config
-from .models_new import Metadata, MetadataAlias
+from .models import Metadata, MetadataAlias
 from cdislogging import get_logger
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
@@ -90,6 +91,12 @@ def get_db_engine_and_sessionmaker() -> tuple[AsyncEngine, async_sessionmaker]:
     if engine is None or async_sessionmaker_instance is None:
         raise Exception("Database not initialized. Call initiate_db() first.")
     return engine, async_sessionmaker_instance
+
+
+async def get_session(request: Request):
+    async_sessionmaker = request.app.state.async_sessionmaker
+    async with async_sessionmaker() as session:
+        yield session
 
 
 class DataAccessLayer:
@@ -146,10 +153,7 @@ class DataAccessLayer:
         Returns:
             Dictionary with guid, data, and authz keys, or None if alias not found
         """
-        result = await self.db_session.execute(
-            select(MetadataAlias).where(MetadataAlias.alias == alias)
-        )
-        alias_record = result.scalar_one_or_none()
+        alias_record = await self.get_alias(alias)
         if alias_record:
             return await self.get_metadata(alias_record.guid)
         return None
@@ -331,6 +335,21 @@ class DataAccessLayer:
     # =========================================================================
     # Alias Operations
     # =========================================================================
+
+    async def get_alias(self, alias: str) -> MetadataAlias | None:
+        """
+        Get alias
+
+        Args:
+            alias: The alias to look up
+
+        Returns:
+            MetadataAlias object or None if alias not found
+        """
+        result = await self.db_session.execute(
+            select(MetadataAlias).where(MetadataAlias.alias == alias)
+        )
+        return result.scalar_one_or_none()
 
     async def get_aliases_for_guid(self, guid: str) -> list[str]:
         """

@@ -1,15 +1,29 @@
 import json
-
 from alembic.config import main as alembic_main
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy import text
 import pytest
 
 from mds.config import DB_DSN, DEFAULT_AUTHZ_STR
-from mds.models import db
+
+
+async_dsn = DB_DSN.set(drivername="postgresql+asyncpg")
+async_engine = create_async_engine(str(async_dsn), future=True)
 
 
 def escape(str):
     # escape single quotes for SQL statement
     return str.replace(":", "\\:").replace("'", "''")
+
+
+async def run_sql(sql, session):
+    result = await session.execute(text(sql))
+    return result
+
+
+async def fetch_sql(sql, session):
+    result = await session.execute(text(sql))
+    return result.fetchall()
 
 
 @pytest.mark.asyncio
@@ -93,45 +107,45 @@ async def test_4d93784a25e5_downgrade(
     2) this issue: https://github.com/encode/starlette/issues/440
     so inserting directly into the DB instead.
     """
-
     # after "add_authz_column" migration
     alembic_main(["--raiseerr", "upgrade", "4d93784a25e5"])
 
     # data values
     fake_guid = "123456"
-
-    async with db.with_bind(DB_DSN):
+    async with AsyncSession(async_engine) as session:
         # insert data
         sql_authz_data = escape(json.dumps(authz_data))
         if new_metadata is not None:
             sql_new_metadata = escape(json.dumps(new_metadata))
-            insert_stmt = f"INSERT INTO metadata(\"guid\", \"authz\", \"data\") VALUES ('{fake_guid}', '{sql_authz_data}', '{sql_new_metadata}')"
+            insert_stmt = f"INSERT INTO metadata (guid, authz, data) VALUES ('{fake_guid}', '{sql_authz_data}', '{sql_new_metadata}')"
         else:
-            insert_stmt = f'INSERT INTO metadata("guid", "authz", "data") VALUES (\'{fake_guid}\', \'{sql_authz_data}\', null)'
-        await db.scalar(db.text(insert_stmt))
+            insert_stmt = f"INSERT INTO metadata (guid, authz, data) VALUES ('{fake_guid}', '{sql_authz_data}', null)"
+        await run_sql(insert_stmt, session)
+        await session.commit()
 
         try:
             # check that the request data was inserted correctly
-            data = await db.all(
-                db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
-            )
-            row = {k: v for k, v in data[0].items()}
+            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+            data = await fetch_sql(fetch_stmt, session)
+            row = dict(data[0]._mapping)
             assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
             # downgrade to before "add_authz_column" migration
             alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])
 
             # check that the migration moved the `authz` data into the `data` column
-            data = await db.all(
-                db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
-            )
+            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+            data = await fetch_sql(fetch_stmt, session)
             assert len(data) == 1
-            row = {k: v for k, v in data[0].items()}
+            row = dict(data[0]._mapping)
             assert row == {"guid": fake_guid, "data": old_metadata}
 
         finally:
-            await db.all(db.text(f"DELETE FROM metadata WHERE guid = '{fake_guid}'"))
-        _reset_migrations()
+            delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
+            await run_sql(delete_stmt, session)
+            await session.commit()
+        await async_engine.dispose()
+    _reset_migrations()
 
 
 @pytest.mark.asyncio
@@ -205,37 +219,35 @@ async def test_4d93784a25e5_upgrade(
     alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])
 
     fake_guid = "7891011"
-
-    async with db.with_bind(DB_DSN):
-
+    async with AsyncSession(async_engine) as session:
         # insert data
         sql_old_metadata = escape(json.dumps(old_metadata))
-        insert_stmt = f"INSERT INTO metadata(\"guid\", \"data\") VALUES ('{fake_guid}', '{sql_old_metadata}')"
-        await db.scalar(db.text(insert_stmt))
+        insert_stmt = f"INSERT INTO metadata (guid, data) VALUES ('{fake_guid}', '{sql_old_metadata}')"
+        await run_sql(insert_stmt, session)
+        await session.commit()
 
         try:
-            # check that the request data was inserted correctly
-            data = await db.all(
-                db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
-            )
-            row = {k: v for k, v in data[0].items()}
+            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+            data = await fetch_sql(fetch_stmt, session)
+            row = dict(data[0]._mapping)
             assert row == {"guid": fake_guid, "data": old_metadata}
 
             # run "add_authz_column" migration
             alembic_main(["--raiseerr", "upgrade", "4d93784a25e5"])
 
-            # check that the migration created correct `authz` data from the `data` column
-            data = await db.all(
-                db.text(f"SELECT * FROM metadata WHERE guid = '{fake_guid}'")
-            )
+            # check correct `authz` data from `data` column
+            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+            data = await fetch_sql(fetch_stmt, session)
             assert len(data) == 1
-            row = {k: v for k, v in data[0].items()}
+            row = dict(data[0]._mapping)
             assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
         finally:
-            await db.all(db.text(f"DELETE FROM metadata WHERE guid = '{fake_guid}'"))
-
-        _reset_migrations()
+            delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
+            await run_sql(delete_stmt, session)
+            await session.commit()
+        await async_engine.dispose()
+    _reset_migrations()
 
 
 @pytest.mark.asyncio
@@ -269,41 +281,41 @@ async def test_6819874e85b9_upgrade():
     }
     authz_data = {"version": 0, "_resource_paths": ["/programs/DEV"]}
 
-    async with db.with_bind(DB_DSN):
-
+    async with AsyncSession(async_engine) as session:
         # insert data
         sql_old_metadata = escape(json.dumps(old_metadata))
         sql_authz_data = escape(json.dumps(authz_data))
-        insert_stmt = f"INSERT INTO metadata(\"guid\", \"data\", \"authz\") VALUES ('{fake_guid}', '{sql_old_metadata}', '{sql_authz_data}')"
-        await db.scalar(db.text(insert_stmt))
+        insert_stmt = f"INSERT INTO metadata (guid, data, authz) VALUES ('{fake_guid}', '{sql_old_metadata}', '{sql_authz_data}')"
+        await run_sql(insert_stmt, session)
+        await session.commit()
 
         try:
             # check that the request data was inserted correctly
-            data = await db.all(
-                db.text(
-                    f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
-                )
+            fetch_stmt = (
+                f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
             )
-            row = {k: v for k, v in data[0].items()}
+            data = await fetch_sql(fetch_stmt, session)
+            row = dict(data[0]._mapping)
             assert row == {"guid": fake_guid, "data": old_metadata, "authz": authz_data}
 
             # run "remove_deprecated_metadata" migration
             alembic_main(["--raiseerr", "upgrade", "6819874e85b9"])
 
             # check that the migration removed the deprecated keys
-            data = await db.all(
-                db.text(
-                    f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
-                )
+            fetch_stmt = (
+                f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
             )
+            data = await fetch_sql(fetch_stmt, session)
             assert len(data) == 1
-            row = {k: v for k, v in data[0].items()}
+            row = dict(data[0]._mapping)
             assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
         finally:
-            await db.all(db.text(f"DELETE FROM metadata WHERE guid = '{fake_guid}'"))
-
-        _reset_migrations()
+            delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
+            await run_sql(delete_stmt, session)
+            await session.commit()
+        await async_engine.dispose()
+    _reset_migrations()
 
 
 def _reset_migrations():

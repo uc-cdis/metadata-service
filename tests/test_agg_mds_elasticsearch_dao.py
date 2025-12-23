@@ -43,10 +43,8 @@ async def test_init():
     ) as mock_client:
         await elasticsearch_dao.init("myhost")
     mock_client.assert_called_with(
-        ["myhost"],
-        port=9200,
-        scheme="http",
-        timeout=ES_RETRY_INTERVAL,
+        ["http://myhost:9200"],
+        request_timeout=ES_RETRY_INTERVAL,
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
@@ -178,19 +176,19 @@ async def test_create_if_exists():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
         MagicMock(
             side_effect=es_exceptions.RequestError(
-                400, "resource_already_exists_exception"
+                "resource_already_exists_exception", 400, None
             )
         ),
     ):
         await elasticsearch_dao.drop_all_non_temp_indexes()
-        await elasticsearch_dao.create_indexes(COMMON_MAPPING)
+        await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
 
 
 @pytest.mark.asyncio
 async def test_create_index_raise_exception():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
-        MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
+        MagicMock(side_effect=es_exceptions.RequestError("expect_to_fail", 403, None)),
     ):
         try:
             await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)

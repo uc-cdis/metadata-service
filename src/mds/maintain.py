@@ -1,9 +1,7 @@
 import json
 
-from asyncpg import UniqueViolationError
 from fastapi import HTTPException, APIRouter, Depends
-from sqlalchemy import bindparam
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
@@ -14,67 +12,42 @@ from starlette.status import (
 )
 
 from .admin_login import admin_required
-from .models import db, Metadata
 from . import config
 from .objects import FORBIDDEN_IDS
+from .db import get_data_access_layer, DataAccessLayer
 
 mod = APIRouter()
 
 
 @mod.post("/metadata")
 async def batch_create_metadata(
-    request: Request, data_list: list[dict], overwrite: bool = True
+    request: Request,
+    data_list: list[dict],
+    overwrite: bool = True,
+    dal: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Create metadata in batch."""
     request.scope.get("add_close_watcher", lambda: None)()
-    created = []
-    updated = []
-    conflict = []
-    bad_input = []
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
-    async with db.acquire() as conn:
-        if overwrite:
-            data = bindparam("data")
-            stmt = await conn.prepare(
-                insert(Metadata)
-                .values(guid=bindparam("guid"), data=data, authz=authz)
-                .on_conflict_do_update(
-                    index_elements=[Metadata.guid], set_=dict(data=data)
-                )
-                .returning(db.text("xmax"))
-            )
-            for data in data_list:
-                if data["guid"] in FORBIDDEN_IDS:
-                    bad_input.append(data["guid"])
-                elif await stmt.scalar(data) == 0:
-                    created.append(data["guid"])
-                else:
-                    updated.append(data["guid"])
-        else:
-            stmt = await conn.prepare(
-                insert(Metadata).values(
-                    guid=bindparam("guid"), data=bindparam("data"), authz=authz
-                )
-            )
-            for data in data_list:
-                if data["guid"] in FORBIDDEN_IDS:
-                    bad_input.append(data["guid"])
-                else:
-                    try:
-                        await stmt.status(data)
-                    except UniqueViolationError:
-                        conflict.append(data["guid"])
-                    else:
-                        created.append(data["guid"])
-    return dict(
-        created=created, updated=updated, conflict=conflict, bad_input=bad_input
+
+    result = await dal.batch_create_metadata(
+        data_list=data_list,
+        overwrite=overwrite,
+        default_authz=authz,
+        forbidden_ids=FORBIDDEN_IDS,
     )
+
+    return JSONResponse(content=result, status_code=HTTP_201_CREATED)
 
 
 @mod.post("/metadata/{guid:path}")
-async def create_metadata(guid, data: dict, overwrite: bool = False):
+async def create_metadata(
+    guid,
+    data: dict,
+    overwrite: bool = False,
+    dal: DataAccessLayer = Depends(get_data_access_layer),
+):
     """Create metadata for the GUID."""
-    created = True
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
 
     # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
@@ -85,33 +58,29 @@ async def create_metadata(guid, data: dict, overwrite: bool = False):
             HTTP_400_BAD_REQUEST, "GUID cannot have value: {FORBIDDEN_IDS}"
         )
 
-    if overwrite:
-        rv = await db.first(
-            insert(Metadata)
-            .values(guid=guid, data=data, authz=authz)
-            .on_conflict_do_update(index_elements=[Metadata.guid], set_=dict(data=data))
-            .returning(Metadata.data, db.text("xmax"))
+    try:
+        record, created = await dal.create_metadata(
+            guid=guid, data=data, authz=authz, overwrite=overwrite
         )
-        if rv["xmax"] != 0:
-            created = False
-    else:
-        try:
-            rv = (
-                await Metadata.insert()
-                .values(guid=guid, data=data, authz=authz)
-                .returning(*Metadata)
-                .gino.first()
-            )
-        except UniqueViolationError:
+    except Exception as e:
+        # Check for duplicate GUID error
+        if isinstance(e, IntegrityError):
             raise HTTPException(HTTP_409_CONFLICT, f"Conflict: {guid}")
+        raise
+
     if created:
-        return JSONResponse(rv["data"], HTTP_201_CREATED)
+        return JSONResponse(content=record["data"], status_code=HTTP_201_CREATED)
     else:
-        return rv["data"]
+        return record["data"]
 
 
 @mod.put("/metadata/{guid:path}")
-async def update_metadata(guid, data: dict, merge: bool = False):
+async def update_metadata(
+    guid,
+    data: dict,
+    merge: bool = False,
+    dal: DataAccessLayer = Depends(get_data_access_layer),
+):
     """Update the metadata of the GUID.
 
     If `merge` is True, then any top-level keys that are not in the new data will be
@@ -120,28 +89,22 @@ async def update_metadata(guid, data: dict, merge: bool = False):
     deep merge.
     """
     # TODO PUT should create if it doesn't exist...
-    metadata = (
-        await Metadata.update.values(data=(Metadata.data + data) if merge else data)
-        .where(Metadata.guid == guid)
-        .returning(*Metadata)
-        .gino.first()
-    )
-    if metadata:
-        return metadata.data
+    updated_record = await dal.update_metadata(guid=guid, data=data, merge=merge)
+    if updated_record:
+        return updated_record["data"]
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
 
 
 @mod.delete("/metadata/{guid:path}")
-async def delete_metadata(guid):
+async def delete_metadata(
+    guid,
+    dal: DataAccessLayer = Depends(get_data_access_layer),
+):
     """Delete the metadata of the GUID."""
-    metadata = (
-        await Metadata.delete.where(Metadata.guid == guid)
-        .returning(*Metadata)
-        .gino.first()
-    )
-    if metadata:
-        return metadata.data
+    deleted_record = await dal.delete_metadata(guid=guid)
+    if deleted_record:
+        return deleted_record["data"]
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
 
