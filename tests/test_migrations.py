@@ -1,14 +1,55 @@
 import json
-from alembic.config import main as alembic_main
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy import text
 import pytest
+import os
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from mds.config import DB_DSN, DEFAULT_AUTHZ_STR
 
 
-async_dsn = DB_DSN.set(drivername="postgresql+asyncpg")
-async_engine = create_async_engine(str(async_dsn), future=True)
+class MigrationRunner:
+    def __init__(self):
+        self.action: str = ""
+        self.target: str = ""
+        current_dir = os.path.dirname(os.path.realpath(__file__))
+        self.alembic_ini_path = os.path.join(current_dir, "../alembic.ini")
+
+    async def upgrade(self, target: str):
+        self.action = "upgrade"
+        self.target = target
+        await self._run_alembic_command()
+
+    async def downgrade(self, target: str):
+        self.action = "downgrade"
+        self.target = target
+        await self._run_alembic_command()
+
+    async def _run_alembic_command(self):
+        """
+        Args:
+            action (str): "upgrade" or "downgrade"
+            target (str): "base", "head" or revision ID
+        """
+
+        def _run_command(connection):
+            alembic_cfg = Config(self.alembic_ini_path)
+            alembic_cfg.attributes["connection"] = connection
+            if self.action == "upgrade":
+                command.upgrade(alembic_cfg, self.target)
+            elif self.action == "downgrade":
+                command.downgrade(alembic_cfg, self.target)
+            else:
+                raise Exception(f"Unknown MigrationRunner action '{self.action}'")
+
+        engine = create_async_engine(
+            DB_DSN.set(drivername="postgresql+asyncpg"), echo=True
+        )
+        async with engine.begin() as conn:
+            await conn.run_sync(_run_command)
+        await engine.dispose()
 
 
 def escape(str):
@@ -16,14 +57,9 @@ def escape(str):
     return str.replace(":", "\\:").replace("'", "''")
 
 
-async def run_sql(sql, session):
-    result = await session.execute(text(sql))
-    return result
-
-
-async def fetch_sql(sql, session):
-    result = await session.execute(text(sql))
-    return result.fetchall()
+async def reset_migrations():
+    migration_runner = MigrationRunner()
+    await migration_runner.upgrade("head")
 
 
 @pytest.mark.asyncio
@@ -98,7 +134,7 @@ async def fetch_sql(sql, session):
     ],
 )
 async def test_4d93784a25e5_downgrade(
-    old_metadata: dict, new_metadata: dict, authz_data: dict
+    db_session, old_metadata: dict, new_metadata: dict, authz_data: dict
 ):
     """
     We can't create metadata by using the `client` fixture because of two reasons:
@@ -108,44 +144,44 @@ async def test_4d93784a25e5_downgrade(
     so inserting directly into the DB instead.
     """
     # after "add_authz_column" migration
-    alembic_main(["--raiseerr", "upgrade", "4d93784a25e5"])
+    migration_runner = MigrationRunner()
+    await migration_runner.upgrade("4d93784a25e5")
 
     # data values
     fake_guid = "123456"
-    async with AsyncSession(async_engine) as session:
-        # insert data
-        sql_authz_data = escape(json.dumps(authz_data))
-        if new_metadata is not None:
-            sql_new_metadata = escape(json.dumps(new_metadata))
-            insert_stmt = f"INSERT INTO metadata (guid, authz, data) VALUES ('{fake_guid}', '{sql_authz_data}', '{sql_new_metadata}')"
-        else:
-            insert_stmt = f"INSERT INTO metadata (guid, authz, data) VALUES ('{fake_guid}', '{sql_authz_data}', null)"
-        await run_sql(insert_stmt, session)
-        await session.commit()
 
-        try:
-            # check that the request data was inserted correctly
-            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
-            data = await fetch_sql(fetch_stmt, session)
-            row = dict(data[0]._mapping)
-            assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
+    # insert data
+    sql_authz_data = escape(json.dumps(authz_data))
+    if new_metadata is not None:
+        sql_new_metadata = escape(json.dumps(new_metadata))
+        insert_stmt = f"INSERT INTO metadata (guid, authz, data) VALUES ('{fake_guid}', '{sql_authz_data}', '{sql_new_metadata}')"
+    else:
+        insert_stmt = f"INSERT INTO metadata (guid, authz, data) VALUES ('{fake_guid}', '{sql_authz_data}', null)"
+    await db_session.execute(text(insert_stmt))
 
-            # downgrade to before "add_authz_column" migration
-            alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])
+    try:
+        # check that the request data was inserted correctly
+        fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+        data = list((await db_session.execute(text(fetch_stmt))).all())
+        row = dict(data[0]._mapping)
+        assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
-            # check that the migration moved the `authz` data into the `data` column
-            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
-            data = await fetch_sql(fetch_stmt, session)
-            assert len(data) == 1
-            row = dict(data[0]._mapping)
-            assert row == {"guid": fake_guid, "data": old_metadata}
+        # downgrade to before "add_authz_column" migration
+        await migration_runner.downgrade("f96cb3b2c523")
 
-        finally:
-            delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
-            await run_sql(delete_stmt, session)
-            await session.commit()
-        await async_engine.dispose()
-    _reset_migrations()
+        # check that the migration moved the `authz` data into the `data` column
+        fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+        data = list((await db_session.execute(text(fetch_stmt))).all())
+        assert len(data) == 1
+        row = dict(data[0]._mapping)
+        assert row == {"guid": fake_guid, "data": old_metadata}
+
+    finally:
+        delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
+        await db_session.execute(text(delete_stmt))
+        await db_session.commit()
+
+    reset_migrations()
 
 
 @pytest.mark.asyncio
@@ -205,7 +241,7 @@ async def test_4d93784a25e5_downgrade(
     ],
 )
 async def test_4d93784a25e5_upgrade(
-    old_metadata: dict, new_metadata: dict, authz_data: dict
+    db_session, old_metadata: dict, new_metadata: dict, authz_data: dict
 ):
     """
     We can't create metadata by using the `client` fixture because of two reasons:
@@ -216,42 +252,42 @@ async def test_4d93784a25e5_upgrade(
     """
 
     # before "add_authz_column" migration
-    alembic_main(["--raiseerr", "downgrade", "f96cb3b2c523"])
+    migration_runner = MigrationRunner()
+    await migration_runner.downgrade("f96cb3b2c523")
 
     fake_guid = "7891011"
-    async with AsyncSession(async_engine) as session:
-        # insert data
-        sql_old_metadata = escape(json.dumps(old_metadata))
-        insert_stmt = f"INSERT INTO metadata (guid, data) VALUES ('{fake_guid}', '{sql_old_metadata}')"
-        await run_sql(insert_stmt, session)
-        await session.commit()
+    # insert data
+    sql_old_metadata = escape(json.dumps(old_metadata))
+    insert_stmt = f"INSERT INTO metadata (guid, data) VALUES ('{fake_guid}', '{sql_old_metadata}')"
+    await db_session.execute(text(insert_stmt))
+    await db_session.commit()
 
-        try:
-            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
-            data = await fetch_sql(fetch_stmt, session)
-            row = dict(data[0]._mapping)
-            assert row == {"guid": fake_guid, "data": old_metadata}
+    try:
+        fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+        data = list((await db_session.execute(text(fetch_stmt))).all())
+        row = dict(data[0]._mapping)
+        assert row == {"guid": fake_guid, "data": old_metadata}
 
-            # run "add_authz_column" migration
-            alembic_main(["--raiseerr", "upgrade", "4d93784a25e5"])
+        # run "add_authz_column" migration
+        await migration_runner.upgrade("4d93784a25e5")
 
-            # check correct `authz` data from `data` column
-            fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
-            data = await fetch_sql(fetch_stmt, session)
-            assert len(data) == 1
-            row = dict(data[0]._mapping)
-            assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
+        # check correct `authz` data from `data` column
+        fetch_stmt = f"SELECT * FROM metadata WHERE guid = '{fake_guid}'"
+        data = list((await db_session.execute(text(fetch_stmt))).all())
+        assert len(data) == 1
+        row = dict(data[0]._mapping)
+        assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
-        finally:
-            delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
-            await run_sql(delete_stmt, session)
-            await session.commit()
-        await async_engine.dispose()
-    _reset_migrations()
+    finally:
+        delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
+        await db_session.execute(text(delete_stmt))
+        await db_session.commit()
+
+    reset_migrations()
 
 
 @pytest.mark.asyncio
-async def test_6819874e85b9_upgrade():
+async def test_6819874e85b9_upgrade(db_session):
     """
     We can't create metadata by using the `client` fixture because of this issue:
     https://github.com/encode/starlette/issues/440
@@ -259,7 +295,8 @@ async def test_6819874e85b9_upgrade():
     """
 
     # before "remove_deprecated_metadata" migration
-    alembic_main(["--raiseerr", "downgrade", "3354f2c466ec"])
+    migration_runner = MigrationRunner()
+    await migration_runner.downgrade("3354f2c466ec")
 
     fake_guid = "7891011"
     # "percent" and "colon" are some edge cases that was causing the migration to fail
@@ -281,42 +318,37 @@ async def test_6819874e85b9_upgrade():
     }
     authz_data = {"version": 0, "_resource_paths": ["/programs/DEV"]}
 
-    async with AsyncSession(async_engine) as session:
-        # insert data
-        sql_old_metadata = escape(json.dumps(old_metadata))
-        sql_authz_data = escape(json.dumps(authz_data))
-        insert_stmt = f"INSERT INTO metadata (guid, data, authz) VALUES ('{fake_guid}', '{sql_old_metadata}', '{sql_authz_data}')"
-        await run_sql(insert_stmt, session)
-        await session.commit()
+    # insert data
+    sql_old_metadata = escape(json.dumps(old_metadata))
+    sql_authz_data = escape(json.dumps(authz_data))
+    insert_stmt = f"INSERT INTO metadata (guid, data, authz) VALUES ('{fake_guid}', '{sql_old_metadata}', '{sql_authz_data}')"
+    await db_session.execute(text(insert_stmt))
+    await db_session.commit()
 
-        try:
-            # check that the request data was inserted correctly
-            fetch_stmt = (
-                f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
-            )
-            data = await fetch_sql(fetch_stmt, session)
-            row = dict(data[0]._mapping)
-            assert row == {"guid": fake_guid, "data": old_metadata, "authz": authz_data}
+    try:
+        # check that the request data was inserted correctly
+        fetch_stmt = (
+            f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
+        )
+        data = list((await db_session.execute(text(fetch_stmt))).all())
+        row = dict(data[0]._mapping)
+        assert row == {"guid": fake_guid, "data": old_metadata, "authz": authz_data}
 
-            # run "remove_deprecated_metadata" migration
-            alembic_main(["--raiseerr", "upgrade", "6819874e85b9"])
+        # run "remove_deprecated_metadata" migration
+        await migration_runner.upgrade("6819874e85b9")
 
-            # check that the migration removed the deprecated keys
-            fetch_stmt = (
-                f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
-            )
-            data = await fetch_sql(fetch_stmt, session)
-            assert len(data) == 1
-            row = dict(data[0]._mapping)
-            assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
+        # check that the migration removed the deprecated keys
+        fetch_stmt = (
+            f"SELECT guid, data, authz FROM metadata WHERE guid = '{fake_guid}'"
+        )
+        data = list((await db_session.execute(text(fetch_stmt))).all())
+        assert len(data) == 1
+        row = dict(data[0]._mapping)
+        assert row == {"guid": fake_guid, "data": new_metadata, "authz": authz_data}
 
-        finally:
-            delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
-            await run_sql(delete_stmt, session)
-            await session.commit()
-        await async_engine.dispose()
-    _reset_migrations()
+    finally:
+        delete_stmt = f"DELETE FROM metadata WHERE guid = '{fake_guid}'"
+        await db_session.execute(text(delete_stmt))
+        await db_session.commit()
 
-
-def _reset_migrations():
-    alembic_main(["--raiseerr", "upgrade", "head"])
+    reset_migrations()

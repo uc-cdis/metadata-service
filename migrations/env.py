@@ -1,8 +1,9 @@
 import logging
-import time
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
+import asyncio
+from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
@@ -22,12 +23,14 @@ fileConfig(config.config_file_name)
 # target_metadata = None
 from mds.main import load_modules
 from mds.models import Base
-from mds.config import DB_DSN, DB_CONNECT_RETRIES
+from mds.config import DB_DSN
 
 load_modules()
 logging.info(f"connecting to: {DB_DSN}")
-config.set_main_option("sqlalchemy.url", str(DB_DSN))
-
+config.set_main_option(
+    "sqlalchemy.url", str(DB_DSN.set(drivername="postgresql+asyncpg"))
+)
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -35,7 +38,7 @@ config.set_main_option("sqlalchemy.url", str(DB_DSN))
 # ... etc.
 
 
-def run_migrations_offline():
+def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL
@@ -50,7 +53,7 @@ def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
-        target_metadata=Base.metadata,
+        target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -59,39 +62,36 @@ def run_migrations_offline():
         context.run_migrations()
 
 
-def run_migrations_online():
-    """Run migrations in 'online' mode.
+def do_run_migrations(connection: Connection) -> None:
+    context.configure(connection=connection, target_metadata=target_metadata)
 
-    In this scenario we need to create an Engine
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def run_async_migrations() -> None:
+    """In this scenario we need to create an Engine
     and associate a connection with the context.
-
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-    retries = 0
-    while True:
-        # noinspection PyBroadException
-        try:
-            retries += 1
-            connection = connectable.connect()
-        except Exception:
-            if retries < DB_CONNECT_RETRIES:
-                logging.info("Waiting for the database to start...")
-                time.sleep(1)
-            else:
-                logging.error("Max retries reached.")
-                raise
-        else:
-            break
 
-    with connection:
-        context.configure(connection=connection, target_metadata=Base.metadata)
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
 
-        with context.begin_transaction():
-            context.run_migrations()
+    await connectable.dispose()
+
+
+def run_migrations_online() -> None:
+    """Run migrations in 'online' mode."""
+    connectable = context.config.attributes.get("connection", None)
+    if connectable is None:
+        asyncio.run(run_async_migrations())
+    else:
+        do_run_migrations(connectable)  # to support running migrations in unit tests
 
 
 if context.is_offline_mode():
