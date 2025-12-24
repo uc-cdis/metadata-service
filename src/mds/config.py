@@ -50,7 +50,7 @@ DB_DSN = config(
         host=DB_HOST,
         port=DB_PORT,
         database=DB_DATABASE,
-    ),
+    ).render_as_string(hide_password=False),
 )
 DB_MIN_SIZE = config("DB_MIN_SIZE", cast=int, default=1)  # deprecated
 DB_POOL_MIN_SIZE = config("DB_POOL_MIN_SIZE", cast=int, default=DB_MIN_SIZE)
