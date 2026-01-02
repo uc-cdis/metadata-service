@@ -4,5 +4,5 @@ nginx
 poetry run opentelemetry-instrument \
     --traces_exporter otlp \
     --metrics_exporter otlp \
-    --logs_exporter otlp \
+    --logs_exporter none \
     gunicorn -c "/mds/deployment/wsgi/gunicorn.conf.py" mds.asgi:app
