@@ -1,4 +1,4 @@
-from elasticsearch import Elasticsearch, exceptions as es_exceptions, helpers
+from opensearchpy import OpenSearch, exceptions as os_exceptions, helpers
 from typing import Any, List, Dict, Union, Optional, Tuple
 from math import ceil
 from mds import logger
@@ -83,10 +83,8 @@ elastic_search_client = None
 
 async def init(hostname: str = "0.0.0.0", port: int = 9200):
     global elastic_search_client
-    elastic_search_client = Elasticsearch(
-        [hostname],
-        scheme="http",
-        port=port,
+    elastic_search_client = OpenSearch(
+        hosts=[f"{hostname}:{port}"],
         timeout=ES_RETRY_INTERVAL,
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
@@ -137,8 +135,8 @@ async def clone_temp_indexes_to_real_indexes():
 
         reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
         logger.debug(f"Cloning index: {source_index} to {index}...")
-        res = Elasticsearch.reindex(elastic_search_client, reqBody)
-        # Elasticsearch >7.4 introduces the clone api we could use later on
+        res = elastic_search_client.reindex(body=reqBody)
+        # OpenSearch >1.0 introduces the clone api we could use later on
         # res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
 
@@ -148,7 +146,7 @@ async def create_indexes(common_mapping: dict):
         mapping = {**SEARCH_CONFIG, **common_mapping}
         res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=mapping)
         logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INDEX}")
             pass  # Index already exists. Ignore.
@@ -161,7 +159,7 @@ async def create_indexes(common_mapping: dict):
         )
         logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
 
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INFO_INDEX}")
             pass  # Index already exists. Ignore.
@@ -173,7 +171,7 @@ async def create_indexes(common_mapping: dict):
             index=AGG_MDS_CONFIG_INDEX, body=CONFIG
         )
         logger.debug(f"created index {AGG_MDS_CONFIG_INDEX}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_CONFIG_INDEX}")
             pass  # Index already exists. Ignore.
@@ -188,7 +186,7 @@ async def create_temp_indexes(common_mapping: dict):
             index=AGG_MDS_INDEX_TEMP, body=mapping
         )
         logger.debug(f"created index {AGG_MDS_INDEX_TEMP}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INDEX_TEMP}")
             pass  # Index already exists. Ignore.
@@ -201,7 +199,7 @@ async def create_temp_indexes(common_mapping: dict):
         )
         logger.debug(f"created index {AGG_MDS_INFO_INDEX_TEMP}: {res}")
 
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INFO_INDEX_TEMP}")
             pass  # Index already exists. Ignore.
@@ -213,7 +211,7 @@ async def create_temp_indexes(common_mapping: dict):
             index=AGG_MDS_CONFIG_INDEX_TEMP, body=CONFIG
         )
         logger.debug(f"created index {AGG_MDS_CONFIG_INDEX_TEMP}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_CONFIG_INDEX_TEMP}")
             pass  # Index already exists. Ignore.

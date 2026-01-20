@@ -16,7 +16,7 @@ from mds.agg_mds.datastore.elasticsearch_dao import (
     count,
     process_record,
 )
-from elasticsearch import exceptions as es_exceptions
+from opensearchpy import exceptions as os_exceptions
 from mds.config import ES_RETRY_LIMIT, ES_RETRY_INTERVAL
 
 COMMON_MAPPING = {
@@ -39,13 +39,11 @@ COMMON_MAPPING = {
 @pytest.mark.asyncio
 async def test_init():
     with patch(
-        "mds.agg_mds.datastore.elasticsearch_dao.Elasticsearch", MagicMock()
+        "mds.agg_mds.datastore.elasticsearch_dao.OpenSearch", MagicMock()
     ) as mock_client:
         await elasticsearch_dao.init("myhost")
     mock_client.assert_called_with(
-        ["myhost"],
-        port=9200,
-        scheme="http",
+        hosts=["myhost:9200"],
         timeout=ES_RETRY_INTERVAL,
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
@@ -89,29 +87,26 @@ async def test_drop_all_temp_indexes():
 @pytest.mark.asyncio
 async def test_clone_temp_indexes_to_real_indexes():
     with patch(
-        "mds.agg_mds.datastore.elasticsearch_dao.Elasticsearch",
+        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
         MagicMock(),
-    ) as mock_es:
+    ) as mock_client:
         await elasticsearch_dao.clone_temp_indexes_to_real_indexes()
-    mock_es.reindex.assert_has_calls(
+    mock_client.reindex.assert_has_calls(
         [
             call(
-                elasticsearch_dao.elastic_search_client,
-                {
+                body={
                     "source": {"index": AGG_MDS_INDEX_TEMP},
                     "dest": {"index": AGG_MDS_INDEX},
                 },
             ),
             call(
-                elasticsearch_dao.elastic_search_client,
-                {
+                body={
                     "source": {"index": AGG_MDS_INFO_INDEX_TEMP},
                     "dest": {"index": AGG_MDS_INFO_INDEX},
                 },
             ),
             call(
-                elasticsearch_dao.elastic_search_client,
-                {
+                body={
                     "source": {"index": AGG_MDS_CONFIG_INDEX_TEMP},
                     "dest": {"index": AGG_MDS_CONFIG_INDEX},
                 },
@@ -177,7 +172,7 @@ async def test_create_if_exists():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
         MagicMock(
-            side_effect=es_exceptions.RequestError(
+            side_effect=os_exceptions.RequestError(
                 400, "resource_already_exists_exception"
             )
         ),
@@ -190,12 +185,12 @@ async def test_create_if_exists():
 async def test_create_index_raise_exception():
     with patch(
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.indices.create",
-        MagicMock(side_effect=es_exceptions.RequestError(403, "expect_to_fail")),
+        MagicMock(side_effect=os_exceptions.RequestError(403, "expect_to_fail")),
     ):
         try:
             await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
         except Exception as exc:
-            assert isinstance(exc, es_exceptions.RequestError) is True
+            assert isinstance(exc, os_exceptions.RequestError) is True
 
 
 @pytest.mark.asyncio
