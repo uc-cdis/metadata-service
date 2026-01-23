@@ -120,79 +120,83 @@ async def create_object(
                 f"Could not verify, parse, and/or validate scope from provided access token.",
             )
 
-    file_name = body.file_name
-    authz = body.authz
-    aliases = body.aliases or []
-    metadata = body.metadata
+        file_name = body.file_name
+        authz = body.authz
+        aliases = body.aliases or []
+        metadata = body.metadata
 
-    with tracer.start_as_current_span("validate.request") as child:
-        logger.debug(f"validating authz block input: {authz}")
-        if not _is_authz_version_supported(authz):
-            child.set_status(Status(StatusCode.ERROR))
-            raise HTTPException(
-                HTTP_400_BAD_REQUEST, f"Unsupported authz version: {authz}"
+        with tracer.start_as_current_span("validate.request") as child:
+            logger.debug(f"validating authz block input: {authz}")
+            if not _is_authz_version_supported(authz):
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST, f"Unsupported authz version: {authz}"
+                )
+
+            logger.debug(
+                f"validating authz.resource_paths: {authz.get('resource_paths')}"
             )
+            if not isinstance(authz.get("resource_paths"), Iterable):
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST,
+                    f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
+                )
 
-        logger.debug(f"validating authz.resource_paths: {authz.get('resource_paths')}")
-        if not isinstance(authz.get("resource_paths"), Iterable):
-            child.set_status(Status(StatusCode.ERROR))
-            raise HTTPException(
-                HTTP_400_BAD_REQUEST,
-                f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
+            # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
+            # This will help avoid conflicts between
+            # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+            logger.debug("checking for allowable aliases")
+            if any(alias in FORBIDDEN_IDS for alias in aliases):
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
+                )
+
+        metadata = metadata or {}
+
+        # get user id from token claims
+        uploader = token_claims.get("sub")
+        auth_header = str(request.headers.get("Authorization", ""))
+
+        with tracer.start_as_current_span("create.blank_record_and_url") as child:
+            blank_guid, signed_upload_url = await _create_blank_record_and_url(
+                file_name, authz, auth_header, request
             )
+            parent.set_attribute("gen3.guid", blank_guid)
+            child.set_attribute("upload.file_name_present", bool(file_name))
+            child.set_attribute("upload.signed_url_present", bool(signed_upload_url))
+            # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+            # This will help avoid conflicts between
+            # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+            logger.debug("checking for allowable GUIDs")
+            if blank_guid in FORBIDDEN_IDS:
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
+                )
 
-        # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
-        # This will help avoid conflicts between
-        # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-        logger.debug("checking for allowable aliases")
-        if any(alias in FORBIDDEN_IDS for alias in aliases):
-            child.set_status(Status(StatusCode.ERROR))
-            raise HTTPException(
-                HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
-            )
+        if aliases:
+            with tracer.start_as_current_span("create.aliases") as child:
+                child.set_attribute("aliases.count", len(aliases))
+                await _create_aliases_for_record(
+                    aliases, blank_guid, auth_header, request
+                )
 
-    metadata = metadata or {}
+        with tracer.start_as_current_span("db.add_metadata") as child:
+            child.set_attribute("db.operation", "INSERT")
+            child.set_attribute("db.table", "metadata")
+            metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
+        parent.set_attribute("result", "ok")
+        response = {
+            "upload_url": signed_upload_url,
+            "authz": authz,
+            "guid": blank_guid,
+            "aliases": sorted(aliases),
+            "metadata": metadata,
+        }
 
-    # get user id from token claims
-    uploader = token_claims.get("sub")
-    auth_header = str(request.headers.get("Authorization", ""))
-
-    with tracer.start_as_current_span("create.blank_record_and_url") as child:
-        blank_guid, signed_upload_url = await _create_blank_record_and_url(
-            file_name, authz, auth_header, request
-        )
-        parent.set_attribute("gen3.guid", blank_guid)
-        child.set_attribute("upload.file_name_present", bool(file_name))
-        child.set_attribute("upload.signed_url_present", bool(signed_upload_url))
-        # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
-        # This will help avoid conflicts between
-        # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-        logger.debug("checking for allowable GUIDs")
-        if blank_guid in FORBIDDEN_IDS:
-            child.set_status(Status(StatusCode.ERROR))
-            raise HTTPException(
-                HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
-            )
-
-    if aliases:
-        with tracer.start_as_current_span("create.aliases") as child:
-            child.set_attribute("aliases.count", len(aliases))
-            await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
-
-    with tracer.start_as_current_span("db.add_metadata") as child:
-        child.set_attribute("db.operation", "INSERT")
-        child.set_attribute("db.table", "metadata")
-        metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
-    parent.set_attribute("result", "ok")
-    response = {
-        "upload_url": signed_upload_url,
-        "authz": authz,
-        "guid": blank_guid,
-        "aliases": sorted(aliases),
-        "metadata": metadata,
-    }
-
-    return JSONResponse(response, HTTP_201_CREATED)
+        return JSONResponse(response, HTTP_201_CREATED)
 
 
 @mod.post("/objects/{guid:path}")
