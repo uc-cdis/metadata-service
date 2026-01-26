@@ -110,11 +110,11 @@ async def create_object(
                 token_claims = await access_token(
                     "user", "openid", audience="openid", purpose="access"
                 )(token)
-                parent.set_attribute("validate.user_present", bool(token_claims))
+                child.set_attribute("validate.user_present", bool(token_claims))
         except Exception as e:
             logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
-            parent.record_exception(e)
-            parent.set_status(Status(StatusCode.ERROR))
+            child.record_exception(e)
+            child.set_status(Status(StatusCode.ERROR))
             raise HTTPException(
                 HTTP_401_UNAUTHORIZED,
                 f"Could not verify, parse, and/or validate scope from provided access token.",
@@ -163,7 +163,7 @@ async def create_object(
             blank_guid, signed_upload_url = await _create_blank_record_and_url(
                 file_name, authz, auth_header, request
             )
-            parent.set_attribute("gen3.guid", blank_guid)
+            child.set_attribute("gen3.guid", blank_guid)
             child.set_attribute("upload.file_name_present", bool(file_name))
             child.set_attribute("upload.signed_url_present", bool(signed_upload_url))
             # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
@@ -187,7 +187,7 @@ async def create_object(
             child.set_attribute("db.operation", "INSERT")
             child.set_attribute("db.table", "metadata")
             metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
-        parent.set_attribute("result", "ok")
+        child.set_attribute("result", "ok")
         response = {
             "upload_url": signed_upload_url,
             "authz": authz,
@@ -339,8 +339,8 @@ async def get_object_signed_download_url(
                 response.raise_for_status()
                 signed_download_url = response.json().get("url")
 
-            parent.set_attribute("gen3.download_url_present", bool(signed_download_url))
-            parent.add_event("signed_url.created")
+            child.set_attribute("gen3.download_url_present", bool(signed_download_url))
+            child.add_event("signed_url.created")
         except httpx.HTTPError as err:
             msg = f"Unable to get signed download url from data access service for GUID or alias '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
@@ -359,12 +359,11 @@ async def get_object_signed_download_url(
                         HTTP_404_NOT_FOUND,
                         f"{msg}. Record with GUID or alias '{guid}' was not found in indexd.",
                     )
-            # Mark the top span as error with context
-            parent.record_exception(err)
-            parent.set_status(Status(StatusCode.ERROR))
+            child.record_exception(err)
+            child.set_status(Status(StatusCode.ERROR))
             raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
             # Mark the top span as success
-        parent.set_attribute("result", "ok")
+        child.set_attribute("result", "ok")
         response = {"url": signed_download_url}
         return JSONResponse(response, HTTP_200_OK)
 
@@ -565,9 +564,8 @@ async def delete_object(guid: str, request: Request) -> JSONResponse:
                     )
                     child.add_event("metadata.recreated")
 
-            # Mark the top span as error with context
-            parent.record_exception(err)
-            parent.set_status(Status(StatusCode.ERROR))
+            child.record_exception(err)
+            child.set_status(Status(StatusCode.ERROR))
             status_code = (
                 err.response.status_code
                 if getattr(err, "response", None)
@@ -575,8 +573,7 @@ async def delete_object(guid: str, request: Request) -> JSONResponse:
             )
             raise HTTPException(status_code, f"Error during request to {svc_name}")
 
-        # Mark the top span as success
-        parent.set_attribute("result", "ok")
+        child.set_attribute("result", "ok")
         return JSONResponse({}, HTTP_204_NO_CONTENT)
 
 

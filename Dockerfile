@@ -8,8 +8,7 @@ ENV appname=mds \
     OTEL_SERVICE_NAME=metadata-service \
     OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy.monitoring:4318 \
     OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
-    OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=sqlalchemy \
-    OTEL_TRACES_EXPORTER=otpl
+    OTEL_PYTHON_DISABLED_INSTRUMENTATIONS=sqlalchemy
 
 COPY --chown=gen3:gen3 /src/${appname} /${appname}
 
