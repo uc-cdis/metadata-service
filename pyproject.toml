@@ -8,6 +8,8 @@ license = "Apache-2.0"
 [tool.poetry.dependencies]
 python = ">=3.9.2, <3.10"
 fastapi = "*"
+opentelemetry-distro = "^0.48b0"
+opentelemetry-exporter-otlp = "^1.27.0"
 uvicorn = {extras = ["standard"], version="^0.18.2"}
 gunicorn = ">=22.0.0"
 gino = {version = "^1.0.0", extras = ["starlette"]}

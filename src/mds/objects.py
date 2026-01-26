@@ -27,6 +27,11 @@ from . import config, logger
 from .models import Metadata
 from .query import get_metadata
 
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+
+tracer = trace.get_tracer("gen3.metadata-service")
+
 mod = APIRouter()
 
 # auto_error=False prevents FastAPI from raises a 403 when the request is missing
@@ -90,76 +95,108 @@ async def create_object(
         request (Request): starlette request (which contains reference to FastAPI app)
         token (HTTPAuthorizationCredentials, optional): bearer token
     """
-    try:
-        # NOTE: token can be None if no Authorization header was provided, we expect
-        #       this to cause a downstream exception since it is invalid
-        token_claims = await access_token(
-            "user", "openid", audience="openid", purpose="access"
-        )(token)
-    except Exception as e:
-        logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
-        raise HTTPException(
-            HTTP_401_UNAUTHORIZED,
-            f"Could not verify, parse, and/or validate scope from provided access token.",
-        )
-
-    file_name = body.file_name
-    authz = body.authz
-    aliases = body.aliases or []
-    metadata = body.metadata
-
-    logger.debug(f"validating authz block input: {authz}")
-    if not _is_authz_version_supported(authz):
-        raise HTTPException(HTTP_400_BAD_REQUEST, f"Unsupported authz version: {authz}")
-
-    logger.debug(f"validating authz.resource_paths: {authz.get('resource_paths')}")
-    if not isinstance(authz.get("resource_paths"), Iterable):
-        raise HTTPException(
-            HTTP_400_BAD_REQUEST,
-            f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
-        )
-
-    # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
-    # This will help avoid conflicts between
-    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-    logger.debug("checking for allowable aliases")
-    if any(alias in FORBIDDEN_IDS for alias in aliases):
-        raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
-        )
-
-    metadata = metadata or {}
-
-    # get user id from token claims
-    uploader = token_claims.get("sub")
-    auth_header = str(request.headers.get("Authorization", ""))
-
-    blank_guid, signed_upload_url = await _create_blank_record_and_url(
-        file_name, authz, auth_header, request
-    )
-    # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
-    # This will help avoid conflicts between
-    # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
-    logger.debug("checking for allowable GUIDs")
-    if blank_guid in FORBIDDEN_IDS:
-        raise HTTPException(
-            HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
-        )
-
-    if aliases:
-        await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
-
-    metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
-
-    response = {
-        "upload_url": signed_upload_url,
-        "authz": authz,
-        "guid": blank_guid,
-        "aliases": sorted(aliases),
-        "metadata": metadata,
+    attrs_common = {
+        "gen3.action": "upload",
+        "gen3.request": request,
+        "http.route": "/objects/upload",
     }
+    with tracer.start_as_current_span(
+        "mds.create_object", attributes=attrs_common
+    ) as parent:
+        try:
+            with tracer.start_as_current_span("validate.validate_token") as child:
+                # NOTE: token can be None if no Authorization header was provided, we expect
+                #       this to cause a downstream exception since it is invalid
+                token_claims = await access_token(
+                    "user", "openid", audience="openid", purpose="access"
+                )(token)
+                child.set_attribute("validate.user_present", bool(token_claims))
+        except Exception as e:
+            logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
+            child.record_exception(e)
+            child.set_status(Status(StatusCode.ERROR))
+            raise HTTPException(
+                HTTP_401_UNAUTHORIZED,
+                f"Could not verify, parse, and/or validate scope from provided access token.",
+            )
 
-    return JSONResponse(response, HTTP_201_CREATED)
+        file_name = body.file_name
+        authz = body.authz
+        aliases = body.aliases or []
+        metadata = body.metadata
+
+        with tracer.start_as_current_span("validate.request") as child:
+            logger.debug(f"validating authz block input: {authz}")
+            if not _is_authz_version_supported(authz):
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST, f"Unsupported authz version: {authz}"
+                )
+
+            logger.debug(
+                f"validating authz.resource_paths: {authz.get('resource_paths')}"
+            )
+            if not isinstance(authz.get("resource_paths"), Iterable):
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST,
+                    f"Invalid authz.resource_paths, must be valid list of resources, got: {authz.get('resource_paths')}",
+                )
+
+            # alias should not be in the FORBIDDEN_ID list (eg, 'upload').
+            # This will help avoid conflicts between
+            # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+            logger.debug("checking for allowable aliases")
+            if any(alias in FORBIDDEN_IDS for alias in aliases):
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST, f"alias cannot have value: {FORBIDDEN_IDS}"
+                )
+
+        metadata = metadata or {}
+
+        # get user id from token claims
+        uploader = token_claims.get("sub")
+        auth_header = str(request.headers.get("Authorization", ""))
+
+        with tracer.start_as_current_span("create.blank_record_and_url") as child:
+            blank_guid, signed_upload_url = await _create_blank_record_and_url(
+                file_name, authz, auth_header, request
+            )
+            child.set_attribute("gen3.guid", blank_guid)
+            child.set_attribute("upload.file_name_present", bool(file_name))
+            child.set_attribute("upload.signed_url_present", bool(signed_upload_url))
+            # GUID should not be in the FORBIDDEN_ID list (eg, 'upload').
+            # This will help avoid conflicts between
+            # POST /api/v1/objects/{GUID or ALIAS} and POST /api/v1/objects/upload endpoints
+            logger.debug("checking for allowable GUIDs")
+            if blank_guid in FORBIDDEN_IDS:
+                child.set_status(Status(StatusCode.ERROR))
+                raise HTTPException(
+                    HTTP_400_BAD_REQUEST, f"GUID cannot have value: {FORBIDDEN_IDS}"
+                )
+
+        if aliases:
+            with tracer.start_as_current_span("create.aliases") as child:
+                child.set_attribute("aliases.count", len(aliases))
+                await _create_aliases_for_record(
+                    aliases, blank_guid, auth_header, request
+                )
+
+        with tracer.start_as_current_span("db.add_metadata") as child:
+            child.set_attribute("db.operation", "INSERT")
+            child.set_attribute("db.table", "metadata")
+            metadata = await _add_metadata(blank_guid, metadata, authz, uploader)
+        child.set_attribute("result", "ok")
+        response = {
+            "upload_url": signed_upload_url,
+            "authz": authz,
+            "guid": blank_guid,
+            "aliases": sorted(aliases),
+            "metadata": metadata,
+        }
+
+        return JSONResponse(response, HTTP_201_CREATED)
 
 
 @mod.post("/objects/{guid:path}")
@@ -276,41 +313,59 @@ async def get_object_signed_download_url(
         or the data access service returns any other 400-range or 500-range
         error
     """
-    try:
-        endpoint = (
-            config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/") + f"/data/download/{guid}"
-        )
-        auth_header = str(request.headers.get("Authorization", ""))
-        logger.debug(
-            f"Attempting to GET signed download url from data access service for GUID or alias '{guid}'"
-        )
-        response = await request.app.async_client.get(
-            endpoint, headers={"Authorization": auth_header}
-        )
-        response.raise_for_status()
-        signed_download_url = response.json().get("url")
-    except httpx.HTTPError as err:
-        msg = f"Unable to get signed download url from data access service for GUID or alias '{guid}'"
-        logger.error(f"{msg}\nException:\n{err}", exc_info=True)
-        if err.response:
-            logger.error(
-                f"data access service response status code: {err.response.status_code}\n"
-                f"data access service response text:\n{getattr(err.response, 'text')}"
+    attrs_common = {
+        "gen3.action": "download",
+        "gen3.guid": guid,
+        "http.route": "/objects/{guid:path}/download",
+    }
+    with tracer.start_as_current_span(
+        "mds.get_object_signed_download_url", attributes=attrs_common
+    ) as parent:
+        try:
+            endpoint = (
+                config.DATA_ACCESS_SERVICE_ENDPOINT.rstrip("/")
+                + f"/data/download/{guid}"
             )
-            if err.response.status_code in (401, 403):
-                raise HTTPException(
-                    HTTP_403_FORBIDDEN,
-                    f"{msg}. You do not have access to generate the download url for GUID or alias '{guid}'.",
+            auth_header = str(request.headers.get("Authorization", ""))
+            logger.debug(
+                f"Attempting to GET signed download url from data access service for GUID or alias '{guid}'"
+            )
+            with tracer.start_as_current_span("validate.data_access") as child:
+                child.set_attribute("peer.service", "fence")
+                child.set_attribute("http.method", "GET")
+                response = await request.app.async_client.get(
+                    endpoint, headers={"Authorization": auth_header}
                 )
-            elif err.response.status_code == 404:
-                raise HTTPException(
-                    HTTP_404_NOT_FOUND,
-                    f"{msg}. Record with GUID or alias '{guid}' was not found in indexd.",
-                )
-        raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
+                response.raise_for_status()
+                signed_download_url = response.json().get("url")
 
-    response = {"url": signed_download_url}
-    return JSONResponse(response, HTTP_200_OK)
+            child.set_attribute("gen3.download_url_present", bool(signed_download_url))
+            child.add_event("signed_url.created")
+        except httpx.HTTPError as err:
+            msg = f"Unable to get signed download url from data access service for GUID or alias '{guid}'"
+            logger.error(f"{msg}\nException:\n{err}", exc_info=True)
+            if err.response:
+                logger.error(
+                    f"data access service response status code: {err.response.status_code}\n"
+                    f"data access service response text:\n{getattr(err.response, 'text')}"
+                )
+                if err.response.status_code in (401, 403):
+                    raise HTTPException(
+                        HTTP_403_FORBIDDEN,
+                        f"{msg}. You do not have access to generate the download url for GUID or alias '{guid}'.",
+                    )
+                elif err.response.status_code == 404:
+                    raise HTTPException(
+                        HTTP_404_NOT_FOUND,
+                        f"{msg}. Record with GUID or alias '{guid}' was not found in indexd.",
+                    )
+            child.record_exception(err)
+            child.set_status(Status(StatusCode.ERROR))
+            raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, msg)
+            # Mark the top span as success
+        child.set_attribute("result", "ok")
+        response = {"url": signed_download_url}
+        return JSONResponse(response, HTTP_200_OK)
 
 
 @mod.get("/objects/{guid:path}/latest")
@@ -429,50 +484,97 @@ async def delete_object(guid: str, request: Request) -> JSONResponse:
         403: if fence/indexd returns a 403 unauthorized response
         500: if fence/indexd does not return 204 or 403 or there is an error deleting metadata
     """
-    # Attempt to get the row, then attempt delete the row from Metadata table
-    metadata_obj = await (
-        Metadata.delete.where(Metadata.guid == guid).returning(*Metadata).gino.first()
-    )
+    attrs_common = {
+        "gen3.action": "delete",
+        "gen3.guid": guid,
+        "http.route": "/objects/{guid:path}",
+    }
 
-    delete_file_locations = False
-    if "delete_file_locations" in request.query_params:
-        if request.query_params["delete_file_locations"]:
-            raise HTTPException(
-                HTTP_400_BAD_REQUEST,
-                f"Query param `delete_file_locations` should not contain any value",
-            )
-        delete_file_locations = True
-    svc_name = "fence" if delete_file_locations else "indexd"
-    try:
-        auth_header = str(request.headers.get("Authorization", ""))
-        headers = {"Authorization": auth_header}
-        if delete_file_locations:
-            fence_endpoint = urljoin(
-                config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}"
-            )
-            response = await request.app.async_client.delete(
-                fence_endpoint, headers=headers
-            )
-        else:
-            rev = await get_indexd_revision(guid, request)
-            indexd_endpoint = urljoin(config.INDEXING_SERVICE_ENDPOINT, f"index/{guid}")
-            response = await request.app.async_client.delete(
-                indexd_endpoint, params={"rev": rev}, headers=headers
-            )
-        response.raise_for_status()
-    except httpx.HTTPError as err:
-        logger.debug(err)
-        # Recreate data in metadata table in case of any exception
-        if metadata_obj:
-            await Metadata.create(
-                guid=metadata_obj.guid, data=metadata_obj.data, authz=metadata_obj.authz
-            )
-        status_code = (
-            err.response.status_code if err.response else HTTP_500_INTERNAL_SERVER_ERROR
-        )
-        raise HTTPException(status_code, f"Error during request to {svc_name}")
+    with tracer.start_as_current_span(
+        "mds.delete_object", attributes=attrs_common
+    ) as parent:
+        with tracer.start_as_current_span("validate.query_params") as child:
+            delete_file_locations = False
+            if "delete_file_locations" in request.query_params:
+                if request.query_params["delete_file_locations"]:
+                    child.set_status(Status(StatusCode.ERROR))
+                    child.add_event("bad_param_value")
+                    raise HTTPException(
+                        HTTP_400_BAD_REQUEST,
+                        "Query param `delete_file_locations` should not contain any value",
+                    )
+                delete_file_locations = True
+            child.set_attribute("delete.delete_file_locations", delete_file_locations)
 
-    return JSONResponse({}, HTTP_204_NO_CONTENT)
+        with tracer.start_as_current_span("db.delete_metadata") as child:
+            child.set_attribute("db.operation", "DELETE")
+            child.set_attribute("db.table", "metadata")
+            # Attempt to get the row, then attempt delete the row from Metadata table
+            metadata_obj = await (
+                Metadata.delete.where(Metadata.guid == guid)
+                .returning(*Metadata)
+                .gino.first()
+            )
+            child.set_attribute("db.row_deleted", bool(metadata_obj))
+
+        svc_name = "fence" if delete_file_locations else "indexd"
+        try:
+            auth_header = str(request.headers.get("Authorization", ""))
+            headers = {"Authorization": auth_header}
+            if delete_file_locations:
+                fence_endpoint = urljoin(
+                    config.DATA_ACCESS_SERVICE_ENDPOINT, f"data/{guid}"
+                )
+                with tracer.start_as_current_span("call.fence.delete") as child:
+                    child.set_attribute("peer.service", "fence")
+                    child.set_attribute("http.method", "DELETE")
+                    child.set_attribute("http.url", fence_endpoint)
+                    response = await request.app.async_client.delete(
+                        fence_endpoint, headers=headers
+                    )
+                    child.set_attribute("http.status_code", response.status_code)
+                    child.add_event("fence.delete.sent")
+            else:
+                rev = await get_indexd_revision(guid, request)
+                indexd_endpoint = urljoin(
+                    config.INDEXING_SERVICE_ENDPOINT, f"index/{guid}"
+                )
+                with tracer.start_as_current_span("call.indexd.delete") as child:
+                    child.set_attribute("peer.service", "indexd")
+                    child.set_attribute("http.method", "DELETE")
+                    child.set_attribute("http.url", indexd_endpoint)
+                    child.set_attribute("indexd.rev", rev)
+                    response = await request.app.async_client.delete(
+                        indexd_endpoint, params={"rev": rev}, headers=headers
+                    )
+                    child.set_attribute("http.status_code", response.status_code)
+                    child.add_event("indexd.delete.sent")
+
+            response.raise_for_status()
+
+        except httpx.HTTPError as err:
+            with tracer.start_as_current_span("db.rollback_metadata") as child:
+                child.set_attribute("db.operation", "INSERT")
+                child.set_attribute("db.table", "metadata")
+                if metadata_obj:
+                    await Metadata.create(
+                        guid=metadata_obj.guid,
+                        data=metadata_obj.data,
+                        authz=metadata_obj.authz,
+                    )
+                    child.add_event("metadata.recreated")
+
+            child.record_exception(err)
+            child.set_status(Status(StatusCode.ERROR))
+            status_code = (
+                err.response.status_code
+                if getattr(err, "response", None)
+                else HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            raise HTTPException(status_code, f"Error during request to {svc_name}")
+
+        child.set_attribute("result", "ok")
+        return JSONResponse({}, HTTP_204_NO_CONTENT)
 
 
 async def get_indexd_revision(guid, request):
