@@ -1077,7 +1077,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 results["results"].update(data)
                 numReturned = len(data)
 
-                if numReturned == 0 or numReturned <= limit:
+                if numReturned < limit:
                     moreData = False
                 offset += numReturned
 
