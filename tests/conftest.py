@@ -18,9 +18,6 @@ environ["TESTING"] = "TRUE"
 environ["USE_AGG_MDS"] = "true"  # enable the Agg MDS endpoints
 from mds import config
 from mds.objects import FORBIDDEN_IDS
-from mds.config import DB_DSN
-from mds.models import Base
-from mds.db import initiate_db, get_db_engine_and_sessionmaker
 
 
 # NOTE: AsyncMock is included in unittest.mock but ONLY in Python 3.8+
