@@ -2,8 +2,7 @@ import importlib
 
 import pytest
 import pytest_asyncio
-from alembic import command
-from alembic.config import Config
+from alembic.config import main
 from asyncpg.exceptions import UndefinedTableError
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
@@ -34,14 +33,13 @@ class AsyncMock(MagicMock):
 def setup_test_database():
     from mds import config
 
-    alembic_cfg = Config("alembic.ini")
-    command.upgrade(alembic_cfg, "head")
+    main(["--raiseerr", "upgrade", "head"])
 
     yield
 
     importlib.reload(config)
     if not config.TEST_KEEP_DB:
-        command.downgrade(alembic_cfg, "base")
+        main(["--raiseerr", "downgrade", "base"])
 
 
 @pytest.fixture()
@@ -525,47 +523,3 @@ def create_aliases_duplicate_patcher(client, guid_mock, signed_url_mock):
     client.delete(f"/metadata/{guid_mock}")
     for patched_function in patches:
         patched_function.stop()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def db_session():
-    """
-    Creates a new async DB session. Reset the test DB before and after every test.
-    """
-    engine = create_async_engine(
-        DB_DSN.set(drivername="postgresql+asyncpg"), echo=False, future=True
-    )
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
-
-    await initiate_db()
-    _, session_maker_instance = get_db_engine_and_sessionmaker()
-
-    async with session_maker_instance() as session:
-        yield session
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-    await engine.dispose()
-
-
-@pytest_asyncio.fixture(autouse=True, scope="function")
-async def reset(db_session):
-    """
-    Before every migration test, drop all tables and remove the current version from the `alembic_version` table, if it exists
-    """
-    engine, _ = get_db_engine_and_sessionmaker()
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-    try:
-        await db_session.execute(text("DELETE FROM alembic_version"))
-        await db_session.commit()
-    except (ProgrammingError, UndefinedTableError) as e:
-        if "UndefinedTableError" in str(e):
-            await db_session.rollback()
-        else:
-            raise

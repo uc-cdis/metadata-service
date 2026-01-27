@@ -64,7 +64,9 @@ async def initiate_db() -> None:
 
     db_dsn = config.DB_DSN
     # set asyncpg for async support
-    async_dsn = db_dsn.set(drivername="postgresql+asyncpg")
+    async_dsn = db_dsn.set(drivername="postgresql+asyncpg").render_as_string(
+        hide_password=False
+    )
 
     logger.info(f"Initializing database with DSN: {async_dsn}")
 
