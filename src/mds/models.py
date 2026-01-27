@@ -1,12 +1,3 @@
-"""
-WIP
-SQLAlchemy ORM models that will replace the GINO models
-in `models.py` as part of the GINO to DAL migration.
-
-Schema matches the existing db tables to ensure compatibility
-with existing migrations.
-"""
-
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict

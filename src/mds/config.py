@@ -63,8 +63,10 @@ DB_USE_CONNECTION_FOR_REQUEST = config(
     "DB_USE_CONNECTION_FOR_REQUEST", cast=bool, default=True
 )
 DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)  # deprecated
-DB_RETRY_LIMIT = config("DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES)
-DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
+DB_RETRY_LIMIT = config(
+    "DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES
+)  # deprecated
+DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)  # deprecated
 
 # Elasticsearch
 ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)
