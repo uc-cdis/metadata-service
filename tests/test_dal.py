@@ -1,26 +1,3 @@
-"""
-WIP - DAL LAYER UNIT TESTS
-
-NOTE: These tests assume the database schema already exists (migrations have been run).
-So for local testing, make sure per the dev.md doc:
-
-psql
-CREATE DATABASE test_metadata;
-
-TESTING=TRUE alembic upgrade head
-
-During migration from GINO, we have not removed the GINO references from conftest.py
-for now, run these DAL layer tests with:
-
-`poetry run pytest tests/test_dal.py -v --noconftest`
-"""
-import os
-
-# Set TESTING early, before importing mds modules.
-# Otherwise config.py uses DB_DATABASE="metadata" instead of "test_metadata".
-# TODO: move this part to conftest.py after GINO stuff is removed
-# os.environ["TESTING"] = "TRUE"
-
 import pytest
 import pytest_asyncio
 from datetime import datetime

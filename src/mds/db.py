@@ -1,5 +1,4 @@
 """
-WIP
 This file houses the database logic.
 For schema/model of particular tables, go to `models.py`
 
