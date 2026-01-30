@@ -41,7 +41,7 @@ jobs:
         DB_PASSWORD: metadata_pass
         PGPASSWORD: metadata_pass
       run: |
-        poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=91 --cov-report xml
+        poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=93 --cov-report xml
     - name: Submit coverage report
       if: github.ref == 'refs/heads/master'
       env:

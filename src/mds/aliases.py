@@ -40,7 +40,7 @@ class AliasObjInput(BaseModel):
 async def create_metadata_aliases(
     guid: str,
     body: AliasObjInput,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Create metadata aliases for the GUID.
@@ -53,13 +53,13 @@ async def create_metadata_aliases(
     aliases = list(set(body.aliases or []))
 
     try:
-        alias_list = await dal.get_aliases_for_guid(guid)
+        alias_list = await data_access_layer.get_aliases_for_guid(guid)
         if alias_list:
             raise HTTPException(
                 HTTP_409_CONFLICT,
                 f"Aliases already exist for {guid}. Use PUT to overwrite.",
             )
-        await dal.create_aliases(guid, aliases)
+        await data_access_layer.create_aliases(guid, aliases)
     except IntegrityError as exc:
         # This specifically catches DB unique violation
         if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
@@ -77,7 +77,7 @@ async def update_metadata_alias(
     guid: str,
     body: AliasObjInput,
     merge: bool = False,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Update the metadata aliases of the GUID.
@@ -92,7 +92,9 @@ async def update_metadata_alias(
             in the new data will be kept.
     """
     requested_aliases = set(body.aliases or [])
-    final_aliases = await dal.update_aliases(guid, requested_aliases, merge=merge)
+    final_aliases = await data_access_layer.update_aliases(
+        guid, requested_aliases, merge=merge
+    )
 
     return JSONResponse({"guid": guid, "aliases": final_aliases}, HTTP_201_CREATED)
 
@@ -101,7 +103,7 @@ async def update_metadata_alias(
 async def delete_metadata_alias(
     guid: str,
     alias: str,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Delete the specified metadata_alias of the GUID.
@@ -110,7 +112,7 @@ async def delete_metadata_alias(
         guid (str): Metadata GUID
         alias (str): the metadata alias to delete
     """
-    deleted_alias = await dal.delete_alias(guid, alias)
+    deleted_alias = await data_access_layer.delete_alias(guid, alias)
     if deleted_alias:
         return JSONResponse({}, HTTP_204_NO_CONTENT)
     else:
@@ -122,7 +124,7 @@ async def delete_metadata_alias(
 @mod.delete("/metadata/{guid:path}/aliases")
 async def delete_all_metadata_aliases(
     guid: str,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Delete all metadata_aliases of the GUID.
@@ -130,7 +132,7 @@ async def delete_all_metadata_aliases(
     Args:
         guid (str): Metadata GUID
     """
-    count = await dal.delete_all_aliases(guid)
+    count = await data_access_layer.delete_all_aliases(guid)
     if count > 0:
         return JSONResponse({}, HTTP_204_NO_CONTENT)
     else:

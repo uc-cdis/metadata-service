@@ -6,7 +6,7 @@ def test_status_success(client):
     patch(
         "mds.main.aggregate_datastore.get_status", AsyncMock(return_value="some status")
     ).start()
-    with patch("mds.main.get_session", AsyncMock()):
+    with patch("mds.main.get_data_access_layer", AsyncMock()):
         resp = client.get("/_status")
         resp.raise_for_status()
         assert resp.status_code == 200
@@ -28,7 +28,7 @@ def test_status_aggregate_error(client):
         "mds.main.aggregate_datastore.get_status",
         AsyncMock(side_effect=Exception("some error")),
     ).start()
-    with patch("mds.main.get_session", AsyncMock(return_value="some time")):
+    with patch("mds.main.get_data_access_layer", AsyncMock(return_value="some time")):
         try:
             resp = client.get("/_status")
             resp.raise_for_status()

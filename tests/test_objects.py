@@ -1460,8 +1460,13 @@ def test_delete_object_when_indexd_returns_403(client, valid_upload_file_patcher
     assert get_metadata_response.status_code == 200
 
 
+from httpx import HTTPError
+
+
 @respx.mock
-def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher):
+def test_delete_object_when_indexd_returns_500(
+    client, valid_upload_file_patcher, monkeypatch
+):
     """
     Test the DELETE endpoint when indexd returns a 500 for specified guid.
     Should proxy to indexd's DELETE /indexd/file_id endpoint and not delete metadata.
@@ -1501,3 +1506,13 @@ def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher
     assert indexd_get_mock.called
     get_metadata_response = client.get(f"/metadata/{created_guid}")
     assert get_metadata_response.status_code == 200
+
+    # test ?delete_file_locations=bar triggers the error branch
+    delete_response = client.delete(
+        f"/objects/{created_guid}?delete_file_locations=bar"
+    )
+    assert delete_response.status_code == 400
+    assert (
+        delete_response.json()["detail"]
+        == "Query param `delete_file_locations` should not contain any value"
+    )

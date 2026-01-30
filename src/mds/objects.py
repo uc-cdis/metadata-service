@@ -80,7 +80,7 @@ async def create_object(
     body: CreateObjInput,
     request: Request,
     token: HTTPAuthorizationCredentials = Security(bearer),
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """
     Create object placeholder and attach metadata, return Upload url to the user.
@@ -149,7 +149,9 @@ async def create_object(
     if aliases:
         await _create_aliases_for_record(aliases, blank_guid, auth_header, request)
 
-    metadata = await _add_metadata(blank_guid, metadata, authz, uploader, dal)
+    metadata = await _add_metadata(
+        blank_guid, metadata, authz, uploader, data_access_layer
+    )
 
     response = {
         "upload_url": signed_upload_url,
@@ -168,7 +170,7 @@ async def create_object_for_id(
     body: CreateObjForIdInput,
     request: Request,
     token: HTTPAuthorizationCredentials = Security(bearer),
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Create object placeholder and attach metadata, return Upload url to the
@@ -246,7 +248,7 @@ async def create_object_for_id(
         metadata,
         {"resource_paths": indexd_record["authz"]},
         uploader,
-        dal,
+        data_access_layer,
     )
 
     response = {
@@ -320,7 +322,9 @@ async def get_object_signed_download_url(
 
 @mod.get("/objects/{guid:path}/latest")
 async def get_object_latest(
-    guid: str, request: Request, dal: DataAccessLayer = Depends(get_data_access_layer)
+    guid: str,
+    request: Request,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Attempt to fetch the latest version of the provided guid/key from indexd.
@@ -359,7 +363,7 @@ async def get_object_latest(
             msg = f"Unable to query indexd for latest record for GUID '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
-    mds_metadata = await _get_metadata(mds_key, dal)
+    mds_metadata = await _get_metadata(mds_key, data_access_layer)
 
     if not indexd_record and not mds_metadata:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
@@ -374,7 +378,9 @@ async def get_object_latest(
 
 @mod.get("/objects/{guid:path}")
 async def get_object(
-    guid: str, request: Request, dal: DataAccessLayer = Depends(get_data_access_layer)
+    guid: str,
+    request: Request,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Get the metadata associated with the provided key. If the key is an
@@ -408,7 +414,7 @@ async def get_object(
             msg = f"Unable to query indexd for GUID or alias '{guid}'"
             logger.error(f"{msg}\nException:\n{err}", exc_info=True)
 
-    mds_metadata = await _get_metadata(mds_key, dal)
+    mds_metadata = await _get_metadata(mds_key, data_access_layer)
 
     if not indexd_record and not mds_metadata:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: '{guid}'")
@@ -423,7 +429,9 @@ async def get_object(
 
 @mod.delete("/objects/{guid:path}")
 async def delete_object(
-    guid: str, request: Request, dal: DataAccessLayer = Depends(get_data_access_layer)
+    guid: str,
+    request: Request,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Delete the metadata for the specified object and also delete the record from indexd.
@@ -441,7 +449,7 @@ async def delete_object(
         500: if fence/indexd does not return 204 or 403 or there is an error deleting metadata
     """
     # Attempt to get the row, then attempt delete the row from Metadata table
-    deleted_record = await dal.delete_metadata(guid)
+    deleted_record = await data_access_layer.delete_metadata(guid)
 
     delete_file_locations = False
     if "delete_file_locations" in request.query_params:
@@ -473,7 +481,7 @@ async def delete_object(
         logger.debug(err)
         # Recreate data in metadata table in case of any exception
         if deleted_record:
-            await dal.create_metadata(
+            await data_access_layer.create_metadata(
                 guid=deleted_record["guid"],
                 data=deleted_record["data"],
                 authz=deleted_record["authz"],
@@ -495,7 +503,7 @@ async def get_indexd_revision(guid, request):
     return indexd_record.get("rev")
 
 
-async def _get_metadata(mds_key: str, dal: DataAccessLayer) -> dict:
+async def _get_metadata(mds_key: str, data_access_layer: DataAccessLayer) -> dict:
     """
     Query the metadata database for mds_key.
 
@@ -508,7 +516,7 @@ async def _get_metadata(mds_key: str, dal: DataAccessLayer) -> dict:
     mds_metadata = {}
     try:
         logger.debug(f"Querying the metadata database directly for key '{mds_key}'")
-        mds_metadata = await get_metadata(mds_key, dal)
+        mds_metadata = await get_metadata(mds_key, data_access_layer)
     except HTTPException as err:
         logger.debug(err)
         if err.status_code == 404:
@@ -700,7 +708,11 @@ async def _create_url_for_blank_record(guid: str, auth_header: str, request: Req
 
 
 async def _add_metadata(
-    blank_guid: str, metadata: dict, authz: dict, uploader: str, dal: DataAccessLayer
+    blank_guid: str,
+    metadata: dict,
+    authz: dict,
+    uploader: str,
+    data_access_layer: DataAccessLayer,
 ):
     # add default metadata to db
     additional_object_metadata = {
@@ -710,7 +722,7 @@ async def _add_metadata(
     metadata.update(additional_object_metadata)
 
     try:
-        record, created = await dal.create_metadata(
+        record, created = await data_access_layer.create_metadata(
             blank_guid, metadata, authz, overwrite=False
         )
     except IntegrityError:

@@ -24,13 +24,13 @@ async def batch_create_metadata(
     request: Request,
     data_list: list[dict],
     overwrite: bool = True,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Create metadata in batch."""
     request.scope.get("add_close_watcher", lambda: None)()
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
 
-    result = await dal.batch_create_metadata(
+    result = await data_access_layer.batch_create_metadata(
         data_list=data_list,
         overwrite=overwrite,
         default_authz=authz,
@@ -45,7 +45,7 @@ async def create_metadata(
     guid,
     data: dict,
     overwrite: bool = False,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Create metadata for the GUID."""
     authz = json.loads(config.DEFAULT_AUTHZ_STR)
@@ -59,7 +59,7 @@ async def create_metadata(
         )
 
     try:
-        record, created = await dal.create_metadata(
+        record, created = await data_access_layer.create_metadata(
             guid=guid, data=data, authz=authz, overwrite=overwrite
         )
     except Exception as e:
@@ -79,7 +79,7 @@ async def update_metadata(
     guid,
     data: dict,
     merge: bool = False,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Update the metadata of the GUID.
 
@@ -89,7 +89,9 @@ async def update_metadata(
     deep merge.
     """
     # TODO PUT should create if it doesn't exist...
-    updated_record = await dal.update_metadata(guid=guid, data=data, merge=merge)
+    updated_record = await data_access_layer.update_metadata(
+        guid=guid, data=data, merge=merge
+    )
     if updated_record:
         return updated_record["data"]
     else:
@@ -99,10 +101,10 @@ async def update_metadata(
 @mod.delete("/metadata/{guid:path}")
 async def delete_metadata(
     guid,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Delete the metadata of the GUID."""
-    deleted_record = await dal.delete_metadata(guid=guid)
+    deleted_record = await data_access_layer.delete_metadata(guid=guid)
     if deleted_record:
         return deleted_record["data"]
     else:

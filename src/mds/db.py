@@ -29,10 +29,12 @@ What do we do in this file?
 """
 import hashlib
 import re
-
+from collections.abc import AsyncIterable
 from typing import Any, AsyncGenerator
 
-from sqlalchemy import delete, select, text, or_, literal_column
+from cdislogging import get_logger
+from sqlalchemy import delete, literal_column, or_, select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -40,12 +42,9 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.dialects.postgresql import insert
-from fastapi import Request
 
 from . import config
 from .models import Metadata, MetadataAlias
-from cdislogging import get_logger
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 
@@ -55,22 +54,13 @@ engine: AsyncEngine | None = None
 async_sessionmaker_instance: async_sessionmaker | None = None
 
 
-async def initiate_db() -> None:
+def initiate_db() -> None:
     """
     Initialize the database engine and async sessionmaker.
     """
     global engine, async_sessionmaker_instance
-
-    db_dsn = config.DB_DSN
-    # set asyncpg for async support
-    async_dsn = db_dsn.set(drivername="postgresql+asyncpg").render_as_string(
-        hide_password=False
-    )
-
-    logger.info(f"Initializing database with DSN: {async_dsn}")
-
     engine = create_async_engine(
-        url=async_dsn,
+        url=config.DB_DSN.render_as_string(hide_password=False),
         pool_size=config.DB_POOL_MIN_SIZE,
         max_overflow=config.DB_POOL_MAX_SIZE - config.DB_POOL_MIN_SIZE,
         echo=config.DB_ECHO,
@@ -94,10 +84,17 @@ def get_db_engine_and_sessionmaker() -> tuple[AsyncEngine, async_sessionmaker]:
     return engine, async_sessionmaker_instance
 
 
-async def get_session(request: Request):
-    async_sessionmaker = request.app.state.async_sessionmaker
-    async with async_sessionmaker() as session:
-        yield session
+async def get_db_session() -> AsyncIterable[AsyncSession]:
+    """
+    Create an AsyncSession and yield an instance of the Data Access Layer,
+    which acts as an abstract interface to manipulate the database.
+
+    Can be injected as a dependency in FastAPI endpoints.
+    """
+    _, async_sessionmaker_instance = get_db_engine_and_sessionmaker()
+    async with async_sessionmaker_instance() as session:
+        async with session.begin():
+            yield session
 
 
 class DataAccessLayer:
@@ -198,7 +195,7 @@ class DataAccessLayer:
             return {"guid": row.guid, "data": row.data, "authz": row.authz}, was_created
         else:
             # Simple insert will raise IntegrityError on conflict
-            # let the exception bubble up like audit-service
+            # let the exception bubble up
             metadata = Metadata(guid=guid, data=data, authz=authz)
             self.db_session.add(metadata)
             await self.db_session.flush()

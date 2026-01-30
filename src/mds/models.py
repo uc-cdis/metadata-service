@@ -18,7 +18,7 @@ class Metadata(Base):
     Core metadata table storing GUID-indexed JSON metadata with authorization info.
 
     Attributes:
-        guid: Primary key, unique identifier for the metadata record
+        guid (str): Primary key, unique identifier for the metadata record
         data: JSONB column containing the actual metadata
         authz: JSONB column containing authorization information (required)
     """
@@ -54,8 +54,8 @@ class MetadataAlias(Base):
     Alias table for mapping alternative identifiers to metadata GUIDs.
 
     Attributes:
-        alias: Primary key, the alternative identifier
-        guid: Foreign key referencing metadata.guid (cascades on delete)
+        alias (str): Primary key, the alternative identifier
+        guid (str): Foreign key referencing metadata.guid (cascades on delete)
     """
 
     __tablename__ = "metadata_alias"
@@ -107,7 +107,8 @@ class MetadataCreateInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     data: Optional[dict] = None
-    authz: dict  # Required for creation
+    # Required for creation
+    authz: dict
 
 
 class MetadataBatchInput(BaseModel):

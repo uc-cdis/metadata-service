@@ -21,7 +21,7 @@ async def search_metadata(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Search the metadata.
 
@@ -75,7 +75,7 @@ async def search_metadata(
         if key not in {"data", "limit", "offset"}:
             queries.setdefault(key, []).append(value)
 
-    result = await dal.search_metadata(
+    result = await data_access_layer.search_metadata(
         filters=queries,
         limit=limit,
         offset=offset,
@@ -88,7 +88,7 @@ async def search_metadata(
 @mod.get("/metadata/{guid:path}/aliases")
 async def get_metadata_aliases(
     guid: str,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Get the aliases for the provided GUID
@@ -96,28 +96,28 @@ async def get_metadata_aliases(
     Args:
         guid (str): Metadata GUID
     """
-    aliases = await dal.get_aliases_for_guid(guid)
+    aliases = await data_access_layer.get_aliases_for_guid(guid)
     return {"guid": guid, "aliases": sorted(aliases)}
 
 
 @mod.get("/metadata/{guid:path}")
 async def get_metadata(
     guid,
-    dal: DataAccessLayer = Depends(get_data_access_layer),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Get the metadata of the GUID."""
-    metadata = await dal.get_metadata(guid)
+    metadata = await data_access_layer.get_metadata(guid)
 
     if not metadata:
         # check if it's an alias
         alias = guid
-        metadata_alias = await dal.get_alias(alias)
+        metadata_alias = await data_access_layer.get_alias(alias)
 
         if not metadata_alias:
             raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
 
         # get metadata for guid based on alias
-        metadata = await dal.get_metadata_by_alias(alias)
+        metadata = await data_access_layer.get_metadata_by_alias(alias)
 
         if not metadata:
             message = f"Alias record exists but GUID not found: {guid}"

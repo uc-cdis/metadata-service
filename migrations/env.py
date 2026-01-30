@@ -25,8 +25,10 @@ from mds.models import Base
 from mds.config import DB_DSN, DB_CONNECT_RETRIES
 
 load_modules()
-logging.info(f"connecting to: {DB_DSN}")
-config.set_main_option("sqlalchemy.url", DB_DSN.render_as_string(hide_password=False))
+config.set_main_option(
+    "sqlalchemy.url",
+    DB_DSN.set(drivername="postgresql").render_as_string(hide_password=False),
+)
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

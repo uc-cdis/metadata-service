@@ -10,9 +10,7 @@ from mds.config import DB_DSN, DEFAULT_AUTHZ_STR
 
 def make_engine():
     return create_async_engine(
-        DB_DSN.set(drivername="postgresql+asyncpg").render_as_string(
-            hide_password=False
-        ),
+        DB_DSN.render_as_string(hide_password=False),
         echo=True,
         future=True,
     )

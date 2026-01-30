@@ -71,26 +71,6 @@ CREATE DATABASE test_metadata;
 pytest --cov=src --cov=migrations/versions tests
 ```
 
-## Develop with Docker
-
-Use Docker compose:
-
-```bash
-docker-compose up
-```
-
-Run database schema migration as well:
-
-```bash
-docker-compose exec app alembic upgrade head
-```
-
-Run tests:
-
-```bash
-docker-compose exec app pytest --cov=src --cov=migrations/versions tests
-```
-
 ## Work with Aggregate MDS
 testing populate:
 ```bash

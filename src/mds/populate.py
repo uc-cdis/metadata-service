@@ -1,15 +1,17 @@
-import asyncio
-from argparse import Namespace
-from pathvalidate import ValidationError, sanitize_filepath, validate_filepath
-from typing import Any, Dict, List, Optional
-from mds.agg_mds import datastore, adapters
-from mds.agg_mds.mds import pull_mds
-from mds.agg_mds.commons import MDSInstance, ColumnsToFields, Commons, parse_config
-from mds import config, logger
-from pathlib import Path
-from urllib.parse import urlparse
 import argparse
+import asyncio
 import sys
+from argparse import Namespace
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
+
+from pathvalidate import ValidationError, sanitize_filepath, validate_filepath
+
+from . import config, logger
+from .agg_mds import adapters, datastore
+from .agg_mds.commons import ColumnsToFields, Commons, MDSInstance, parse_config
+from .agg_mds.mds import pull_mds
 
 
 def parse_args(argv: List[str]) -> Namespace:
