@@ -1460,13 +1460,8 @@ def test_delete_object_when_indexd_returns_403(client, valid_upload_file_patcher
     assert get_metadata_response.status_code == 200
 
 
-from httpx import HTTPError
-
-
 @respx.mock
-def test_delete_object_when_indexd_returns_500(
-    client, valid_upload_file_patcher, monkeypatch
-):
+def test_delete_object_when_indexd_returns_500(client, valid_upload_file_patcher):
     """
     Test the DELETE endpoint when indexd returns a 500 for specified guid.
     Should proxy to indexd's DELETE /indexd/file_id endpoint and not delete metadata.
