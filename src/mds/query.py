@@ -23,7 +23,7 @@ async def search_metadata(
     offset: int = Query(0, description="Return results at this given offset."),
     data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
-    """Search the metadata.
+    r"""Search the metadata.
 
     Without filters, this will return all data. Add filters as query strings like this:
 
