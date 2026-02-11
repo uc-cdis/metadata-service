@@ -97,6 +97,7 @@ def load_modules(app=None):
         https://setuptools.pypa.io/en/latest/userguide/entry_point.html#entry-points-for-plugins
     """
     logger.info("Start to load modules.")
+
     # sorted set ensures deterministic loading order
     for ep in sorted(set(entry_points()["mds.modules"])):
         mod = ep.load()
