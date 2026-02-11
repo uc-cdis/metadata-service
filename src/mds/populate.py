@@ -8,10 +8,10 @@ from urllib.parse import urlparse
 
 from pathvalidate import ValidationError, sanitize_filepath, validate_filepath
 
-from . import config, logger
-from .agg_mds import adapters, datastore
-from .agg_mds.commons import ColumnsToFields, Commons, MDSInstance, parse_config
-from .agg_mds.mds import pull_mds
+from mds import config, logger
+from mds.agg_mds import adapters, datastore
+from mds.agg_mds.commons import ColumnsToFields, Commons, MDSInstance, parse_config
+from mds.agg_mds.mds import pull_mds
 
 
 def parse_args(argv: List[str]) -> Namespace:
