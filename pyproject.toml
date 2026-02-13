@@ -10,7 +10,7 @@ python = ">=3.13,<4.0"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version="^0.30.0"}
 gunicorn = ">=22.0.0"
-sqlalchemy = {version = "^2.0", extras = ["asyncio"]}
+sqlalchemy = {version = ">=2.0", extras = ["asyncio"]}
 psycopg2-binary = "^2.8"
 alembic = "^1.13"
 gen3authz = "^2.0"
