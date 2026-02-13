@@ -19,8 +19,6 @@ COPY --chown=gen3:gen3 . /${appname}
 COPY --chown=gen3:gen3 ./deployment/wsgi/wsgi.py /${appname}/wsgi.py
 
 RUN poetry install -vv --no-interaction --without dev
-##!!!
-RUN poetry install --no-interaction --with dev
 
 # Final stage
 FROM base
