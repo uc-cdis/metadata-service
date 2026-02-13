@@ -28,7 +28,7 @@ The MDS and all MDS records are public (requiring no login to read) by design to
 However, you must create resource/role/policy to permit admin users to create/read/update/delete (CRUD) records in the MDS. Here is what you should add to your user.yaml to permit creation of your MDS.  
 
 ```
-resources:
+  resources:
     - name: 'mds_gateway'
       description: 'commons /mds-admin'
 
