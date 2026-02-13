@@ -1,20 +1,18 @@
 [tool.poetry]
 name = "mds"
-version = "4.1.1"
+version = "4.2.0"
 description = "Metadata Service"
 authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = ">=3.9.2, <3.10"
+python = ">=3.13,<4.0"
 fastapi = "*"
-uvicorn = {extras = ["standard"], version="^0.18.2"}
+uvicorn = {extras = ["standard"], version="^0.30.0"}
 gunicorn = ">=22.0.0"
-gino = {version = "^1.0.0", extras = ["starlette"]}
-# restricting sqlalchemy for gino https://github.com/python-gino/gino/discussions/765'
-sqlalchemy = "^1.3.0, <1.4"
+sqlalchemy = {version = ">=2.0", extras = ["asyncio"]}
 psycopg2-binary = "^2.8"
-alembic = "^1.3"
+alembic = "^1.13"
 gen3authz = "^2.0"
 httpx = "^0.23.0"
 authutils = ">=7.1.1"
@@ -35,14 +33,14 @@ pydantic = "2.9.2"
 xmltodict = "0.14.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^5.3"
-pytest-cov = "^2.8"
+pytest = "^8.0"
+pytest-cov = "*"
 pyyaml = "*"
 requests = "^2.32"
 respx = "*"
 nest-asyncio = "^1.5.1"
 deptry = "^0.23.1"
-pytest-asyncio = "^0.15.1"
+pytest-asyncio = "^0.23.0"
 
 [tool.poetry.plugins."mds.modules"]
 "query" = "mds.query"
@@ -55,3 +53,11 @@ pytest-asyncio = "^0.15.1"
 [build-system]
 requires = ["poetry>=2.0"]
 build-backend = "poetry.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+# fix for coverage reporting when using sqlalchemy async sessions
+# (see https://stackoverflow.com/questions/74305054)
+concurrency = ["multiprocessing", "thread", "greenlet"]

@@ -29,7 +29,7 @@ ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
 # Database
 
-DB_DRIVER = config("DB_DRIVER", default="postgresql")
+DB_DRIVER = config("DB_DRIVER", default="postgresql+asyncpg")
 DB_HOST = config("DB_HOST", default=None)
 DB_PORT = config("DB_PORT", cast=int, default=None)
 DB_USER = config("DB_USER", default=None)
@@ -40,30 +40,25 @@ if TESTING:
     DB_DATABASE = "test_" + (DB_DATABASE or "metadata")
     TEST_KEEP_DB = config("TEST_KEEP_DB", cast=bool, default=False)
 
+
 DB_DSN = config(
     "DB_DSN",
     cast=make_url,
-    default=URL(
+    default=URL.create(
         drivername=DB_DRIVER,
         username=DB_USER,
-        password=DB_PASSWORD,
+        password=str(DB_PASSWORD) if DB_PASSWORD else None,
         host=DB_HOST,
         port=DB_PORT,
         database=DB_DATABASE,
     ),
 )
-DB_MIN_SIZE = config("DB_MIN_SIZE", cast=int, default=1)  # deprecated
-DB_POOL_MIN_SIZE = config("DB_POOL_MIN_SIZE", cast=int, default=DB_MIN_SIZE)
-DB_MAX_SIZE = config("DB_MAX_SIZE", cast=int, default=10)  # deprecated
-DB_POOL_MAX_SIZE = config("DB_POOL_MAX_SIZE", cast=int, default=DB_MAX_SIZE)
+DB_POOL_MIN_SIZE = config("DB_POOL_MIN_SIZE", cast=int, default=5)
+DB_POOL_MAX_SIZE = config("DB_POOL_MAX_SIZE", cast=int, default=15)
 DB_ECHO = config("DB_ECHO", cast=bool, default=False)
 DB_SSL = config("DB_SSL", default=None)
-DB_USE_CONNECTION_FOR_REQUEST = config(
-    "DB_USE_CONNECTION_FOR_REQUEST", cast=bool, default=True
-)
-DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)  # deprecated
-DB_RETRY_LIMIT = config("DB_RETRY_LIMIT", cast=int, default=DB_CONNECT_RETRIES)
-DB_RETRY_INTERVAL = config("DB_RETRY_INTERVAL", cast=int, default=1)
+DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)
+
 
 # Elasticsearch
 ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)

@@ -13,7 +13,7 @@
 Install required software:
 
 * [PostgreSQL](PostgreSQL) 9.6 or above
-* [Python](https://www.python.org/downloads/) 3.9 or above
+* [Python](https://www.python.org/downloads/) 3.13 or above
 * [Poetry](https://poetry.eustace.io/docs/#installation)
 
 Then use `poetry install` to install the dependencies. Before that,
@@ -69,26 +69,6 @@ CREATE DATABASE test_metadata;
 
 ```bash
 pytest --cov=src --cov=migrations/versions tests
-```
-
-## Develop with Docker
-
-Use Docker compose:
-
-```bash
-docker-compose up
-```
-
-Run database schema migration as well:
-
-```bash
-docker-compose exec app alembic upgrade head
-```
-
-Run tests:
-
-```bash
-docker-compose exec app pytest --cov=src --cov=migrations/versions tests
 ```
 
 ## Work with Aggregate MDS
