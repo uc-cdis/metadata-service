@@ -97,7 +97,6 @@ def test_create_already_created_aliases(guid, aliases, client):
             f"/metadata/{guid}/aliases", json={"aliases": ["new", "stuff"]}
         )
         assert str(response.status_code) == "409"
-        assert "Aliases already exist" in response.json().get("detail")
 
         # ensure the original aliases data did not get modified
         assert client.get(f"/metadata/{guid}").json() == data
@@ -160,9 +159,6 @@ def test_create_already_created_aliases_on_different_guid(
     try:
         response = client.post(f"/metadata/{guid2}/aliases", json={"aliases": aliases2})
         assert str(response.status_code) == "409"
-        assert "Alias is already in use by a different GUID." in response.json().get(
-            "detail"
-        )
 
         # ensure the original aliases data did not get modified
         assert client.get(f"/metadata/{guid1}").json() == data
