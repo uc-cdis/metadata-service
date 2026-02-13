@@ -20,3 +20,28 @@ The documentation can be browsed in the [docs](docs) folder, and key documents a
 * [Detailed API Documentation](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/uc-cdis/metadata-service/master/docs/openapi.yaml)
 * [Development and deployment](docs/dev.md)
 * [Aggregate Metadata Service](docs/agg_mds.md)
+
+## Creating appropriate resources/roles/policies in the user.yaml
+
+The MDS and all MDS records are public (requiring no login to read) by design to ensure FAIR data management. Therefore, the user.yaml does not need to provide any read access to the MDS for any users.  
+
+However, you must create resource/role/policy to permit admin users to create/read/update/delete (CRUD) records in the MDS. Here is what you should add to your user.yaml to permit creation of your MDS.  
+
+```
+resources:
+    - name: 'mds_gateway'
+      description: 'commons /mds-admin'
+
+  roles:
+    - id: 'mds_crud'
+      permissions:
+        - id: 'mds_access'
+          action:
+            service: 'mds_gateway'
+            method: 'access'
+  policies:
+    - id: 'mds_admin'
+      description: 'be able to CRUD records in metadata service'
+      resource_paths: ['/mds_gateway']
+      role_ids: ['mds_crud']
+```
