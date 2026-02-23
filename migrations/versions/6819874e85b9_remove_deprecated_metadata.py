@@ -35,7 +35,7 @@ def upgrade():
     query = (
         f"SELECT guid, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset}"
     )
-    results = connection.execute(query).fetchall()
+    results = connection.execute(sa.text(query)).fetchall()
     while results:
         for r in results:
             guid, data = r[0], r[1]
@@ -51,7 +51,7 @@ def upgrade():
         # Grab another batch of rows
         offset += limit
         query = f"SELECT guid, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset} "
-        results = connection.execute(query).fetchall()
+        results = connection.execute(sa.text(query)).fetchall()
 
 
 def downgrade():

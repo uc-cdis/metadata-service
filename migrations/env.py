@@ -1,6 +1,6 @@
 import logging
-import time
 from logging.config import fileConfig
+import time
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -20,13 +20,16 @@ fileConfig(config.config_file_name)
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
-from mds.main import db as target_metadata, load_modules
+from mds.main import load_modules
+from mds.models import Base
 from mds.config import DB_DSN, DB_CONNECT_RETRIES
 
 load_modules()
-logging.info(f"connecting to: {DB_DSN}")
-config.set_main_option("sqlalchemy.url", str(DB_DSN))
-
+config.set_main_option(
+    "sqlalchemy.url",
+    DB_DSN.set(drivername="postgresql").render_as_string(hide_password=False),
+)
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -34,7 +37,7 @@ config.set_main_option("sqlalchemy.url", str(DB_DSN))
 # ... etc.
 
 
-def run_migrations_offline():
+def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
     This configures the context with just a URL

@@ -178,7 +178,7 @@ async def test_create_if_exists():
         ),
     ):
         await elasticsearch_dao.drop_all_non_temp_indexes()
-        await elasticsearch_dao.create_indexes(COMMON_MAPPING)
+        await elasticsearch_dao.create_indexes(common_mapping=COMMON_MAPPING)
 
 
 @pytest.mark.asyncio
