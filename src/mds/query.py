@@ -1,9 +1,9 @@
-from fastapi import HTTPException, Query, APIRouter
+from fastapi import HTTPException, Query, APIRouter, Depends
 from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 from starlette.responses import JSONResponse
 
-from .models import db, Metadata, MetadataAlias
+from .db import get_data_access_layer, DataAccessLayer
 from . import config
 
 mod = APIRouter()
@@ -21,6 +21,7 @@ async def search_metadata(
         10, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ):
     """Search the metadata.
 
@@ -74,54 +75,20 @@ async def search_metadata(
         if key not in {"data", "limit", "offset"}:
             queries.setdefault(key, []).append(value)
 
-    def add_filter(query):
-        for path, values in queries.items():
-            if "*" in values:
-                # query all records with a value for this path
-                path = list(path.split("."))
-                field = path.pop()
-                query = query.where(Metadata.data[path].has_key(field))
-            else:
-                values = ["*" if v == "\*" else v for v in values]
-                if "." in path:
-                    path = list(path.split("."))
-                query = query.where(
-                    db.or_(Metadata.data[path].astext == v for v in values)
-                )
+    result = await data_access_layer.search_metadata(
+        filters=queries,
+        limit=limit,
+        offset=offset,
+        return_data=data,
+    )
 
-        # TODO/FIXME: There's no updated date on the records, and without that
-        # this "pagination" is prone to produce inconsistent results if someone is
-        # trying to paginate using offset WHILE data is being added
-        #
-        # The only real way to try and reduce that risk
-        # is to order by updated date (so newly added stuff is
-        # at the end and new records don't end up in a page earlier on)
-        # This is how our indexing service handles this situation.
-        #
-        # But until we have an updated_date, we can't do that, so naively order by
-        # GUID for now and accept this inconsistency risk.
-        query = query.order_by(Metadata.guid)
-
-        query = query.offset(offset).limit(limit)
-        return query
-
-    if data:
-        return {
-            metadata.guid: metadata.data
-            for metadata in await add_filter(Metadata.query).gino.all()
-        }
-    else:
-        return [
-            row[0]
-            for row in await add_filter(db.select([Metadata.guid]))
-            .gino.return_model(False)
-            .all()
-        ]
+    return result
 
 
 @mod.get("/metadata/{guid:path}/aliases")
 async def get_metadata_aliases(
     guid: str,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Get the aliases for the provided GUID
@@ -129,38 +96,34 @@ async def get_metadata_aliases(
     Args:
         guid (str): Metadata GUID
     """
-    metadata_aliases = await MetadataAlias.query.where(
-        MetadataAlias.guid == guid
-    ).gino.all()
-
-    aliases = [metadata_alias.alias for metadata_alias in metadata_aliases]
+    aliases = await data_access_layer.get_aliases_for_guid(guid)
     return {"guid": guid, "aliases": sorted(aliases)}
 
 
 @mod.get("/metadata/{guid:path}")
-async def get_metadata(guid):
+async def get_metadata(
+    guid,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
+):
     """Get the metadata of the GUID."""
-    metadata = await Metadata.get(guid)
+    metadata = await data_access_layer.get_metadata(guid)
 
     if not metadata:
         # check if it's an alias
         alias = guid
-        metadata_alias = await MetadataAlias.query.where(
-            MetadataAlias.alias == alias
-        ).gino.first()
+        metadata_alias = await data_access_layer.get_alias(alias)
 
         if not metadata_alias:
             raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
 
         # get metadata for guid based on alias
-        metadata = await Metadata.get(metadata_alias.guid)
+        metadata = await data_access_layer.get_metadata_by_alias(alias)
 
         if not metadata:
             message = f"Alias record exists but GUID not found: {guid}"
-            logging.error(message)
             raise HTTPException(HTTP_500_INTERNAL_SERVER_ERROR, message)
 
-    return metadata.data
+    return metadata["data"]
 
 
 def init_app(app):

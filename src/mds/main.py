@@ -1,53 +1,33 @@
 import asyncio
-
-import pkg_resources
-from fastapi import FastAPI, APIRouter, HTTPException
-import httpx
+from contextlib import asynccontextmanager
 from urllib.parse import urlparse
-from starlette.status import (
-    HTTP_500_INTERNAL_SERVER_ERROR,
-)
 
-from mds.agg_mds import datastore as aggregate_datastore
+import httpx
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 try:
-    from importlib.metadata import entry_points
+    from importlib.metadata import entry_points, version
 except ImportError:
-    from importlib_metadata import entry_points
+    from importlib_metadata import entry_points, version
 
-from . import logger, config
-from .models import db
+from .agg_mds import datastore as aggregate_datastore
+from . import config, logger
+from .db import DataAccessLayer, get_data_access_layer, initiate_db
 
 
-def get_app():
+def get_app() -> FastAPI:
     app = FastAPI(
         title="Framework Services Object Management Service",
-        version=pkg_resources.get_distribution("mds").version,
+        version=version("mds"),
         debug=config.DEBUG,
         root_path=config.URL_PREFIX,
+        lifespan=lifespan,
     )
     app.include_router(router)
-    db.init_app(app)
     app.add_middleware(ClientDisconnectMiddleware)
-    load_modules(app)
     app.async_client = httpx.AsyncClient()
-
-    @app.on_event("shutdown")
-    async def shutdown_event():
-        if config.USE_AGG_MDS:
-            logger.info("Closing aggregate datastore.")
-            await aggregate_datastore.close()
-        logger.info("Closing async client.")
-        await app.async_client.aclose()
-
-    @app.on_event("startup")
-    async def startup_event():
-        if config.USE_AGG_MDS:
-            logger.info("Creating aggregate datastore.")
-            url_parts = urlparse(config.ES_ENDPOINT)
-            await aggregate_datastore.init(
-                hostname=url_parts.hostname, port=url_parts.port
-            )
+    load_modules(app)
 
     return app
 
@@ -88,6 +68,32 @@ class ClientDisconnectMiddleware:
             waiter.cancel()
 
 
+async def setup_aggregate_datastore(app):
+    if config.USE_AGG_MDS:
+        logger.info("Creating aggregate datastore.")
+        url_parts = urlparse(config.ES_ENDPOINT)
+        await aggregate_datastore.init(hostname=url_parts.hostname, port=url_parts.port)
+
+
+async def close_aggregate_datastore(app):
+    if config.USE_AGG_MDS:
+        logger.info("Closing aggregate datastore.")
+        await aggregate_datastore.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup actions
+    initiate_db()
+    await setup_aggregate_datastore(app)
+
+    yield
+
+    # Shutdown actions
+    await close_aggregate_datastore(app)
+    await app.async_client.aclose()
+
+
 def load_modules(app=None):
     """
     Loop through Poetry [plugins](https://python-poetry.org/docs/master/pyproject/#plugins)
@@ -98,7 +104,8 @@ def load_modules(app=None):
     """
     logger.info("Start to load modules.")
     # sorted set ensures deterministic loading order
-    for ep in sorted(set(entry_points()["mds.modules"])):
+    eps = entry_points(group="mds.modules")
+    for ep in eps:
         mod = ep.load()
         if app and hasattr(mod, "init_app"):
             mod.init_app(app)
@@ -111,18 +118,20 @@ router = APIRouter()
 
 @router.get("/version")
 def get_version():
-    return pkg_resources.get_distribution("mds").version
+    return version("mds")
 
 
 @router.get("/_status")
-async def get_status():
+async def get_status(
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
+):
     """
     Returns the status of the MDS:
      * error: if there was no error this will be "none"
      * last_update: timestamp of the last data pull from the commons
      * count: number of entries
     """
-    now = await db.scalar("SELECT now()")
+    now = await data_access_layer.get_current_time()
 
     if config.USE_AGG_MDS:
         try:

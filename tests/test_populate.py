@@ -277,7 +277,9 @@ async def test_populate_config():
             )
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config)
-        await mock_datastore.update_config_info.called_with(["_subjects_count"])
+        mock_datastore.update_config_info.assert_called_with(
+            {"array": ["_subjects_count"]}, False
+        )
 
 
 @pytest.mark.asyncio
@@ -318,8 +320,8 @@ async def test_populate_config_to_temp_index():
             )
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config, True)
-        mock_datastore.update_config_info.called_with(
-            ["_subjects_count"], use_temp_index=True
+        mock_datastore.update_config_info.assert_called_with(
+            {"array": ["_subjects_count"]}, True
         )
 
 
