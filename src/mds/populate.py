@@ -175,10 +175,6 @@ async def main(commons_config: Commons) -> None:
         }
     """
 
-    if not config.USE_AGG_MDS:
-        logger.info("aggregate MDS disabled")
-        exit(1)
-
     url_parts = urlparse(config.ES_ENDPOINT)
 
     await datastore.init(hostname=url_parts.hostname, port=url_parts.port)
