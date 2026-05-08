@@ -197,6 +197,7 @@ class MDSInstance:
     ] = None
     study_data_field: str = "gen3_discovery"
     guid_type: str = "discovery_metadata"
+    batch_size: int = "1000"
     data_dict_field: Optional[str] = None
     select_field: Optional[Dict[str, str]] = None
 

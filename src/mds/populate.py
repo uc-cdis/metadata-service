@@ -206,7 +206,7 @@ async def main(commons_config: Commons) -> None:
     try:
         for name, common in commons_config.gen3_commons.items():
             logger.info(f"Populating {name} using Gen3 MDS connector")
-            results = pull_mds(common.mds_url, common.guid_type)
+            results = pull_mds(common.mds_url, common.guid_type, common.batch_size)
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
