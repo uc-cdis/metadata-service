@@ -53,7 +53,7 @@ SEARCH_CONFIG = {
             "mapping.nested_objects": {
                 "limit": 200000,
             },
-            "total_fields": {"limit": 2500},
+            "mapping.total_fields": {"limit": 2500},
             "number_of_shards": 1,
             "number_of_replicas": 0,
             "analysis": {
