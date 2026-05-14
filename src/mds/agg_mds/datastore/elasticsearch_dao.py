@@ -37,7 +37,10 @@ CONFIG = {
         "index": {
             "number_of_shards": 1,
             "number_of_replicas": 0,
-            "mapping": {"nested_objects": {"limit": 200000}},
+            "mapping": {
+                "nested_objects": {"limit": 200000},
+                "total_fields": {"limit": 2500},
+            },
         }
     },
     "mappings": {"properties": {"array": {"type": "keyword"}}},
@@ -50,6 +53,7 @@ SEARCH_CONFIG = {
             "mapping.nested_objects": {
                 "limit": 200000,
             },
+            "total_fields": {"limit": 2500},
             "number_of_shards": 1,
             "number_of_replicas": 0,
             "analysis": {
