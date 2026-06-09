@@ -1084,9 +1084,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 numReturned = len(data)
                 total += numReturned
                 offset += numReturned
-                if numReturned == 0 or numReturned < limit:
-                    moreData = False
-                if total >= maxItems:
+                if numReturned == 0 or numReturned <= limit:
                     moreData = False
                 offset += numReturned
 

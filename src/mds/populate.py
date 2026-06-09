@@ -164,7 +164,7 @@ async def populate_config(commons_config: Commons, use_temp_index=False) -> None
     await datastore.update_config_info(array_definition, use_temp_index)
 
 
-async def main(commons_config: Commons) -> None:
+async def main(commons_config: Commons, offset=0, append=False) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
