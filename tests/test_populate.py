@@ -1,3 +1,4 @@
+from pathvalidate import ValidationError
 import pytest
 import respx
 import httpx
@@ -11,6 +12,7 @@ from mds.populate import (
     populate_info,
     populate_drs_info,
     populate_config,
+    is_valid_path,
 )
 from mds.agg_mds.commons import (
     AdapterMDSInstance,
@@ -275,7 +277,9 @@ async def test_populate_config():
             )
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config)
-        await mock_datastore.update_config_info.called_with(["_subjects_count"])
+        mock_datastore.update_config_info.assert_called_with(
+            {"array": ["_subjects_count"]}, False
+        )
 
 
 @pytest.mark.asyncio
@@ -316,8 +320,8 @@ async def test_populate_config_to_temp_index():
             )
         config = parse_config_from_file(Path(fp.name))
         await populate_config(config, True)
-        mock_datastore.update_config_info.called_with(
-            ["_subjects_count"], use_temp_index=True
+        mock_datastore.update_config_info.assert_called_with(
+            {"array": ["_subjects_count"]}, True
         )
 
 
@@ -657,3 +661,14 @@ def test_parse_config_from_file():
         parse_config_from_file(Path("/"))
     except Exception as exc:
         assert isinstance(exc, IOError) is True
+
+
+def test_is_valid_path():
+    assert is_valid_path("/aggregrate.json")
+    try:
+        is_valid_path("/tmp/:/aggregate.json")
+    except Exception as exc:
+        assert isinstance(exc, ValidationError)
+    assert not is_valid_path("/tmp/../..aggregate.json")
+    assert not is_valid_path("/tmp/|aggregate.json")
+    assert not is_valid_path("/tmp/aggregate.json?hello")

@@ -1,16 +1,7 @@
-from math import ceil
+from opensearchpy import OpenSearch, exceptions as os_exceptions, helpers
 from typing import Any, List, Dict, Union, Optional, Tuple
-import jsonpath_ng as jp
-from elasticsearch import Elasticsearch, exceptions as es_exceptions
-
+from math import ceil
 from mds import logger
-from mds.agg_mds.datastore.search import (
-    build_multi_search_query,
-    build_nested_field_dictionary,
-    build_search_query,
-    build_facet_search_query,
-    build_aggregation_query,
-)
 from mds.config import (
     AGG_MDS_NAMESPACE,
     ES_RETRY_LIMIT,
@@ -18,6 +9,8 @@ from mds.config import (
     AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
     AGG_MDS_DEFAULT_DATA_DICT_FIELD,
 )
+import json
+import time
 
 AGG_MDS_INDEX = f"{AGG_MDS_NAMESPACE}-commons-index"
 AGG_MDS_TYPE = "commons"
@@ -44,7 +37,10 @@ CONFIG = {
         "index": {
             "number_of_shards": 1,
             "number_of_replicas": 0,
-            "mapping": {"nested_objects": {"limit": 200000}},
+            "mapping": {
+                "nested_objects": {"limit": 200000},
+                "total_fields": {"limit": 2500},
+            },
         }
     },
     "mappings": {"properties": {"array": {"type": "keyword"}}},
@@ -57,6 +53,7 @@ SEARCH_CONFIG = {
             "mapping.nested_objects": {
                 "limit": 200000,
             },
+            "mapping.total_fields": {"limit": 2500},
             "number_of_shards": 1,
             "number_of_replicas": 0,
             "analysis": {
@@ -88,34 +85,14 @@ SEARCH_CONFIG = {
 elastic_search_client = None
 
 
-# get the mapping from the elastic search client
-def init_search_fields_from_mapping():
-    raw_data = elastic_search_client.indices.get_mapping(index=AGG_MDS_INDEX)
-    # get paths to 'nested' fields using jsonpath_ng
-    nested = [
-        str(match.full_path).replace("properties.", "").replace(".type", "")
-        for match in jp.parse("$..type").find(raw_data[AGG_MDS_INDEX]["mappings"])
-        if match.value == "nested"
-    ]
-    # TODO build a list of all fields in the index
-    # allFields = [str(match.full_path).replace('.keyword','').replace('properties.','').replace('.type','').replace('.fields','') for match in jp.parse('$..type').find(raw_data[AGG_MDS_INDEX]["mappings"]['commons'])]
-
-    # set the global variable nestedFields to a nested dictionary of all the nested fields
-    build_nested_field_dictionary(nested)
-
-
-async def init(hostname: str = "0.0.0.0", port: int = 9200, support_search=False):
+async def init(hostname: str = "0.0.0.0", port: int = 9200):
     global elastic_search_client
-    elastic_search_client = Elasticsearch(
-        [hostname],
-        scheme="http",
-        port=port,
+    elastic_search_client = OpenSearch(
+        hosts=[f"{hostname}:{port}"],
         timeout=ES_RETRY_INTERVAL,
         max_retries=ES_RETRY_LIMIT,
         retry_on_timeout=True,
     )
-    if support_search:
-        init_search_fields_from_mapping()
 
 
 async def drop_all_non_temp_indexes():
@@ -137,10 +114,33 @@ async def drop_all_temp_indexes():
 async def clone_temp_indexes_to_real_indexes():
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         source_index = index + "-temp"
+        source_index_ready = False
+        i = 0
+        while not source_index_ready and i <= 4:
+            try:
+                doc_count = elastic_search_client.count(index=source_index).get(
+                    "count", 0
+                )
+                logger.debug(f"Index {source_index} has {doc_count} documents")
+                if doc_count > 0:
+                    source_index_ready = True
+                else:
+                    logger.debug(
+                        f"Attempt {i} - Temp index empty, wait 30 seconds and retry"
+                    )
+                    time.sleep(30)
+            except Exception as e:
+                logger.debug(
+                    f"Attempt {i} - Error checking index '{source_index}', wait 30 seconds and retry"
+                )
+                logger.debug(f"Error - {e}")
+                time.sleep(30)
+            i += 1
+
         reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
         logger.debug(f"Cloning index: {source_index} to {index}...")
-        res = Elasticsearch.reindex(elastic_search_client, reqBody)
-        # Elasticsearch >7.4 introduces the clone api we could use later on
+        res = elastic_search_client.reindex(body=reqBody)
+        # OpenSearch >1.0 introduces the clone api we could use later on
         # res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
 
@@ -150,7 +150,7 @@ async def create_indexes(common_mapping: dict):
         mapping = {**SEARCH_CONFIG, **common_mapping}
         res = elastic_search_client.indices.create(index=AGG_MDS_INDEX, body=mapping)
         logger.debug(f"created index {AGG_MDS_INDEX}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INDEX}")
             pass  # Index already exists. Ignore.
@@ -163,7 +163,7 @@ async def create_indexes(common_mapping: dict):
         )
         logger.debug(f"created index {AGG_MDS_INFO_INDEX}: {res}")
 
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INFO_INDEX}")
             pass  # Index already exists. Ignore.
@@ -175,7 +175,7 @@ async def create_indexes(common_mapping: dict):
             index=AGG_MDS_CONFIG_INDEX, body=CONFIG
         )
         logger.debug(f"created index {AGG_MDS_CONFIG_INDEX}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_CONFIG_INDEX}")
             pass  # Index already exists. Ignore.
@@ -190,7 +190,7 @@ async def create_temp_indexes(common_mapping: dict):
             index=AGG_MDS_INDEX_TEMP, body=mapping
         )
         logger.debug(f"created index {AGG_MDS_INDEX_TEMP}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INDEX_TEMP}")
             pass  # Index already exists. Ignore.
@@ -203,7 +203,7 @@ async def create_temp_indexes(common_mapping: dict):
         )
         logger.debug(f"created index {AGG_MDS_INFO_INDEX_TEMP}: {res}")
 
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_INFO_INDEX_TEMP}")
             pass  # Index already exists. Ignore.
@@ -215,7 +215,7 @@ async def create_temp_indexes(common_mapping: dict):
             index=AGG_MDS_CONFIG_INDEX_TEMP, body=CONFIG
         )
         logger.debug(f"created index {AGG_MDS_CONFIG_INDEX_TEMP}: {res}")
-    except es_exceptions.RequestError as ex:
+    except os_exceptions.RequestError as ex:
         if ex.error == "resource_already_exists_exception":
             logger.warning(f"index already exists: {AGG_MDS_CONFIG_INDEX_TEMP}")
             pass  # Index already exists. Ignore.
@@ -546,67 +546,6 @@ async def get_commons_attribute(name):
     except Exception as error:
         logger.error(error)
         return None
-
-
-import json
-
-
-async def search(field: str, term: str, limit=10, offset=0, op="OR", type="match"):
-    fields = field.split(",")
-    if len(fields) > 1:
-        query = build_multi_search_query(fields, term, limit, offset, op, type)
-    else:
-        query = build_search_query(field, term, limit, offset, type)
-
-    print("query", json.dumps(query, indent=2))
-    if query is None:
-        return {}
-    try:
-        data = elastic_search_client.search(
-            index=AGG_MDS_INDEX,
-            body=query,
-        )
-        return data["hits"]["hits"]
-    except Exception as error:
-        logger.error(error)
-        return {}
-
-
-async def facet_search(search_query):
-    query = build_facet_search_query(search_query)
-    if query is None:
-        return {}
-    try:
-        data = elastic_search_client.search(
-            index=AGG_MDS_INDEX,
-            body=query,
-        )
-        return data["hits"]["hits"]
-    except Exception as error:
-        logger.error(error)
-        return {}
-
-
-async def get_aggs(agg_query, function="count"):
-    print("agg_query", agg_query)
-    query = build_aggregation_query(agg_query, function)
-    print("query", query)
-    if query is None:
-        return {}
-    try:
-        data = elastic_search_client.search(
-            index=AGG_MDS_INDEX,
-            body=query,
-        )
-        print("data", data)
-        query_path = agg_query.replace(".", "__")
-        print("query_path", query_path)
-        matches = jp.parse(f"aggregations..{query_path}").find(data)
-        print("matches", matches)
-        return matches[0].value
-    except Exception as error:
-        logger.error(error)
-        return {}
 
 
 async def get_aggregations(name):

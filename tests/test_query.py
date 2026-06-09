@@ -1,4 +1,3 @@
-import gino
 import pytest
 
 
@@ -105,9 +104,6 @@ def test_query_offset_with_filter(client):
             client.delete(f"/metadata/x_1_{i}")
 
 
-@pytest.mark.skipif(
-    gino.__version__ <= "0.8.5", reason="https://github.com/fantix/gino/pull/609"
-)
 def test_query_filter(client):
     try:
         for guid, data in [

@@ -1,13 +1,11 @@
 import collections.abc
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Tuple, Union
-from jsonpath_ng import parse
-from jsonpath_ng.exceptions import JSONPathError
+from typing import Any, Dict, List, Tuple, Union, Optional
+from jsonpath_ng import parse, JSONPathError
 import httpx
 import xmltodict
 import bleach
 import logging
-from dataclasses import dataclass
 import re
 from tenacity import (
     retry,
@@ -68,22 +66,120 @@ def aggregate_pdc_file_count(record: list):
     return file_count
 
 
+def strip_leading_double_underscore(d):
+    """
+    Rename dictionary keys that start with '__' to start with '_' instead.
+    Can handle a single dictionary or a list of dictionaries.
+
+    Args:
+        d (dict or list): A dictionary or list of dictionaries to modify
+
+    Returns:
+        dict or list: A new dictionary/list with renamed keys
+    """
+    if isinstance(d, list):
+        return [
+            rename_single_dict(item) if isinstance(item, dict) else item for item in d
+        ]
+    elif isinstance(d, dict):
+        return rename_single_dict(d)
+    else:
+        return d
+
+
+def rename_single_dict(d):
+    """Helper function to rename keys in a single dictionary."""
+    result = {}
+    for key, value in d.items():
+        # ensure keys is a string and is only leading with __
+        if isinstance(key, str) and re.match(r"^__[^_]", key):
+            new_key = (
+                "_" + key[2:]
+            )  # Remove first two characters and add single underscore
+            result[new_key] = value
+        else:
+            result[key] = value
+    return result
+
+
+def normalize_value(value: str, mapping: Optional[Dict[str, str]] = None):
+    """
+    Normalizes the input value based on the given mapping.
+
+    This function checks if the input `value` is a string, and if a `mapping`
+    dictionary is provided. If both conditions are met, the function attempts
+    to find the `value` in the given `mapping`. If a match is found, it returns
+    the corresponding mapped value. If no match is found, or if `value` is not
+    a string or no mapping is provided, it returns the original value.
+
+    Args:
+        value: str
+            The input value to be normalized.
+        mapping: Optional[Dict[str, str]]
+            An optional dictionary that maps specific values to their desired
+            normalized equivalents.
+
+    Returns:
+        str
+            The normalized value if a mapping is provided and the value is found
+            in the mapping; otherwise, the original input value.
+    """
+    return mapping.get(value, value) if isinstance(value, str) and mapping else value
+
+
+def normalize_tags(
+    tags: List[Dict[str, str]], mapping: Optional[Dict[str, str]] = None
+):
+    """
+    Maps the 'name' field of dictionaries in a list based on matching 'category' using a mapping.
+
+    Args:
+        items: A list of dictionaries, each containing 'name' and 'category' keys.
+        mapping: A dictionary where the key is a category and the value is another dictionary
+                 mapping old names to new names.
+
+    Returns:
+        A new list of dictionaries with updated 'name' values where mappings are applied.
+    """
+    if not mapping:
+        return tags
+
+    updated_tags = []
+    for tag in tags:
+        if "name" in tag and "category" in tag:
+            category = tag["category"]
+            name = tag["name"]
+            # Update name if category and name are in the mapping
+            new_name = mapping.get(category, {}).get(name, name)
+            updated_tags.append({**tag, "name": new_name})
+        else:
+            # If tag does not contain 'name' or 'category', keep it unchanged
+            updated_tags.append(tag)
+
+    return updated_tags
+
+
 class FieldFilters:
     filters = {
         "strip_html": strip_html,
         "strip_email": strip_email,
+        "strip_leading_double_underscore": strip_leading_double_underscore,
         "add_icpsr_source_url": add_icpsr_source_url,
         "add_clinical_trials_source_url": add_clinical_trials_source_url,
         "uppercase": uppercase,
         "prepare_cidc_description": prepare_cidc_description,
         "aggregate_pdc_file_count": aggregate_pdc_file_count,
+        "normalize_value": normalize_value,
+        "normalize_tags": normalize_tags,
     }
 
     @classmethod
-    def execute(cls, name, value):
+    def execute(cls, name, value, params=None):
         if name not in FieldFilters.filters:
             logger.warning(f"filter {name} not found: returning original value.")
             return value
+        if params is not None:
+            return FieldFilters.filters[name](value, params)
         return FieldFilters.filters[name](value)
 
 
@@ -222,8 +318,14 @@ class RemoteMetadataAdapter(ABC):
                 )
 
                 filters = value.get("filters", [])
+                filterParams = value.get("filterParams", {})
                 for flt in filters:
-                    field_value = FieldFilters.execute(flt, field_value)
+                    if flt in filterParams:
+                        field_value = FieldFilters.execute(
+                            flt, field_value, filterParams[flt]
+                        )
+                    else:
+                        field_value = FieldFilters.execute(flt, field_value)
 
             elif isinstance(value, str) and "path:" in value:
                 # process as json path
@@ -1378,7 +1480,7 @@ class CIDCAdapter(RemoteMetadataAdapter):
         except httpx.TimeoutException as exc:
             logger.error(f"An timeout error occurred while requesting {mds_url}.")
             raise
-        except httpx.HTTPError as exc:
+        except httpx.HTTPStatusError as exc:
             logger.error(
                 f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
             )
@@ -1592,6 +1694,888 @@ class PDCAdapter(RemoteMetadataAdapter):
         return results
 
 
+class PDCSubjectAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Proteomic Data Commons
+    Expected Parameters:
+        size:   Number of studies to pull in a single call, default=5 and therefore optional
+        #Note - The API doesn't seem to do very well with large requests,
+                hence confining it to a smaller number
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+        batchSize = kwargs["filters"].get("size", 5)
+
+        query = """
+query FilteredClinicalDataPaginated($offset_value: Int, $limit_value: Int, $sort_value: String, $program_name_filter: String!, $project_name_filter: String!, $study_name_filter: String!, $disease_filter: String!, $filterValue: String!, $analytical_frac_filter: String!, $exp_type_filter: String!, $ethnicity_filter: String!, $race_filter: String!, $gender_filter: String!, $tumor_grade_filter: String!, $sample_type_filter: String!, $acquisition_type_filter: String!, $data_category_filter: String!, $file_type_filter: String!, $access_filter: String!, $downloadable_filter: String!, $case_status_filter: String!, $biospecimen_status_filter: String!, $getAll: Boolean!) {
+  getPaginatedUIClinical(offset: $offset_value, limit: $limit_value, sort: $sort_value, program_name: $program_name_filter, project_name: $project_name_filter, study_name: $study_name_filter, disease_type: $disease_filter, primary_site: $filterValue, analytical_fraction: $analytical_frac_filter, experiment_type: $exp_type_filter, ethnicity: $ethnicity_filter, race: $race_filter, gender: $gender_filter, tumor_grade: $tumor_grade_filter, sample_type: $sample_type_filter, acquisition_type: $acquisition_type_filter, data_category: $data_category_filter, file_type: $file_type_filter, access: $access_filter, downloadable: $downloadable_filter, case_status: $case_status_filter, biospecimen_status: $biospecimen_status_filter, getAll: $getAll) {
+    total
+    uiClinical {
+      case_submitter_id
+      external_case_id
+      ethnicity
+      gender
+      race
+      morphology
+      primary_diagnosis
+      site_of_resection_or_biopsy
+      tissue_or_organ_of_origin
+      tumor_grade
+      tumor_stage
+      age_at_diagnosis
+      classification_of_tumor
+      days_to_recurrence
+      case_id
+      disease_type
+      primary_site
+      program_name
+      project_name
+      status
+      cause_of_death
+      days_to_birth
+      days_to_death
+      vital_status
+      year_of_birth
+      year_of_death
+      age_at_index
+      premature_at_birth
+      weeks_gestation_at_birth
+      age_is_obfuscated
+      cause_of_death_source
+      occupation_duration_years
+      country_of_residence_at_enrollment
+      days_to_last_follow_up
+      days_to_last_known_disease_status
+      last_known_disease_status
+      progression_or_recurrence
+      prior_malignancy
+      ajcc_clinical_m
+      ajcc_clinical_n
+      ajcc_clinical_stage
+      ajcc_clinical_t
+      ajcc_pathologic_m
+      ajcc_pathologic_n
+      ajcc_pathologic_stage
+      ajcc_pathologic_t
+      ajcc_staging_system_edition
+      ann_arbor_b_symptoms
+      ann_arbor_clinical_stage
+      ann_arbor_extranodal_involvement
+      ann_arbor_pathologic_stage
+      best_overall_response
+      burkitt_lymphoma_clinical_variant
+      circumferential_resection_margin
+      colon_polyps_history
+      days_to_best_overall_response
+      days_to_diagnosis
+      days_to_hiv_diagnosis
+      days_to_new_event
+      figo_stage
+      hiv_positive
+      hpv_positive_type
+      hpv_status
+      iss_stage
+      laterality
+      ldh_level_at_diagnosis
+      ldh_normal_range_upper
+      lymph_nodes_positive
+      lymphatic_invasion_present
+      method_of_diagnosis
+      peripancreatic_lymph_nodes_positive
+      peripancreatic_lymph_nodes_tested
+      supratentorial_localization
+      tumor_confined_to_organ_of_origin
+      tumor_focality
+      tumor_regression_grade
+      vascular_invasion_type
+      wilms_tumor_histologic_subtype
+      breslow_thickness
+      gleason_grade_group
+      igcccg_stage
+      international_prognostic_index
+      largest_extrapelvic_peritoneal_focus
+      masaoka_stage
+      new_event_anatomic_site
+      new_event_type
+      overall_survival
+      perineural_invasion_present
+      prior_treatment
+      progression_free_survival
+      progression_free_survival_event
+      residual_disease
+      vascular_invasion_present
+      year_of_diagnosis
+      icd_10_code
+      synchronous_malignancy
+      metastasis_at_diagnosis
+      metastasis_at_diagnosis_site
+      mitosis_karyorrhexis_index
+      non_nodal_regional_disease
+      non_nodal_tumor_deposits
+      ovarian_specimen_status
+      ovarian_surface_involvement
+      percent_tumor_invasion
+      peritoneal_fluid_cytological_status
+      primary_gleason_grade
+      secondary_gleason_grade
+      weiss_assessment_score
+      adrenal_hormone
+      ann_arbor_b_symptoms_described
+      diagnosis_is_primary_disease
+      eln_risk_classification
+      figo_staging_edition_year
+      gleason_grade_tertiary
+      gleason_patterns_percent
+      margin_distance
+      margins_involved_site
+      pregnant_at_diagnosis
+      satellite_nodule_present
+      sites_of_involvement
+      tumor_depth
+      who_cns_grade
+      who_nte_grade
+      diagnosis_uuid
+      anaplasia_present
+      anaplasia_present_type
+      child_pugh_classification
+      cog_liver_stage
+      cog_neuroblastoma_risk_group
+      cog_renal_stage
+      cog_rhabdomyosarcoma_risk_group
+      enneking_msts_grade
+      enneking_msts_metastasis
+      enneking_msts_stage
+      enneking_msts_tumor_site
+      esophageal_columnar_dysplasia_degree
+      esophageal_columnar_metaplasia_present
+      first_symptom_prior_to_diagnosis
+      gastric_esophageal_junction_involvement
+      goblet_cells_columnar_mucosa_present
+      gross_tumor_weight
+      inpc_grade
+      inpc_histologic_group
+      inrg_stage
+      inss_stage
+      irs_group
+      irs_stage
+      ishak_fibrosis_score
+      lymph_nodes_tested
+      medulloblastoma_molecular_classification
+      externalReferences {
+        reference_resource_shortname
+        reference_entity_location
+        __typename
+      }
+      exposures {
+        exposure_id
+        exposure_submitter_id
+        alcohol_days_per_week
+        alcohol_drinks_per_day
+        alcohol_history
+        alcohol_intensity
+        asbestos_exposure
+        cigarettes_per_day
+        coal_dust_exposure
+        environmental_tobacco_smoke_exposure
+        pack_years_smoked
+        radon_exposure
+        respirable_crystalline_silica_exposure
+        smoking_frequency
+        time_between_waking_and_first_smoke
+        tobacco_smoking_onset_year
+        tobacco_smoking_quit_year
+        tobacco_smoking_status
+        type_of_smoke_exposure
+        type_of_tobacco_used
+        years_smoked
+        age_at_onset
+        alcohol_type
+        exposure_duration
+        exposure_duration_years
+        exposure_type
+        marijuana_use_per_week
+        parent_with_radiation_exposure
+        secondhand_smoke_as_child
+        smokeless_tobacco_quit_age
+        tobacco_use_per_day
+        __typename
+      }
+      follow_ups {
+        follow_up_id
+        follow_up_submitter_id
+        adverse_event
+        adverse_event_grade
+        aids_risk_factors
+        barretts_esophagus_goblet_cells_present
+        bmi
+        body_surface_area
+        cause_of_response
+        cd4_count
+        cdc_hiv_risk_factors
+        comorbidity
+        comorbidity_method_of_diagnosis
+        days_to_adverse_event
+        days_to_comorbidity
+        days_to_follow_up
+        days_to_imaging
+        days_to_progression
+        days_to_progression_free
+        days_to_recurrence
+        diabetes_treatment_type
+        disease_response
+        dlco_ref_predictive_percent
+        ecog_performance_status
+        evidence_of_recurrence_type
+        eye_color
+        fev1_ref_post_bronch_percent
+        fev1_ref_pre_bronch_percent
+        fev1_fvc_pre_bronch_percent
+        fev1_fvc_post_bronch_percent
+        haart_treatment_indicator
+        height
+        hepatitis_sustained_virological_response
+        history_of_tumor
+        history_of_tumor_type
+        hiv_viral_load
+        hormonal_contraceptive_type
+        hormonal_contraceptive_use
+        hormone_replacement_therapy_type
+        hpv_positive_type
+        hysterectomy_margins_involved
+        hysterectomy_type
+        imaging_result
+        imaging_type
+        immunosuppressive_treatment_type
+        karnofsky_performance_status
+        menopause_status
+        nadir_cd4_count
+        pancreatitis_onset_year
+        pregnancy_outcome
+        procedures_performed
+        progression_or_recurrence
+        progression_or_recurrence_anatomic_site
+        progression_or_recurrence_type
+        recist_targeted_regions_number
+        recist_targeted_regions_sum
+        reflux_treatment_type
+        risk_factor
+        risk_factor_treatment
+        scan_tracer_used
+        undescended_testis_corrected
+        undescended_testis_corrected_age
+        undescended_testis_corrected_laterality
+        undescended_testis_corrected_method
+        undescended_testis_history
+        undescended_testis_history_laterality
+        viral_hepatitis_serologies
+        weight
+        __typename
+      }
+      treatments {
+        treatment_id
+        treatment_submitter_id
+        days_to_treatment_end
+        days_to_treatment_start
+        initial_disease_status
+        regimen_or_line_of_therapy
+        therapeutic_agents
+        treatment_anatomic_site
+        treatment_effect
+        treatment_intent_type
+        treatment_or_therapy
+        treatment_outcome
+        treatment_type
+        chemo_concurrent_to_radiation
+        number_of_cycles
+        reason_treatment_ended
+        route_of_administration
+        treatment_arm
+        treatment_dose
+        treatment_dose_units
+        treatment_effect_indicator
+        treatment_frequency
+        __typename
+      }
+      samples {
+        sample_id
+        sample_submitter_id
+        annotation
+        __typename
+      }
+      __typename
+    }
+    pagination {
+      count
+      sort
+      from
+      page
+      total
+      pages
+      size
+      __typename
+    }
+    __typename
+  }
+}
+                """
+
+        variables = {
+            "offset_value": 0,
+            "limit_value": 250,
+            "sort_value": "",
+            "program_name_filter": "Applied Proteogenomics OrganizationaL Learning and Outcomes - APOLLO",
+            "project_name_filter": "",
+            "study_name_filter": "",
+            "disease_filter": "",
+            "filterValue": "",
+            "analytical_frac_filter": "",
+            "exp_type_filter": "",
+            "ethnicity_filter": "",
+            "race_filter": "",
+            "gender_filter": "",
+            "tumor_grade_filter": "",
+            "sample_type_filter": "",
+            "acquisition_type_filter": "",
+            "data_category_filter": "",
+            "file_type_filter": "",
+            "access_filter": "",
+            "downloadable_filter": "",
+            "case_status_filter": "",
+            "biospecimen_status_filter": "",
+            "getAll": False,
+        }
+
+        try:
+            response = httpx.post(
+                mds_url, json={"query": query, "variables": variables}
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            results["results"] = response_data["data"]["getPaginatedUIClinical"][
+                "uiClinical"
+            ]
+            logger.info(
+                f"Fetched {response_data['data']['getPaginatedUICase']['total']} records from PDC)"
+            )
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDCSubjectAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["disease_type", "primary_site"]
+            ]
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class PDCStudyAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for Proteomic Data Commons
+    Expected Parameters:
+        size:   Number of studies to pull in a single call, default=5 and therefore optional
+        #Note - The API doesn't seem to do very well with large requests,
+                hence confining it to a smaller number
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+        batchSize = kwargs["filters"].get("size", 5)
+
+        query = """
+                    query FilteredStudiesDataPaginated(
+                    $offset_value: Int
+                    $limit_value: Int
+                    $sort_value: String
+                    $program_name_filter: String!
+                    $project_name_filter: String!
+                    $study_name_filter: String!
+                    $disease_filter: String!
+                    $filterValue: String!
+                    $analytical_frac_filter: String!
+                    $exp_type_filter: String!
+                    $ethnicity_filter: String!
+                    $race_filter: String!
+                    $gender_filter: String!
+                    $tumor_grade_filter: String!
+                    $sample_type_filter: String!
+                    $acquisition_type_filter: String!
+                    $data_category_filter: String!
+                    $file_type_filter: String!
+                    $access_filter: String!
+                    $downloadable_filter: String!
+                    $biospecimen_status_filter: String!
+                    $case_status_filter: String!
+                    $getAll: Boolean!
+                    ) {
+                    getPaginatedUIStudy(
+                        offset: $offset_value
+                        limit: $limit_value
+                        sort: $sort_value
+                        program_name: $program_name_filter
+                        project_name: $project_name_filter
+                        study_name: $study_name_filter
+                        disease_type: $disease_filter
+                        primary_site: $filterValue
+                        analytical_fraction: $analytical_frac_filter
+                        experiment_type: $exp_type_filter
+                        ethnicity: $ethnicity_filter
+                        race: $race_filter
+                        gender: $gender_filter
+                        tumor_grade: $tumor_grade_filter
+                        sample_type: $sample_type_filter
+                        acquisition_type: $acquisition_type_filter
+                        data_category: $data_category_filter
+                        file_type: $file_type_filter
+                        access: $access_filter
+                        downloadable: $downloadable_filter
+                        biospecimen_status: $biospecimen_status_filter
+                        case_status: $case_status_filter
+                        getAll: $getAll
+                    ) {
+                        total
+                        uiStudies {
+                        study_id
+                        pdc_study_id
+                        submitter_id_name
+                        study_description
+                        study_submitter_id
+                        program_name
+                        project_name
+                        disease_type
+                        primary_site
+                        analytical_fraction
+                        experiment_type
+                        embargo_date
+                        cases_count
+                        aliquots_count
+                        filesCount {
+                            file_type
+                            data_category
+                            files_count
+                            __typename
+                        }
+                        supplementaryFilesCount {
+                            data_category
+                            file_type
+                            files_count
+                            __typename
+                        }
+                        nonSupplementaryFilesCount {
+                            data_category
+                            file_type
+                            files_count
+                            __typename
+                        }
+                        contacts {
+                            name
+                            institution
+                            email
+                            url
+                            __typename
+                        }
+                        versions {
+                            number
+                            __typename
+                        }
+                        __typename
+                        }
+                        pagination {
+                        count
+                        sort
+                        from
+                        page
+                        total
+                        pages
+                        size
+                        __typename
+                        }
+                        __typename
+                    }
+                    }
+                """
+
+        variables = {
+            "offset_value": 0,
+            "limit_value": 10,
+            "sort_value": "",
+            "program_name_filter": "Applied Proteogenomics OrganizationaL Learning and Outcomes - APOLLO",
+            "project_name_filter": "",
+            "study_name_filter": "",
+            "disease_filter": "",
+            "filterValue": "",
+            "analytical_frac_filter": "",
+            "exp_type_filter": "",
+            "ethnicity_filter": "",
+            "race_filter": "",
+            "gender_filter": "",
+            "tumor_grade_filter": "",
+            "sample_type_filter": "",
+            "acquisition_type_filter": "",
+            "data_category_filter": "",
+            "file_type_filter": "",
+            "access_filter": "",
+            "downloadable_filter": "",
+            "biospecimen_status_filter": "",
+            "case_status_filter": "",
+            "getAll": False,
+        }
+
+        try:
+            response = httpx.post(
+                mds_url, json={"query": query, "variables": variables}
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            results["results"] = response_data["data"]["getPaginatedUIStudy"][
+                "uiStudies"
+            ]
+            logger.info(
+                f"Fetched {response_data['data']['getPaginatedUICase']['total']} records from PDC)"
+            )
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = PDCSubjectAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+            tag_list = []
+            for tag_category in ["disease_type", "primary_site"]:
+                if normalized_item[tag_category]:
+                    tag_string = normalized_item[tag_category]
+                    if ";" in tag_string:
+                        tags = tag_string.split(";")
+                        for tag in tags:
+                            tag_list.append({"name": tag, "category": tag_category})
+                    else:
+                        tag_list.append({"name": tag_string, "category": tag_category})
+
+                else:
+                    tag_list.append({"name": "", "category": tag_category})
+
+            normalized_item["tags"] = tag_list
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class TCIAAdapter(RemoteMetadataAdapter):
+    """
+    Simple adapter for TCIA (cancerimagingarchive.net)
+    """
+
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        try:
+            response = httpx.get(mds_url)
+            response.raise_for_status()
+
+            response_data = response.json()
+            results["results"] = response_data
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = TCIAAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+
+            normalized_item[
+                "description"
+            ] = f"TCIA data from collection: {normalized_item['program_name']}."
+
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item[tag] if normalized_item[tag] else "",
+                    "category": tag,
+                }
+                for tag in ["program_name"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "discovery_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
+class WindberSubjectAdapter(RemoteMetadataAdapter):
+    @retry(
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(httpx.TimeoutException),
+        wait=wait_random_exponential(multiplier=1, max=10),
+    )
+    def getRemoteDataAsJson(self, **kwargs) -> Dict:
+        results = {"results": []}
+
+        mds_url = kwargs.get("mds_url", None)
+        if mds_url is None:
+            return results
+
+        try:
+            response = httpx.get(mds_url)
+            response.raise_for_status()
+
+            response_data = response.json()
+            results["results"] = response_data
+
+        except httpx.TimeoutException as exc:
+            logger.error(f"An timeout error occurred while requesting {mds_url}.")
+            raise
+        except httpx.HTTPError as exc:
+            logger.error(
+                f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Returning {len(results['results'])} results"
+            )
+        except Exception as exc:
+            logger.error(
+                f"An error occurred while requesting {mds_url} {exc}. Returning {len(results['results'])} results."
+            )
+
+        return results
+
+    @staticmethod
+    def addGen3ExpectedFields(
+        item, mappings, keepOriginalFields, globalFieldFilters, schema
+    ):
+        """
+        Map item fields to gen3 normalized fields
+        using the mapping and adding the location
+        """
+        results = item
+        if mappings is not None:
+            mapped_fields = RemoteMetadataAdapter.mapFields(
+                item, mappings, globalFieldFilters, schema
+            )
+            if keepOriginalFields:
+                results.update(mapped_fields)
+            else:
+                results = mapped_fields
+
+        return results
+
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response.
+        :param data:
+        :return:
+        """
+        mappings = kwargs.get("mappings", None)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for item in data["results"]:
+            normalized_item = WindberSubjectAdapter.addGen3ExpectedFields(
+                item,
+                mappings,
+                keepOriginalFields,
+                globalFieldFilters,
+                schema,
+            )
+
+            normalized_item["tags"] = [
+                {
+                    "name": normalized_item.get(tag, ""),
+                    "category": tag,
+                }
+                for tag in ["primary_disease", "cancer_type"]
+            ]
+
+            results[normalized_item["_unique_id"]] = {
+                "_guid_type": "Windber_subject_metadata",
+                "gen3_discovery": normalized_item,
+            }
+
+        return results
+
+
 def gather_metadata(
     gather,
     mds_url,
@@ -1604,7 +2588,6 @@ def gather_metadata(
     schema,
     offset,
 ):
-    # loger
     try:
         json_data = gather.getRemoteDataAsJson(
             mds_url=mds_url, filters=filters, config=config, offset=offset
@@ -1641,6 +2624,10 @@ adapters = {
     "gdc": GDCAdapter,
     "cidc": CIDCAdapter,
     "pdc": PDCAdapter,
+    "tcia": TCIAAdapter,
+    "pdcsubject": PDCSubjectAdapter,
+    "pdcstudy": PDCStudyAdapter,
+    "windbersubject": WindberSubjectAdapter,
 }
 
 

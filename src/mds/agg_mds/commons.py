@@ -242,6 +242,7 @@ class Settings:
     cache_drs: bool = False
     drs_indexd_server: str = "https://dataguids.org"
     timestamp_entry: bool = False
+    array_config_prefix: Optional[str] = None
 
 
 @dataclass_json

@@ -1,14 +1,17 @@
-from more_itertools import side_effect
 import respx
-import asyncio
 from mds.agg_mds.adapters import (
     get_metadata,
     get_json_path_value,
     strip_email,
     strip_html,
+    normalize_value,
+    normalize_tags,
     add_icpsr_source_url,
     FieldFilters,
     get_json_path_value,
+    add_clinical_trials_source_url,
+    uppercase,
+    strip_leading_double_underscore,
 )
 import httpx
 
@@ -136,3 +139,292 @@ def test_json_path_expression():
         ["results1.csv", "results2.csv", "results3.csv"],
         ["results4.csv", "results5.csv", "results6.csv"],
     ]
+
+
+def test_normalize_value_with_no_mapping():
+    """
+    Test that the function returns the input value when mapping is None.
+    """
+    value = "test_value"
+    result = normalize_value(value)
+    assert result == "test_value"
+
+
+def test_normalize_value_with_non_matching_mapping():
+    """
+    Test that the function returns the input value when it is not found in the mapping.
+    """
+    value = "test_value"
+    mapping = {"other_value": "mapped_value"}
+    result = normalize_value(value, mapping)
+    assert result == "test_value"
+
+
+def test_normalize_value_with_matching_mapping():
+    """
+    Test that the function returns the mapped value when the input value is found in the mapping.
+    """
+    value = "test_value"
+    mapping = {"test_value": "mapped_value"}
+    result = normalize_value(value, mapping)
+    assert result == "mapped_value"
+
+
+def test_normalize_value_with_non_string_input():
+    """
+    Test that the function returns the input value unchanged when the input is not a string.
+    """
+    value = 12345
+    mapping = {"12345": "mapped_value"}
+    result = normalize_value(value, mapping)
+    assert result == 12345
+
+
+def test_normalize_value_with_empty_mapping():
+    """
+    Test that the function returns the input value when the mapping is empty.
+    """
+    value = "test_value"
+    mapping = {}
+    result = normalize_value(value, mapping)
+    assert result == "test_value"
+
+
+def test_normalize_value_with_none_as_value():
+    """
+    Test that the function returns None when the input value is None.
+    """
+    value = None
+    mapping = {"test_value": "mapped_value"}
+    result = normalize_value(value, mapping)
+    assert result is None
+
+
+def test_normalize_tags_with_no_mapping():
+    """
+    Test that the function returns the original tags unmodified
+    when no mapping is provided.
+    """
+    input_tags = [{"name": "tag1", "category": "cat1"}]
+    result = normalize_tags(input_tags)
+    assert result == input_tags
+
+
+def test_normalize_tags_with_empty_mapping():
+    """
+    Test that the function returns the original tags unmodified
+    when an empty mapping is provided.
+    """
+    input_tags = [{"name": "tag1", "category": "cat1"}]
+    result = normalize_tags(input_tags, mapping={})
+    assert result == input_tags
+
+
+def test_normalize_tags_with_matching_mapping():
+    """
+    Test that the function updates the 'name' field correctly
+    based on the provided mapping.
+    """
+    input_tags = [{"name": "tag1", "category": "cat1"}]
+    mapping = {"cat1": {"tag1": "tag1_updated"}}
+    expected = [{"name": "tag1_updated", "category": "cat1"}]
+    result = normalize_tags(input_tags, mapping=mapping)
+    assert result == expected
+
+
+def test_normalize_tags_with_non_matching_category():
+    """
+    Test that the function leaves the tags unchanged
+    when the category is not in the mapping.
+    """
+    input_tags = [{"name": "tag1", "category": "cat1"}]
+    mapping = {"cat2": {"tag1": "tag1_updated"}}
+    result = normalize_tags(input_tags, mapping=mapping)
+    assert result == input_tags
+
+
+def test_normalize_tags_with_non_matching_name():
+    """
+    Test that the function leaves the tags unchanged
+    when the name is not in the mapping for the given category.
+    """
+    input_tags = [{"name": "tag1", "category": "cat1"}]
+    mapping = {"cat1": {"tag2": "tag2_updated"}}
+    result = normalize_tags(input_tags, mapping=mapping)
+    assert result == input_tags
+
+
+def test_normalize_tags_with_missing_name_key():
+    """
+    Test that the function leaves tags without a 'name' key unchanged.
+    """
+    input_tags = [{"category": "cat1"}]
+    mapping = {"cat1": {"tag1": "tag1_updated"}}
+    result = normalize_tags(input_tags, mapping=mapping)
+    assert result == input_tags
+
+
+def test_normalize_tags_with_missing_category_key():
+    """
+    Test that the function leaves tags without a 'category' key unchanged.
+    """
+    input_tags = [{"name": "tag1"}]
+    mapping = {"cat1": {"tag1": "tag1_updated"}}
+    result = normalize_tags(input_tags, mapping=mapping)
+    assert result == input_tags
+
+
+def test_normalize_tags_with_partial_mapping_applied():
+    """
+    Test that the function updates the 'name' field for tags with matches
+    in the mapping and leaves others unchanged.
+    """
+    input_tags = [
+        {"name": "tag1", "category": "cat1"},
+        {"name": "tag2", "category": "cat2"},
+    ]
+    mapping = {"cat1": {"tag1": "tag1_updated"}}
+    expected = [
+        {"name": "tag1_updated", "category": "cat1"},
+        {"name": "tag2", "category": "cat2"},
+    ]
+    result = normalize_tags(input_tags, mapping=mapping)
+    assert result == expected
+
+
+def test_normalize_tags_empty_input_tags():
+    """
+    Test that the function returns an empty list when given
+    an empty input list.
+    """
+    result = normalize_tags([], mapping={"cat1": {"tag1": "tag1_updated"}})
+    assert result == []
+
+
+def test_add_clinical_trials_source_url():
+    integer = 1
+    assert add_clinical_trials_source_url(integer) == 1
+
+
+def test_uppercase():
+    integer = 1
+    assert uppercase(integer) == 1
+
+
+def test_single_dict_with_double_underscore_keys():
+    """Test renaming double underscore keys in a single dictionary."""
+    input_dict = {"__private": "secret", "__name": "test", "normal": "value"}
+    expected = {"_private": "secret", "_name": "test", "normal": "value"}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected
+
+
+def test_single_dict_no_double_underscore_keys():
+    """Test dictionary with no double underscore keys remains unchanged."""
+    input_dict = {"normal": "value", "_single": "underscore", "no_underscore": "test"}
+    expected = {"normal": "value", "_single": "underscore", "no_underscore": "test"}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected
+
+
+def test_empty_dict():
+    """Test empty dictionary."""
+    input_dict = {}
+    expected = {}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected
+
+
+def test_dict_with_non_string_keys():
+    """Test dictionary with non-string keys."""
+    input_dict = {123: "number", ("a", "b"): "tuple", "__string": "value"}
+    expected = {123: "number", ("a", "b"): "tuple", "_string": "value"}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected
+
+
+def test_dict_with_only_double_underscores():
+    """Test dictionary with key that is exactly '__'"""
+    input_dict = {"__": "double_underscore_only"}
+    expected = {"__": "double_underscore_only"}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected
+
+
+def test_list_of_dicts():
+    """Test list containing multiple dictionaries."""
+    input_list = [
+        {"__id": 1, "__type": "user", "name": "Alice"},
+        {"__id": 2, "__type": "admin", "name": "Bob"},
+        {"normal_key": "no change needed"},
+    ]
+    expected = [
+        {"_id": 1, "_type": "user", "name": "Alice"},
+        {"_id": 2, "_type": "admin", "name": "Bob"},
+        {"normal_key": "no change needed"},
+    ]
+    result = strip_leading_double_underscore(input_list)
+    assert result == expected
+
+
+def test_empty_list():
+    """Test empty list."""
+    input_list = []
+    expected = []
+    result = strip_leading_double_underscore(input_list)
+    assert result == expected
+
+
+def test_mixed_list():
+    """Test list with dictionaries and other types."""
+    input_list = [{"__test": "value"}, "string_item", 123, {"__another": "dict"}, None]
+    expected = [{"_test": "value"}, "string_item", 123, {"_another": "dict"}, None]
+    result = strip_leading_double_underscore(input_list)
+    assert result == expected
+
+
+def test_list_with_empty_dicts():
+    """Test list containing empty dictionaries."""
+    input_list = [{}, {"__key": "value"}, {}]
+    expected = [{}, {"_key": "value"}, {}]
+    result = strip_leading_double_underscore(input_list)
+    assert result == expected
+
+
+def test_non_dict_non_list_input():
+    """Test input that is neither dict nor list."""
+    inputs = ["string", 123, None, ("tuple",), {"set"}]
+    for input_val in inputs:
+        result = strip_leading_double_underscore(input_val)
+        assert result == input_val
+
+
+def test_original_not_modified():
+    """Test that the original input is not modified (immutability)."""
+    original_dict = {"__private": "secret", "normal": "value"}
+    original_copy = original_dict.copy()
+
+    strip_leading_double_underscore(original_dict)
+    assert original_dict == original_copy
+
+    original_list = [{"__id": 1}, {"normal": "value"}]
+    original_list_copy = [d.copy() for d in original_list]
+
+    strip_leading_double_underscore(original_list)
+    assert original_list == original_list_copy
+
+
+def test_keys_starting_with_triple_underscore():
+    """Test keys that start with more than two underscores."""
+    input_dict = {"___private": "secret", "____name": "test"}
+    expected = {"___private": "secret", "____name": "test"}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected
+
+
+def test_keys_with_underscore_not_at_start():
+    """Test keys with underscores not at the beginning."""
+    input_dict = {"my__private": "secret", "test__name": "value"}
+    expected = {"my__private": "secret", "test__name": "value"}
+    result = strip_leading_double_underscore(input_dict)
+    assert result == expected

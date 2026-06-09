@@ -1,41 +1,46 @@
 [tool.poetry]
 name = "mds"
-version = "3.1.0"
+version = "4.3.0"
 description = "Metadata Service"
 authors = ["CTDS UChicago <cdis@uchicago.edu>"]
 license = "Apache-2.0"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-fastapi = "^0.65.2"
-uvicorn = {extras = ["standard"], version="^0.18.2"}
-gunicorn = "^20.0.4"
-gino = {version = "^1.0.0", extras = ["starlette"]}
-alembic = "^1.3"
+python = ">=3.13,<4.0"
+fastapi = "*"
+uvicorn = {extras = ["standard"], version="^0.30.0"}
+gunicorn = ">=22.0.0"
+sqlalchemy = {version = ">=2.0", extras = ["asyncio"]}
 psycopg2-binary = "^2.8"
-gen3authz = "^1.5.1"
-indexclient = "^2.1.0"
+alembic = "^1.13"
+gen3authz = "^2.0"
 httpx = "^0.23.0"
-authutils = "^5.0.4"
+authutils = ">=7.2.2"
 cdislogging = "^1.0"
-click = "==7.1.*,>=7.1.2"
-pyyaml = "==5.4.*,>=5.4.1"
+pyyaml = "^6.0"
 setuptools = "*"
 dataclasses-json = "==0.5.*,>=0.5.2"
-pytest-asyncio = "^0.15.1"
-jsonpath-ng = "^1.5.3"
-elasticsearch = "==7.10.*"
+jsonpath-ng = "==1.5.3"
+opensearch-py = ">=2.0.0,<3"
+urllib3 = ">=2.7.0,<3"
 bleach = ">=3.3.1"
 tenacity = ">=8.0.0"
-pydash = "^5.1.0"
+pathvalidate = "^3.2.0"
+importlib-metadata = "^6.8.0"
+starlette = "^0.49.3"
+asyncpg = "0.30.0"
+pydantic = "2.9.2"
+xmltodict = "0.14.2"
 
-[tool.poetry.dev-dependencies]
-pytest = "^5.3"
-pytest-cov = "^2.8"
-pyyaml = "^5.3.1"
-requests = "^2.22"
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-cov = "*"
+pyyaml = "*"
+requests = "^2.32"
 respx = "*"
 nest-asyncio = "^1.5.1"
+deptry = "^0.23.1"
+pytest-asyncio = "^0.23.0"
 
 [tool.poetry.plugins."mds.modules"]
 "query" = "mds.query"
@@ -46,5 +51,13 @@ nest-asyncio = "^1.5.1"
 "aliases" = "mds.aliases"
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=2.0"]
 build-backend = "poetry.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+# fix for coverage reporting when using sqlalchemy async sessions
+# (see https://stackoverflow.com/questions/74305054)
+concurrency = ["multiprocessing", "thread", "greenlet"]

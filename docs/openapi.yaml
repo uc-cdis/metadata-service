@@ -5,7 +5,8 @@ components:
         \ using in place of whatever GUID\n    specified"
       properties:
         aliases:
-          items: {}
+          items:
+            type: string
           title: Aliases
           type: array
       title: AliasObjInput
@@ -66,9 +67,16 @@ components:
       type: object
     ValidationError:
       properties:
+        ctx:
+          title: Context
+          type: object
+        input:
+          title: Input
         loc:
           items:
-            type: string
+            anyOf:
+            - type: string
+            - type: integer
           title: Location
           type: array
         msg:
@@ -92,8 +100,8 @@ components:
       type: http
 info:
   title: Framework Services Object Management Service
-  version: 3.1.0
-openapi: 3.0.2
+  version: 4.3.0
+openapi: 3.1.0
 paths:
   /_status:
     get:
@@ -272,21 +280,23 @@ paths:
       - Aggregate
   /aggregate/metadata/{name}:
     get:
-      description: "et all metadata records from a commons by name\n\nReturns an array\
-        \ containing all the metadata entries for a single commons.\nThere are no\
-        \ limit/offset parameters.\n\nExample:\n\n    [\n        {\n            \"\
-        gen3_discovery\": {\n                \"name\": \"bear\",\n               \
-        \ \"type\": \"study\",\n                ...\n            },\n            \"\
-        data_dictionaries\": {\n                ...\n            }\n        },\n \
-        \       {\n            \"gen3_discovery\": {\n                \"name\": \"\
-        cat\",\n                \"type\": \"study\",\n                ...\n      \
-        \      }\n        },\n        ...\n    ]"
+      description: "get all metadata records from a commons by name\n\nReturns an\
+        \ array containing all the metadata entries for a single commons.\nThere are\
+        \ no limit/offset parameters.\n\nExample:\n\n    [\n        {\n          \
+        \  \"gen3_discovery\": {\n                \"name\": \"bear\",\n          \
+        \      \"type\": \"study\",\n                ...\n            },\n       \
+        \     \"data_dictionaries\": {\n                ...\n            }\n     \
+        \   },\n        {\n            \"gen3_discovery\": {\n                \"name\"\
+        : \"cat\",\n                \"type\": \"study\",\n                ...\n  \
+        \          }\n        },\n        ...\n    ]"
       operationId: get_aggregate_metadata_for_commons_aggregate_metadata__name__get
       parameters:
-      - in: path
+      - description: Return the results without grouping items by commons.
+        in: path
         name: name
         required: true
         schema:
+          description: Return the results without grouping items by commons.
           title: Name
           type: string
       responses:
@@ -434,7 +444,8 @@ paths:
         content:
           application/json:
             schema:
-              items: {}
+              items:
+                type: object
               title: Data List
               type: array
         required: true

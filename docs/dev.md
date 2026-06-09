@@ -13,7 +13,7 @@
 Install required software:
 
 * [PostgreSQL](PostgreSQL) 9.6 or above
-* [Python](https://www.python.org/downloads/) 3.9 or above
+* [Python](https://www.python.org/downloads/) 3.13 or above
 * [Poetry](https://poetry.eustace.io/docs/#installation)
 
 Then use `poetry install` to install the dependencies. Before that,
@@ -69,26 +69,6 @@ CREATE DATABASE test_metadata;
 
 ```bash
 pytest --cov=src --cov=migrations/versions tests
-```
-
-## Develop with Docker
-
-Use Docker compose:
-
-```bash
-docker-compose up
-```
-
-Run database schema migration as well:
-
-```bash
-docker-compose exec app alembic upgrade head
-```
-
-Run tests:
-
-```bash
-docker-compose exec app pytest --cov=src --cov=migrations/versions tests
 ```
 
 ## Work with Aggregate MDS
@@ -172,3 +152,12 @@ helm upgrade --install gen3/metadata
 You can also store your images in a local registry. Kind and Minikube are popular for their local registries:
 - https://kind.sigs.k8s.io/docs/user/local-registry/
 - https://minikube.sigs.k8s.io/docs/handbook/registry/#enabling-insecure-registries
+
+
+## Additional Notes
+
+When using the Metadata Service as a backend to retrieve results for the Discovery Page, query response times can increase if the database contains a large number of records. To improve performance in such cases, one recommended approach is to manually add an index on the `data->>_guid_type` field in the PostgreSQL database.
+
+```SQL
+create index metadata_guid_type on public.metadata((data->>'_guid_type'));
+```
