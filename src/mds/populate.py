@@ -276,8 +276,9 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
     logger.info(f"Temp indexes populated successfully. Proceeding to clone")
     # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
     try:
-        await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
-        await datastore.create_indexes(commons_mapping=field_mapping)
+        if append == False:
+            await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
+            await datastore.create_indexes(commons_mapping=field_mapping)
         await datastore.clone_temp_indexes_to_real_indexes()
         await datastore.drop_all_temp_indexes()
     except Exception as ex:
