@@ -112,12 +112,15 @@ async def drop_all_temp_indexes():
 
 
 async def clone_temp_indexes_to_real_indexes():
+    res = None
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         source_index = index + "-temp"
         source_index_ready = False
         i = 0
         while not source_index_ready and i <= 4:
             try:
+                # Force a refresh so all buffered documents become visible before counting
+                elastic_search_client.indices.refresh(index=source_index)
                 doc_count = elastic_search_client.count(index=source_index).get(
                     "count", 0
                 )
@@ -139,10 +142,13 @@ async def clone_temp_indexes_to_real_indexes():
 
         reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
         logger.debug(f"Cloning index: {source_index} to {index}...")
-        res = elastic_search_client.reindex(body=reqBody)
+        res = elastic_search_client.reindex(
+            body=reqBody, params={"wait_for_completion": "true"}
+        )
         # OpenSearch >1.0 introduces the clone api we could use later on
         # res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
+    return res
 
 
 async def create_indexes(common_mapping: dict):

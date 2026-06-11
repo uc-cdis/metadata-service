@@ -279,8 +279,14 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
         if append == False:
             await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
             await datastore.create_indexes(commons_mapping=field_mapping)
-        await datastore.clone_temp_indexes_to_real_indexes()
-        await datastore.drop_all_temp_indexes()
+
+        results = await datastore.clone_temp_indexes_to_real_indexes()
+        if results.get("failures") == []:
+            print("Reindexing successful. Deleting temporary index...")
+            await datastore.drop_all_temp_indexes()
+        else:
+            print("Reindex encountered failures. Aborting deletion.")
+
     except Exception as ex:
         logger.error("Error occurred during cloning.")
         logger.error(ex)
