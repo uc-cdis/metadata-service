@@ -33,7 +33,7 @@ pydantic = "2.9.2"
 xmltodict = "0.14.2"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
+pytest = "^9.0"
 pytest-cov = "*"
 pyyaml = "*"
 requests = "^2.32"
