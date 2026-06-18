@@ -82,14 +82,6 @@ def dict_to_array(d: dict) -> List[Dict[Any, Any]]:
     return [d]
 
 
-def string_to_text(s: str) -> Optional[float]:
-    try:
-        return str(s)
-    except ValueError:
-        logger.error(f"{s} failed to convert to a string")
-        return None
-
-
 @dataclass_json
 @dataclass
 class FieldDefinition:

@@ -142,7 +142,9 @@ async def clone_temp_indexes_to_real_indexes():
         reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
         logger.debug(f"Cloning index: {source_index} to {index}...")
         res = elastic_search_client.reindex(
-            body=reqBody, params={"wait_for_completion": "true"}
+            body=reqBody,
+            params={"wait_for_completion": "true"},
+            request_timeout=600,
         )
         # OpenSearch >1.0 introduces the clone api we could use later on
         # res = elastic_search_client.indices.clone(index=source_index, target=index)

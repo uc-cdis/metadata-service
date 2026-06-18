@@ -1104,7 +1104,7 @@ class Gen3Adapter(RemoteMetadataAdapter):
         moreData = True
         while moreData:
             try:
-                logger.info(f"getting batch {round(offset/batchSize)}.")
+                logger.info(f"getting batch {round(offset/batchSize)}")
 
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if filters:
