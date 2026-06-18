@@ -16,6 +16,13 @@ from tenacity import (
     before_sleep_log,
 )
 from mds import logger
+import re
+from functools import lru_cache
+
+
+@lru_cache(maxsize=None)
+def _cached_parse(expr: str):
+    return parse(expr)
 
 
 def strip_email(text: str):
@@ -183,6 +190,28 @@ class FieldFilters:
         return FieldFilters.filters[name](value)
 
 
+# Sentinel-free traversal below returns early, so no need for one here.
+# Matches plain dotted paths like $.foo.bar.baz — no filters, wildcards, indices, or recursion.
+_SIMPLE_PATH = re.compile(r"^\$(?:\.[A-Za-z_]\w*)+$")
+
+
+@lru_cache(maxsize=4096)
+def _parse_cached(expression: str):
+    """Compile and cache a JSON Path expression. Parsing dominates cost, so reuse it."""
+    return parse(expression)
+
+
+@lru_cache(maxsize=4096)
+def _simple_keys(expression: str) -> Optional[Tuple[str, ...]]:
+    """
+    If the expression is a plain dotted path, return its keys as a tuple so we can
+    walk the dict directly and skip the JSON Path engine entirely. Otherwise None.
+    """
+    if _SIMPLE_PATH.match(expression):
+        return tuple(expression[2:].split("."))
+    return None
+
+
 def get_json_path_value(
     expression: str,
     item: dict,
@@ -190,17 +219,27 @@ def get_json_path_value(
     default_value: str = "",
 ) -> Union[str, List[Any]]:
     """
-    Given a JSON Path expression and a dictionary, using the path expression
-    to find the value. If not found return and default value define return it, else
-    return None
+    Given a JSON Path expression and a dictionary, use the path expression to find
+    the value. If not found, return the default value when one is defined, else None.
     """
 
     if expression is None:
         return default_value if has_default_value else None
 
-    try:
-        jsonpath_expr = parse(expression)
+    # Fast path: plain dotted lookups bypass the JSON Path parser/evaluator.
+    keys = _simple_keys(expression)
+    if keys is not None:
+        obj: Any = item
+        for k in keys:
+            if isinstance(obj, dict) and k in obj:
+                obj = obj[k]
+            else:  # missing key -> same as "nothing found"
+                return default_value if has_default_value else None
+        return obj
 
+    # General path: parse (cached) then evaluate.
+    try:
+        jsonpath_expr = _parse_cached(expression)
     except JSONPathError as exc:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
@@ -208,13 +247,13 @@ def get_json_path_value(
         return default_value if has_default_value else None
 
     v = jsonpath_expr.find(item)
-    if len(v) == 0:  # nothing found, deal with this
+    if len(v) == 0:  # nothing found
         return default_value if has_default_value else None
 
-    if len(v) == 1:  # convert array length 1 to a value
+    if len(v) == 1:  # unwrap single match to a scalar
         return v[0].value
 
-    return [x.value for x in v]  # join list
+    return [x.value for x in v]
 
 
 def flatten(dictionary, parent_key=False, separator="."):
@@ -285,8 +324,10 @@ class RemoteMetadataAdapter(ABC):
         results = {}
 
         for key, value in mappings.items():
+            has_default_value = False
+            default_value = None
             try:
-                jsonpath_expr = parse(key)
+                jsonpath_expr = _cached_parse(key)
             except JSONPathError as exc:
                 logger.error(
                     f"Invalid JSON Path expression {exc} found as key . See https://github.com/json-path/JsonPath. Skipping this field"
@@ -327,14 +368,14 @@ class RemoteMetadataAdapter(ABC):
                     else:
                         field_value = FieldFilters.execute(flt, field_value)
 
-            elif isinstance(value, str) and "path:" in value:
+            elif isinstance(value, str) and value.startswith("path:"):
                 # process as json path
                 expression = value.split("path:")[1]
 
                 has_default_value = False
                 default_value = None
                 if (
-                    len(key_entries_in_schema)
+                    key_entries_in_schema
                     and key_entries_in_schema[0].value.default is not None
                 ):
                     has_default_value = True
@@ -1058,19 +1099,13 @@ class Gen3Adapter(RemoteMetadataAdapter):
         batchSize = config.get("batchSize", 1000)
         maxItems = config.get("maxItems", None)
 
-        offset = kwargs.get("offset", 0)
-
+        offset = 0
         limit = min(maxItems, batchSize) if maxItems is not None else batchSize
         moreData = True
-        if maxItems is not None:
-            if maxItems > batchSize:
-                limit = batchSize
-            else:
-                limit = maxItems
-
-        total = 0
         while moreData:
             try:
+                logger.info(f"getting batch {round(offset/batchSize)}.")
+
                 url = f"{mds_url}mds/metadata?data=True&_guid_type={guid_type}&limit={limit}&offset={offset}"
                 if filters:
                     url += f"&{filters}"
@@ -1082,11 +1117,13 @@ class Gen3Adapter(RemoteMetadataAdapter):
                 data = response.json()
                 results["results"].update(data)
                 numReturned = len(data)
-                total += numReturned
-                offset += numReturned
-                if numReturned == 0 or numReturned <= limit:
+
+                if numReturned < limit:
                     moreData = False
                 offset += numReturned
+                if maxItems is not None and offset >= maxItems:
+                    logger.info(f"Reached max items {maxItems}. Stopping.")
+                    moreData = False
 
             except httpx.TimeoutException:
                 logger.error(f"An timeout error occurred while requesting {url}.")
@@ -2584,11 +2621,10 @@ def gather_metadata(
     keepOriginalFields,
     globalFieldFilters,
     schema,
-    offset,
 ):
     try:
         json_data = gather.getRemoteDataAsJson(
-            mds_url=mds_url, filters=filters, config=config, offset=offset
+            mds_url=mds_url, filters=filters, config=config
         )
         results = gather.normalizeToGen3MDSFields(
             json_data,
@@ -2598,7 +2634,6 @@ def gather_metadata(
             keepOriginalFields=keepOriginalFields,
             globalFieldFilters=globalFieldFilters,
             schema=schema,
-            offset=offset,
         )
         logger.debug("Result after normalizing: ")
         logger.debug(results)
@@ -2608,6 +2643,60 @@ def gather_metadata(
     except RetryError:
         logger.error("Multiple retries failed. Returning no results")
     return {}
+
+
+class MC2DPFilesAdapter(Gen3Adapter):
+    def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
+        """
+        Iterates over the response extracting each data file from the _data_files field.
+        * data: input metadata to normalize
+        * kwargs: key value parameters passed as a dict
+        return: dict of results where the keys are identifiers in the Gen3 metadata format:
+                "GUID" : {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": normalize_item_metadata
+                    }
+        """
+
+        mappings = kwargs.get("mappings", None)
+        config = kwargs.get("config", {})
+        study_field = config.get("study_field", "gen3_discovery")
+        data_files_field = config.get("data_files_field", "data_files")
+        file_guid_field = config.get("file_guid_field", "file_unique_identifier")
+        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        globalFieldFilters = kwargs.get("globalFieldFilters", [])
+        schema = kwargs.get("schema", {})
+
+        results = {}
+        for guid, record in data["results"].items():
+            if study_field not in record:
+                logger.error("Study field not in record. Skipping")
+                continue
+            # get all the data files in the _data_files field
+
+            if data_files_field not in record[study_field]:
+                logger.info(f"Data files field not in record for {guid}. Skipping")
+                continue
+
+            items = record[study_field][data_files_field]
+            logger.info(f"Processing {len(items)} data files for {guid}")
+            for file_item in items:
+                item = {}
+                item["_guid_type"] = "discovery_metadata"
+                item = Gen3Adapter.addGen3ExpectedFields(
+                    file_item,
+                    mappings,
+                    keepOriginalFields,
+                    globalFieldFilters,
+                    schema,
+                )
+                file_guid = item.get(file_guid_field, None)
+                results[file_guid] = {
+                    "_guid_type": "discovery_metadata",
+                    "gen3_discovery": item,
+                }
+
+        return results
 
 
 adapters = {
@@ -2626,6 +2715,7 @@ adapters = {
     "pdcsubject": PDCSubjectAdapter,
     "pdcstudy": PDCStudyAdapter,
     "windbersubject": WindberSubjectAdapter,
+    "mc2dpFiles": MC2DPFilesAdapter,
 }
 
 
@@ -2639,7 +2729,6 @@ def get_metadata(
     keepOriginalFields=False,
     globalFieldFilters=None,
     schema=None,
-    offset=0,
 ):
     if config is None:
         config = {}
@@ -2667,5 +2756,4 @@ def get_metadata(
         keepOriginalFields=keepOriginalFields,
         globalFieldFilters=globalFieldFilters,
         schema=schema,
-        offset=offset,
     )

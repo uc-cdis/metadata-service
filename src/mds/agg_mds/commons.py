@@ -66,6 +66,10 @@ def string_to_number(s: str) -> Optional[float]:
         return None
 
 
+def float_to_integer(f: float) -> int:
+    return int(f)
+
+
 def string_to_dict(s: str) -> Optional[Dict[Any, Any]]:
     try:
         return json.loads(s)
@@ -114,10 +118,10 @@ class FieldDefinition:
         "string_to_number": string_to_number,
         "string_to_integer": string_to_integer,
         "string_to_object": string_to_dict,
-        "string_to_text": string_to_text,
         "object_to_array": dict_to_array,
         "string_to_array": string_to_array,
         "array_to_string": array_to_string,
+        "float_to_integer": float_to_integer,
     }
 
     MAP_TYPE_TO_JSON_SCHEMA_TYPES = {
@@ -125,7 +129,6 @@ class FieldDefinition:
         "int": "integer",
         "list": "array",
         "dict": "object",
-        "text": "string",
     }
 
     def has_default_value(self):
@@ -182,6 +185,9 @@ class FieldDefinition:
 
         if value_type == self.type:
             return value
+
+        if value is None:
+            return None
 
         conversion = f"{value_type}_to_{self.type}"
         converter = FieldDefinition.FIELD_NORMALIZATION.get(conversion, None)

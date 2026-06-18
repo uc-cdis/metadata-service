@@ -22,17 +22,11 @@ def parse_args(argv: List[str]) -> Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="config file to use", type=str, required=True)
-    parser.add_argument(
-        "--offset", help="offset for mds", type=int, default=0, required=False
-    )
-    parser.add_argument("--append", help="append mode for indices", action="store_true")
     known_args, unknown_args = parser.parse_known_args(argv)
     return known_args
 
 
-async def populate_metadata(
-    name: str, common, results, use_temp_index=False, append=False
-):
+async def populate_metadata(name: str, common, results, use_temp_index=False):
     mds_arr = [{k: v} for k, v in results.items()]
 
     total_items = len(mds_arr)
@@ -113,10 +107,7 @@ async def populate_metadata(
     keys = list(results.keys())
     info = {"commons_url": common.commons_url}
 
-    if append:
-        await datastore.add_metadata(name, mds_arr, use_temp_index)
-    else:
-        await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
+    await datastore.update_metadata(name, mds_arr, keys, tags, info, use_temp_index)
 
 
 async def populate_info(commons_config: Commons, use_temp_index=False) -> None:
@@ -164,7 +155,7 @@ async def populate_config(commons_config: Commons, use_temp_index=False) -> None
     await datastore.update_config_info(array_definition, use_temp_index)
 
 
-async def main(commons_config: Commons, offset=0, append=False) -> None:
+async def main(commons_config: Commons) -> None:
     """
     Given a config structure, pull all metadata from each one in the config and cache into the following
     structure:
@@ -215,18 +206,11 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
     try:
         for name, common in commons_config.gen3_commons.items():
             logger.info(f"Populating {name} using Gen3 MDS connector")
-            results = pull_mds(common.mds_url, common.guid_type, offset=offset)
+            results = pull_mds(common.mds_url, common.guid_type)
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
-                if append:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=True, append=True
-                    )
-                else:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=True, append=False
-                    )
+                await populate_metadata(name, common, results, use_temp_index=True)
 
         for name, common in commons_config.adapter_commons.items():
             logger.info(f"Populating {name} using adapter: {common.adapter}")
@@ -240,20 +224,11 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
                 common.keep_original_fields,
                 common.global_field_filters,
                 schema=commons_config.configuration.schema,
-                offset=offset,
             )
             logger.info(f"Received {len(results)} from {name}")
             if len(results) > 0:
                 mdsCount += len(results)
-                print("Populating metadata for %s" % name)
-                if append:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=True, append=True
-                    )
-                else:
-                    await populate_metadata(
-                        name, common, results, use_temp_index=True, append=False
-                    )
+                await populate_metadata(name, common, results, use_temp_index=True)
 
         if mdsCount == 0:
             logger.info(
@@ -276,17 +251,10 @@ async def main(commons_config: Commons, offset=0, append=False) -> None:
     logger.info(f"Temp indexes populated successfully. Proceeding to clone")
     # All temp indexes created without error, drop current real index, clone temp to real index and then drop temp index
     try:
-        if append == False:
-            await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
-            await datastore.create_indexes(commons_mapping=field_mapping)
-
-        results = await datastore.clone_temp_indexes_to_real_indexes()
-        if results.get("failures") == []:
-            print("Reindexing successful. Deleting temporary index...")
-            await datastore.drop_all_temp_indexes()
-        else:
-            print("Reindex encountered failures. Aborting deletion.")
-
+        await datastore.drop_all_non_temp_indexes()  # TODO: rename indexes to old
+        await datastore.create_indexes(commons_mapping=field_mapping)
+        await datastore.clone_temp_indexes_to_real_indexes()
+        await datastore.drop_all_temp_indexes()
     except Exception as ex:
         logger.error("Error occurred during cloning.")
         logger.error(ex)
@@ -359,10 +327,7 @@ if __name__ == "__main__":
     Runs a "populate" procedure. Assumes the datastore is ready.
     """
     args: Namespace = parse_args(sys.argv)
-    offset = args.offset
-    append = args.append
-
     if not is_valid_path(args.config):
         exit()
     commons = parse_config_from_file(Path(args.config))
-    asyncio.run(main(commons_config=commons, offset=offset, append=append))
+    asyncio.run(main(commons_config=commons))

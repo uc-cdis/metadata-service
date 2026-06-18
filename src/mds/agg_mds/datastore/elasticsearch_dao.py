@@ -112,7 +112,6 @@ async def drop_all_temp_indexes():
 
 
 async def clone_temp_indexes_to_real_indexes():
-    res = None
     for index in [AGG_MDS_INDEX, AGG_MDS_INFO_INDEX, AGG_MDS_CONFIG_INDEX]:
         source_index = index + "-temp"
         source_index_ready = False
@@ -148,7 +147,6 @@ async def clone_temp_indexes_to_real_indexes():
         # OpenSearch >1.0 introduces the clone api we could use later on
         # res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
-    return res
 
 
 async def create_indexes(common_mapping: dict):
@@ -237,14 +235,11 @@ async def update_metadata(
     info: Dict[str, str],
     use_temp_index: bool = False,
 ):
-    index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
-    elastic_search_client.index(
-        index=index_to_update,
-        id=name,
-        body=info,
-    )
+    info_index = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
+    data_index = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
 
-    index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
+    actions = [{"_index": info_index, "_id": name, "_source": info}]
+
     for d in data:
         key = list(d.keys())[0]
         # Flatten out this structure
@@ -255,40 +250,13 @@ async def update_metadata(
             doc[AGG_MDS_DEFAULT_DATA_DICT_FIELD] = d[key][
                 AGG_MDS_DEFAULT_DATA_DICT_FIELD
             ]
+        actions.append({"_index": data_index, "_id": key, "_source": doc})
 
-        try:
-            elastic_search_client.index(index=index_to_update, id=key, body=doc)
-        except Exception as ex:
-            print(f"Failed to index document in index: {index_to_update}")
-            raise (ex)
-
-
-async def add_metadata(
-    name: str,
-    data: List[Dict],
-    use_temp_index: bool = False,
-):
-    """
-    Add metadata to an existing index.
-    Assumes that the index already exists and that the other required indexes exist.
-    """
-    index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
-    for d in data:
-        key = list(d.keys())[0]
-        # Flatten out this structure
-        doc = {
-            AGG_MDS_DEFAULT_STUDY_DATA_FIELD: d[key][AGG_MDS_DEFAULT_STUDY_DATA_FIELD]
-        }
-        if AGG_MDS_DEFAULT_DATA_DICT_FIELD in d[key]:
-            doc[AGG_MDS_DEFAULT_DATA_DICT_FIELD] = d[key][
-                AGG_MDS_DEFAULT_DATA_DICT_FIELD
-            ]
-
-        try:
-            elastic_search_client.index(index=index_to_update, id=key, body=doc)
-        except Exception as ex:
-            print(f"Failed to index document in index: {index_to_update}")
-            raise (ex)
+    _, errors = helpers.bulk(elastic_search_client, actions, raise_on_error=False)
+    if errors:
+        for error in errors:
+            logger.error(f"Failed to index document: {error}")
+        raise Exception(f"Bulk indexing failed with {len(errors)} error(s)")
 
 
 async def update_global_info(key, doc, use_temp_index: bool = False) -> None:
