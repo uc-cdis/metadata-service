@@ -60,6 +60,27 @@ DB_SSL = config("DB_SSL", default=None)
 DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)
 
 
+def render_alembic_dsn(dsn: URL = DB_DSN) -> str:
+    """Render a database URL string safe for Alembic's config.
+
+    Alembic keeps ``sqlalchemy.url`` in a ``configparser.ConfigParser``, which
+    uses ``%`` to start an interpolation token. When the DB password contains
+    reserved characters, SQLAlchemy percent-encodes them while rendering the URL
+    (e.g. ``&`` -> ``%26``, ``*`` -> ``%2A``). Passing that raw string to
+    ``config.set_main_option("sqlalchemy.url", ...)`` makes ConfigParser fail
+    with ``ValueError: invalid interpolation syntax``.
+
+    Doubling every ``%`` to ``%%`` escapes it for ConfigParser, which restores
+    the original single ``%`` when the value is read back, yielding the correct
+    connection URL.
+    """
+    return (
+        dsn.set(drivername="postgresql")
+        .render_as_string(hide_password=False)
+        .replace("%", "%%")
+    )
+
+
 # Elasticsearch
 ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)
 ES_RETRY_LIMIT = config("ES_RETRY_LIMIT", cast=int, default=5)
