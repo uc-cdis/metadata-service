@@ -2,12 +2,11 @@ import time
 
 import pytest
 import starlette
-from asyncpg import InvalidCatalogNameError
 from requests import ReadTimeout
 from starlette.testclient import TestClient
+from asyncpg import InvalidCatalogNameError
 
-from mds.main import db
-from mds.main import get_app
+from mds.main import get_app, config
 
 
 def test_version(client):
@@ -39,19 +38,10 @@ def test_status(client):
 
 
 def test_wait_for_db(monkeypatch):
-    monkeypatch.setitem(db.config, "retry_limit", 0)
-    monkeypatch.setattr(db.config["dsn"], "database", "non_exist")
+    monkeypatch.setattr(config, "DB_DSN", config.DB_DSN.set(database="non_exist"))
 
     start = time.time()
     with pytest.raises(InvalidCatalogNameError, match="non_exist"):
         with TestClient(get_app()) as client:
             client.get("/_status").raise_for_status()
     assert time.time() - start < 1
-
-    monkeypatch.setitem(db.config, "retry_limit", 2)
-
-    start = time.time()
-    with pytest.raises(InvalidCatalogNameError, match="non_exist"):
-        with TestClient(get_app()) as client:
-            client.get("/_status").raise_for_status()
-    assert time.time() - start > 1

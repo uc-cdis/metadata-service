@@ -45,7 +45,7 @@ def upgrade():
     query = (
         f"SELECT guid, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset}"
     )
-    results = connection.execute(query).fetchall()
+    results = connection.execute(sa.text(query)).fetchall()
     while results:
         for r in results:
             guid, data = r[0], r[1]
@@ -63,11 +63,11 @@ def upgrade():
             else:
                 # default values for authz (["/open"])
                 sql_statement = f"UPDATE metadata SET authz='{DEFAULT_AUTHZ_STR}' WHERE guid='{guid}'"
-            connection.execute(sql_statement)
+            connection.execute(sa.text(sql_statement))
         # Grab another batch of rows
         offset += limit
         query = f"SELECT guid, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset} "
-        results = connection.execute(query).fetchall()
+        results = connection.execute(sa.text(query)).fetchall()
 
     # now that there are no null values, make the column non-nullable
     op.alter_column("metadata", "authz", nullable=False)
@@ -94,10 +94,9 @@ def downgrade():
     offset = 0
     limit = 500
     query = f"SELECT guid, authz, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset}"
-    results = connection.execute(query).fetchall()
+    results = connection.execute(sa.text(query)).fetchall()
     while results:
         for r in results:
-
             guid = r[0]
             authz_data = r[1]
             data = r[2]
@@ -108,12 +107,12 @@ def downgrade():
                 else:
                     data[authz_key] = authz_data.pop(authz_key)
                 sql_statement = f"UPDATE metadata SET data='{escape(json.dumps(data))}' WHERE guid='{guid}'"
-                connection.execute(sql_statement)
+                connection.execute(sa.text(sql_statement))
 
         # Grab another batch of rows
         offset += limit
         query = f"SELECT guid, authz, data FROM metadata ORDER BY guid LIMIT {limit} OFFSET {offset}"
-        results = connection.execute(query).fetchall()
+        results = connection.execute(sa.text(query)).fetchall()
 
     # drop the `authz` column
     op.drop_column("metadata", "authz")

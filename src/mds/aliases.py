@@ -7,12 +7,9 @@ for naming blobs. However, in cases where you want multiple identifiers
 to point to the same blob, aliases allow that without duplicating the
 actual blob.
 """
-from typing import Union
-
-from asyncpg import UniqueViolationError, ForeignKeyViolationError
 from fastapi import HTTPException, APIRouter, Depends
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
-from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.status import (
     HTTP_201_CREATED,
@@ -22,7 +19,7 @@ from starlette.status import (
 )
 
 from .admin_login import admin_required
-from .models import MetadataAlias
+from .db import get_data_access_layer, DataAccessLayer
 from . import logger
 
 mod = APIRouter()
@@ -43,7 +40,7 @@ class AliasObjInput(BaseModel):
 async def create_metadata_aliases(
     guid: str,
     body: AliasObjInput,
-    request: Request,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Create metadata aliases for the GUID.
@@ -53,37 +50,24 @@ async def create_metadata_aliases(
         body (AliasObjInput): JSON body with list of aliases
         request (Request): incoming request
     """
-    input_body_aliases = body.aliases or []
-    aliases = list(set(input_body_aliases))
-
-    metadata_aliases = await MetadataAlias.query.where(
-        MetadataAlias.guid == guid
-    ).gino.all()
-
-    if metadata_aliases:
-        raise HTTPException(
-            HTTP_409_CONFLICT,
-            f"Aliases already exist for {guid}. " "Use PUT to overwrite.",
-        )
+    aliases = list(set(body.aliases or []))
 
     try:
-        for alias in aliases:
-            logger.debug(f"inserting MetadataAlias(alias={alias}, guid={guid})")
-            metadata_alias = (
-                await MetadataAlias.insert()
-                .values(alias=alias, guid=guid)
-                .returning(*MetadataAlias)
-                .gino.first()
+        alias_list = await data_access_layer.get_aliases_for_guid(guid)
+        if alias_list:
+            raise HTTPException(
+                HTTP_409_CONFLICT,
+                f"Aliases already exist for {guid}. Use PUT to overwrite.",
             )
-    except ForeignKeyViolationError as exc:
-        logger.debug(exc)
-        raise HTTPException(HTTP_404_NOT_FOUND, f"GUID: '{guid}' does not exist.")
-    except UniqueViolationError as exc:
-        logger.debug(exc)
-        raise HTTPException(
-            HTTP_409_CONFLICT,
-            f"Alias: '{alias}' is already in use by a different GUID.",
-        )
+        await data_access_layer.create_aliases(guid, aliases)
+    except IntegrityError as exc:
+        # This specifically catches DB unique violation
+        if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
+            raise HTTPException(
+                HTTP_409_CONFLICT,
+                "Alias is already in use by a different GUID.",
+            )
+        raise
 
     return JSONResponse({"guid": guid, "aliases": sorted(aliases)}, HTTP_201_CREATED)
 
@@ -92,8 +76,8 @@ async def create_metadata_aliases(
 async def update_metadata_alias(
     guid: str,
     body: AliasObjInput,
-    request: Request,
     merge: bool = False,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Update the metadata aliases of the GUID.
@@ -104,61 +88,22 @@ async def update_metadata_alias(
     Args:
         guid (str): Metadata GUID
         body (AliasObjInput): JSON body with list of aliases
-        request (Request): incoming request
         merge (bool, optional): If `merge` is True, then any aliases that are not
             in the new data will be kept.
     """
-    input_body_aliases = body.aliases or []
-    requested_aliases = set(input_body_aliases)
-    logger.debug(f"requested_aliases: {requested_aliases}")
-
-    existing_metadata_aliases = await MetadataAlias.query.where(
-        MetadataAlias.guid == guid
-    ).gino.all()
-
-    existing_aliases = set([item.alias for item in existing_metadata_aliases])
-    aliases_to_add = requested_aliases - existing_aliases
-    final_aliases = requested_aliases | existing_aliases
-
-    if not merge:
-        # remove old aliases if they don't exist in new ones
-        for alias_metadata in existing_metadata_aliases:
-            if alias_metadata.alias not in requested_aliases:
-                logger.debug(
-                    f"deleting MetadataAlias(alias={alias_metadata.alias}, guid={guid})"
-                )
-                await alias_metadata.delete()
-        final_aliases = requested_aliases
-
-    for alias in aliases_to_add:
-        try:
-            logger.debug(f"inserting MetadataAlias(alias={alias}, guid={guid})")
-            metadata_alias = (
-                await MetadataAlias.insert()
-                .values(alias=alias, guid=guid)
-                .returning(*MetadataAlias)
-                .gino.first()
-            )
-        except ForeignKeyViolationError as exc:
-            logger.debug(exc)
-            raise HTTPException(HTTP_404_NOT_FOUND, f"GUID: '{guid}' does not exist.")
-        except UniqueViolationError as exc:
-            logger.debug(exc)
-            raise HTTPException(
-                HTTP_409_CONFLICT,
-                f"Alias: '{alias}' is already in use by a different GUID.",
-            )
-
-    return JSONResponse(
-        {"guid": guid, "aliases": sorted(list(final_aliases))}, HTTP_201_CREATED
+    requested_aliases = set(body.aliases or [])
+    final_aliases = await data_access_layer.update_aliases(
+        guid, requested_aliases, merge=merge
     )
+
+    return JSONResponse({"guid": guid, "aliases": final_aliases}, HTTP_201_CREATED)
 
 
 @mod.delete("/metadata/{guid:path}/aliases/{alias:path}")
 async def delete_metadata_alias(
     guid: str,
     alias: str,
-    request: Request,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Delete the specified metadata_alias of the GUID.
@@ -166,16 +111,9 @@ async def delete_metadata_alias(
     Args:
         guid (str): Metadata GUID
         alias (str): the metadata alias to delete
-        request (Request): incoming request
     """
-    metadata_alias = (
-        await MetadataAlias.delete.where(MetadataAlias.guid == guid)
-        .where(MetadataAlias.alias == alias)
-        .returning(*MetadataAlias)
-        .gino.first()
-    )
-    logger.debug(f"deleting: {metadata_alias}")
-    if metadata_alias:
+    deleted_alias = await data_access_layer.delete_alias(guid, alias)
+    if deleted_alias:
         return JSONResponse({}, HTTP_204_NO_CONTENT)
     else:
         raise HTTPException(
@@ -186,21 +124,16 @@ async def delete_metadata_alias(
 @mod.delete("/metadata/{guid:path}/aliases")
 async def delete_all_metadata_aliases(
     guid: str,
-    request: Request,
+    data_access_layer: DataAccessLayer = Depends(get_data_access_layer),
 ) -> JSONResponse:
     """
     Delete all metadata_aliases of the GUID.
 
     Args:
         guid (str): Metadata GUID
-        request (Request): incoming request
     """
-    metadata_alias = (
-        await MetadataAlias.delete.where(MetadataAlias.guid == guid)
-        .returning(*MetadataAlias)
-        .gino.first()
-    )
-    if metadata_alias:
+    count = await data_access_layer.delete_all_aliases(guid)
+    if count > 0:
         return JSONResponse({}, HTTP_204_NO_CONTENT)
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"No aliases found for: {guid}")
