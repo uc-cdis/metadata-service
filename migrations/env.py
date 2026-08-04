@@ -22,13 +22,12 @@ fileConfig(config.config_file_name)
 # target_metadata = None
 from mds.main import load_modules
 from mds.models import Base
-from mds.config import DB_DSN, DB_CONNECT_RETRIES
+from mds.config import DB_DSN, DB_CONNECT_RETRIES, render_alembic_dsn
 
 load_modules()
-config.set_main_option(
-    "sqlalchemy.url",
-    DB_DSN.set(drivername="postgresql").render_as_string(hide_password=False),
-)
+# render_alembic_dsn() escapes '%' so passwords with URL-encoded reserved
+# characters (e.g. '&' -> '%26') don't break ConfigParser interpolation.
+config.set_main_option("sqlalchemy.url", render_alembic_dsn(DB_DSN))
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
