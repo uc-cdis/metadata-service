@@ -1,9 +1,10 @@
-from fastapi import HTTPException, Path, Query, APIRouter, Request
+from fastapi import HTTPException, Path, Query, APIRouter, Request, Depends
 from starlette.status import HTTP_404_NOT_FOUND
 from mds import config
 from mds.agg_mds import datastore
 from typing import Any, Dict, List
 from pydantic import BaseModel
+from ..authorizations import metadata_queries_access_required
 
 mod = APIRouter()
 
@@ -271,4 +272,11 @@ async def get_aggregate_metadata_guid(guid: str):
 
 def init_app(app):
     if config.USE_AGG_MDS:
-        app.include_router(mod, tags=["Aggregate"])
+        if config.FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES:
+            app.include_router(
+                mod,
+                tags=["Aggregate"],
+                dependencies=[Depends(metadata_queries_access_required)],
+            )
+        else:
+            app.include_router(mod, tags=["Aggregate"])

@@ -81,6 +81,7 @@ METADATA_QUERY_RESULTS_LIMIT = config(
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
 ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
+FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES = config("FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", cast=bool, default=False)
 
 # Other Services
 

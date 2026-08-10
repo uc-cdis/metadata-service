@@ -42,3 +42,23 @@ async def admin_required(
             f"Authorization error: token must have '{method}' access on {resource} for service '{service}'."
         )
         raise HTTPException(status_code=HTTP_403_FORBIDDEN)
+
+
+async def metadata_queries_access_required(
+    credentials: HTTPBasicCredentials = Depends(security),
+    token: HTTPAuthorizationCredentials = Security(bearer),
+):
+    if config.DEBUG:
+        logger.warning("Skipping authorization check")
+        return
+
+    service = "mds_metadata_queries"
+    method = "access"
+    resource = "/mds_metadata_queries"
+    if not token or not await arborist.auth_request(
+        token.credentials, service, method, resource
+    ):
+        logger.error(
+            f"Authorization error: token must have '{method}' access on {resource} for service '{service}'."
+        )
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN)
