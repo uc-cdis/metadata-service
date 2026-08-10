@@ -18,7 +18,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from .admin_login import admin_required
+from .authorizations import admin_required
 from .db import get_data_access_layer, DataAccessLayer
 from . import logger
 
