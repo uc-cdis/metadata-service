@@ -35,6 +35,16 @@ async def admin_required(
 
     In debug mode, the authorization check (i.e. Arborist query) is skipped.
 
+    Args below are expected to be filled automatically by API framework
+    when this method is added as a dependency to the API router.
+
+    Args:
+        credentials: (optional) HTTP Basic authentication credentials provided by the client.
+        token: (optional) Bearer token credentials extracted from the Authorization header.
+
+    Returns:
+        None
+
     Raises:
         HTTPException: With status code 403 if the token is missing or does not
         have the required authorization.
@@ -76,6 +86,15 @@ async def metadata_queries_access_required(
     `mds_metadata_queries` service by querying Arborist.
 
     In debug mode, the authorization check (i.e. Arborist query) is skipped.
+
+    Args below are expected to be filled automatically by API framework
+    when this method is added as a dependency to the API router.
+
+    Args:
+        token: Bearer token credentials extracted from the Authorization header.
+
+    Returns:
+        None
 
     Raises:
         HTTPException: With status code 403 if the token is missing or does not
