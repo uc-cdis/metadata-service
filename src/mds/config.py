@@ -14,7 +14,7 @@ config = Config(".env")
 
 # =============== Server  ===============
 
-DEBUG = config("DEBUG", cast=bool, default=True)
+DEBUG = config("DEBUG", cast=bool, default=False)
 TESTING = config("TESTING", cast=bool, default=False)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
