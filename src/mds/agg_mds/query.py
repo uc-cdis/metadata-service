@@ -4,7 +4,7 @@ from mds import config
 from mds.agg_mds import datastore
 from typing import Any, Dict, List
 from pydantic import BaseModel
-from ..authorizations import metadata_queries_access_required
+from mds.authorizations import metadata_queries_access_required
 
 mod = APIRouter()
 

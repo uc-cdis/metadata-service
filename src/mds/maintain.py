@@ -11,10 +11,10 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from .authorizations import admin_required
-from . import config
-from .objects import FORBIDDEN_IDS
-from .db import get_data_access_layer, DataAccessLayer
+from mds.authorizations import admin_required
+from mds import config
+from mds.objects import FORBIDDEN_IDS
+from mds.db import get_data_access_layer, DataAccessLayer
 
 mod = APIRouter()
 

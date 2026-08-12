@@ -5,7 +5,7 @@ from starlette.responses import JSONResponse
 
 from .db import get_data_access_layer, DataAccessLayer
 from . import config
-from .authorizations import metadata_queries_access_required
+from mds.authorizations import metadata_queries_access_required
 
 mod = APIRouter()
 

@@ -18,9 +18,9 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from .authorizations import admin_required
-from .db import get_data_access_layer, DataAccessLayer
-from . import logger
+from mds.authorizations import admin_required
+from mds.db import get_data_access_layer, DataAccessLayer
+from mds import logger
 
 mod = APIRouter()
 
