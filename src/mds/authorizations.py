@@ -19,6 +19,26 @@ async def admin_required(
     credentials: HTTPBasicCredentials = Depends(security),
     token: HTTPAuthorizationCredentials = Security(bearer),
 ):
+    """Enforces authorization, checking for a specific "mds_gateway access permission".
+
+    This function can be used as an extra check to specific endpoints.
+
+    If basic username + password is provided: if will check if the username + password
+    is part of the list of configured ADMIN_LOGINS.
+    If no username + password is provided OR it is not an ADMIN login, if falls back
+    to token (below).
+
+    If a token is provided: it verifies that the provided bearer token has
+    `access` permission on the
+    `/mds_gateway` resource for the
+    `mds_gateway` service by querying Arborist.
+
+    In debug mode, the authorization check (i.e. Arborist query) is skipped.
+
+    Raises:
+        HTTPException: With status code 403 if the token is missing or does not
+        have the required authorization.
+    """
     if config.DEBUG:
         logger.warning("Skipping authorization check")
         return
@@ -32,9 +52,9 @@ async def admin_required(
             "Invalid Basic Auth credentials. Attempting fallback to JWT token..."
         )
 
-    service = "mds_gateway"
     method = "access"
     resource = "/mds_gateway"
+    service = "mds_gateway"
     if not token or not await arborist.auth_request(
         token.credentials, service, method, resource
     ):
@@ -45,16 +65,29 @@ async def admin_required(
 
 
 async def metadata_queries_access_required(
-    credentials: HTTPBasicCredentials = Depends(security),
     token: HTTPAuthorizationCredentials = Security(bearer),
 ):
+    """Enforces authorization, checking for a specific "metadata query permission".
+
+    This function can be used as an extra check to specific endpoints.
+    It verifies that the provided bearer token has
+    `access` permission on the
+    `/mds_metadata_queries` resource for the
+    `mds_metadata_queries` service by querying Arborist.
+
+    In debug mode, the authorization check (i.e. Arborist query) is skipped.
+
+    Raises:
+        HTTPException: With status code 403 if the token is missing or does not
+        have the required authorization.
+    """
     if config.DEBUG:
         logger.warning("Skipping authorization check")
         return
 
-    service = "mds_metadata_queries"
     method = "access"
     resource = "/mds_metadata_queries"
+    service = "mds_metadata_queries"
     if not token or not await arborist.auth_request(
         token.credentials, service, method, resource
     ):

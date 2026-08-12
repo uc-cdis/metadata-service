@@ -12,7 +12,7 @@ class CommaSeparatedLogins(CommaSeparatedStrings):
 
 config = Config(".env")
 
-# Server
+# =============== Server  ===============
 
 DEBUG = config("DEBUG", cast=bool, default=True)
 TESTING = config("TESTING", cast=bool, default=False)
@@ -27,7 +27,7 @@ AGG_MDS_DEFAULT_DATA_DICT_FIELD = config(
 )
 ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
-# Database
+# =============== Database ===============
 
 DB_DRIVER = config("DB_DRIVER", default="postgresql+asyncpg")
 DB_HOST = config("DB_HOST", default=None)
@@ -60,10 +60,10 @@ DB_SSL = config("DB_SSL", default=None)
 DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)
 
 
-# Elasticsearch
+# =============== Elasticsearch ===============
 ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)
 ES_RETRY_LIMIT = config("ES_RETRY_LIMIT", cast=int, default=5)
-# Authz string
+# =============== Authz string ===============
 
 DEFAULT_AUTHZ_STR = config(
     "DEFAULT_AUTHZ_STR",
@@ -71,19 +71,22 @@ DEFAULT_AUTHZ_STR = config(
     default='{"version": 0, "_resource_paths": ["/open"]}',
 )
 
-# Limits
+# =============== Limits ===============
 METADATA_QUERY_RESULTS_LIMIT = config(
     "METADATA_QUERY_RESULTS_LIMIT", cast=int, default=2000
 )
 
-# Security
+# =============== Security ===============
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
 ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
-FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES = config("FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", cast=bool, default=False)
+# If set to True, this flag will force an authorization check for all metadata query endpoints:
+FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES = config(
+    "FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", cast=bool, default=False
+)
 
-# Other Services
+# =============== Other Services ===============
 
 INDEXING_SERVICE_ENDPOINT = config(
     "INDEXING_SERVICE_ENDPOINT", cast=str, default="http://indexd-service"

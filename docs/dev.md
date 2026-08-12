@@ -6,6 +6,7 @@
 * [Develop with Docker](#develop-with-docker)
 * [Work with Aggregate MDS](#work-with-aggregate-mds)
 * [Deployment](#deployment)
+* [Configuration](#configuration)
 * [Helm](#Quickstart with Helm)
 
 ## Installation
@@ -28,7 +29,8 @@ poetry shell
 ## Development
 
 Create a file `.env` in the root directory of the checkout:
-(uncomment to override the default)
+(uncomment to override the default - see [Configuration](#configuration) to
+learn where to find the full set of config options).
 
 ```python
 # USE_AGG_MDS = True                  # default: False
@@ -100,6 +102,12 @@ ADMIN_LOGINS=alice:123,bob:456
 ```
 
 Except that, don't use `123` or `456` as the password.
+
+## Configuration
+
+For the full set of configuration options, their descriptions and defaults,
+see [src/mds/config.py](../src/mds/config.py). As described above,
+you can override these defaults by creating a `.env` file.
 
 ## Quickstart with Helm
 
