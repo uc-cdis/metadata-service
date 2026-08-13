@@ -14,8 +14,13 @@ config = Config(".env")
 
 # =============== Server  ===============
 
+# When True, (1) sets log level to debug, (2) ensures fastapi traces are more detailed and (3) changes URL_PREFIX (see below):
 DEBUG = config("DEBUG", cast=bool, default=False)
 TESTING = config("TESTING", cast=bool, default=False)
+# (Legacy feature) if set to True, this flag will disable authz to simplify some test paths - DO NOT ENABLE IN PROD:
+TESTING_WITH_DISABLED_AUTHZ = config(
+    "TESTING_WITH_DISABLED_AUTHZ", cast=bool, default=False
+)
 URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
@@ -78,6 +83,7 @@ METADATA_QUERY_RESULTS_LIMIT = config(
 
 # =============== Security ===============
 
+# Optional. Can be set to enable basic auth on some admin endpoints. E.g. ADMIN_LOGINS=alice:123,bob:456
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
 ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))

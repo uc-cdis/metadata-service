@@ -94,15 +94,6 @@ gunicorn mds.asgi:app -k uvicorn.workers.UvicornWorker -c gunicorn.conf.py
 Or use the Docker image built from the `Dockerfile`, using environment variables
 with the same name to configure the server.
 
-Other than database configuration, please also set:
-
-```bash
-DEBUG=0
-ADMIN_LOGINS=alice:123,bob:456
-```
-
-Except that, don't use `123` or `456` as the password.
-
 ## Configuration
 
 For the full set of configuration options, their descriptions and defaults,

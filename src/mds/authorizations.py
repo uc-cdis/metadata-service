@@ -49,7 +49,8 @@ async def admin_required(
         HTTPException: With status code 403 if the token is missing or does not
         have the required authorization.
     """
-    if config.DEBUG:
+    # Legacy flag, disabled by default... TODO - get rid of this?
+    if config.TESTING_WITH_DISABLED_AUTHZ:
         logger.warning("Skipping authorization check")
         return
 
@@ -84,7 +85,7 @@ async def metadata_queries_access_required(
     It verifies that the provided bearer token has
     `access` permission on the
     `/mds_metadata_queries` resource for the
-    `mds_metadata_queries` service by querying Arborist.
+    `mds_gateway` service by querying Arborist.
 
     In debug mode, the authorization check (i.e. Arborist query) is skipped.
 
@@ -101,13 +102,14 @@ async def metadata_queries_access_required(
         HTTPException: With status code 403 if the token is missing or does not
         have the required authorization.
     """
-    if config.DEBUG:
+    # Legacy flag, disabled by default... TODO - get rid of this?
+    if config.TESTING_WITH_DISABLED_AUTHZ:
         logger.warning("Skipping authorization check")
         return
 
     method = "access"
     resource = "/mds_metadata_queries"
-    service = "mds_metadata_queries"
+    service = "mds_gateway"
     if not token or not await arborist.auth_request(
         token.credentials, service, method, resource
     ):
