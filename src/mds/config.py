@@ -14,14 +14,14 @@ config = Config(".env")
 
 # =============== Server  ===============
 
-# When True, (1) sets log level to debug, (2) ensures fastapi traces are more detailed and (3) changes URL_PREFIX (see below):
+# When True, (1) sets log level to debug and (2) ensures fastapi log/error traces are more detailed:
 DEBUG = config("DEBUG", cast=bool, default=False)
 TESTING = config("TESTING", cast=bool, default=False)
 # (Legacy feature) if set to True, this flag will disable authz to simplify some test paths - DO NOT ENABLE IN PROD:
 TESTING_WITH_DISABLED_AUTHZ = config(
     "TESTING_WITH_DISABLED_AUTHZ", cast=bool, default=False
 )
-URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
+URL_PREFIX = config("URL_PREFIX", "/mds")
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
 AGG_MDS_DEFAULT_STUDY_DATA_FIELD = config(
