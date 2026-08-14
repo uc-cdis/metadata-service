@@ -61,12 +61,44 @@ Try out the API at: <http://localhost:8000/docs>.
 
 ## Run tests
 
-Please note that the name of the test database is prepended with "test_", you
-need to create that database first:
+Before running tests, create a test postgres DB.
+Please note that the name of the test database is to be prepended with "test_" (while in config `DB_DATABASE =` it should not have this prefix):
 
 ```bash
 psql
 CREATE DATABASE test_metadata;
+```
+
+Or, using Docker:
+
+```bash
+docker run --name local-mds-test-db --rm \
+-p 5432:5432 \
+-e POSTGRES_PASSWORD=mysecretpassword \
+-d \
+postgres:12.10-bullseye
+```
+
+And then:
+
+```bash
+docker exec -it local-mds-test-db \
+  psql -U postgres -c "CREATE DATABASE test_metadata;"
+```
+
+Finally, create local .env file:
+
+```bash
+cat > .env <<'EOF'
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=mysecretpassword
+DB_DATABASE=metadata
+# most unit tests expect this, and some ovewrite this if not,
+# DO NOT USE IN PRODUCTION:
+TESTING_WITH_DISABLED_AUTHZ=True
+EOF
 ```
 
 ```bash
