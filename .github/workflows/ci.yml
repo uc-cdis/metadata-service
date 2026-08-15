@@ -40,6 +40,7 @@ jobs:
         DB_USER: metadata_user
         DB_PASSWORD: metadata_pass
         PGPASSWORD: metadata_pass
+        TESTING_WITH_DISABLED_AUTHZ: True
       run: |
         poetry run pytest --cov=src --cov=migrations/versions --cov-fail-under=93 --cov-report xml
     - name: Submit coverage report
