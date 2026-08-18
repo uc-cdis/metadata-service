@@ -21,7 +21,6 @@ TESTING = config("TESTING", cast=bool, default=False)
 TESTING_WITH_DISABLED_AUTHZ = config(
     "TESTING_WITH_DISABLED_AUTHZ", cast=bool, default=False
 )
-URL_PREFIX = config("URL_PREFIX", default="/mds")
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
 AGG_MDS_DEFAULT_STUDY_DATA_FIELD = config(
