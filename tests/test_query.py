@@ -1,4 +1,8 @@
 import pytest
+import importlib
+from fastapi.testclient import TestClient
+
+from mds import config, main
 
 
 @pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
@@ -171,3 +175,17 @@ def test_query_filter_all_values(client):
     finally:
         for i in range(1, 8):
             client.delete(f"/metadata/tq_{i}")
+
+
+def test_get_with_force_authz_check(monkeypatch, client):
+    """Test /metadata behavior with and without FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES"""
+    monkeypatch.setenv("TESTING_WITH_DISABLED_AUTHZ", "False")
+    monkeypatch.setenv("FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", "True")
+    importlib.reload(config)
+    importlib.reload(main)
+
+    app = main.get_app()
+    with TestClient(app) as client:
+        key = "any_key"
+        resp = client.get("/metadata/" + key)
+        assert resp.status_code == 403
