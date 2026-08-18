@@ -178,7 +178,7 @@ def test_query_filter_all_values(client):
 
 
 def test_get_with_force_authz_check(monkeypatch, client):
-    """Test /metadata behavior with and without FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES"""
+    """Test /metadata behavior with FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES"""
     monkeypatch.setenv("TESTING_WITH_DISABLED_AUTHZ", "False")
     monkeypatch.setenv("FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", "True")
     importlib.reload(config)
