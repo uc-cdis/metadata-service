@@ -257,7 +257,9 @@ async def update_metadata(
             ]
         actions.append({"_index": data_index, "_id": key, "_source": doc})
 
-    _, errors = helpers.bulk(elastic_search_client, actions, raise_on_error=False)
+    _, errors = helpers.bulk(
+        elastic_search_client, actions, chunk_size=50, raise_on_error=False
+    )
     if errors:
         for error in errors:
             logger.error(f"Failed to index document: {error}")
