@@ -17,7 +17,7 @@ config = Config(".env")
 # When True, (1) sets log level to debug and (2) ensures fastapi log/error traces are more detailed:
 DEBUG = config("DEBUG", cast=bool, default=False)
 TESTING = config("TESTING", cast=bool, default=False)
-# (Legacy feature) if set to True, this flag will disable authz to simplify some test paths - DO NOT ENABLE IN PROD:
+# (For easier local testing/dev - DO NOT ENABLE IN PROD) If set to True, this flag will disable authz to simplify some test paths:
 TESTING_WITH_DISABLED_AUTHZ = config(
     "TESTING_WITH_DISABLED_AUTHZ", cast=bool, default=False
 )

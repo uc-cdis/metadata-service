@@ -33,7 +33,7 @@ async def admin_required(
     `/mds_gateway` resource for the
     `mds_gateway` service by querying Arborist.
 
-    In debug mode, the authorization check (i.e. Arborist query) is skipped.
+    In "TESTING_WITH_DISABLED_AUTHZ" mode, the authorization check (i.e. Arborist query) is skipped.
 
     Args below are expected to be filled automatically by API framework
     when this method is added as a dependency to the API router.
@@ -49,7 +49,6 @@ async def admin_required(
         HTTPException: With status code 403 if the token is missing or does not
         have the required authorization.
     """
-    # Legacy flag, disabled by default... TODO - get rid of this?
     if config.TESTING_WITH_DISABLED_AUTHZ:
         logger.warning("Skipping authorization check")
         return
@@ -87,7 +86,7 @@ async def metadata_queries_access_required(
     `/mds_metadata_queries` resource for the
     `mds_gateway` service by querying Arborist.
 
-    In debug mode, the authorization check (i.e. Arborist query) is skipped.
+    In "TESTING_WITH_DISABLED_AUTHZ" mode, the authorization check (i.e. Arborist query) is skipped.
 
     Args below are expected to be filled automatically by API framework
     when this method is added as a dependency to the API router.
@@ -102,7 +101,6 @@ async def metadata_queries_access_required(
         HTTPException: With status code 403 if the token is missing or does not
         have the required authorization.
     """
-    # Legacy flag, disabled by default... TODO - get rid of this?
     if config.TESTING_WITH_DISABLED_AUTHZ:
         logger.warning("Skipping authorization check")
         return

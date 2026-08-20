@@ -178,7 +178,11 @@ def test_query_filter_all_values(client):
 
 
 def test_get_with_force_authz_check(monkeypatch, client):
-    """Test /metadata behavior with FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES"""
+    """Test that /metadata/some_key denies access appropriately when configured to do so
+
+    Details: this test ensures /metadata/some_key endpoint (which is open by default) now returns 403
+    when config option FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES=True and no authentication is added to request
+    """
     monkeypatch.setenv("TESTING_WITH_DISABLED_AUTHZ", "False")
     monkeypatch.setenv("FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", "True")
     importlib.reload(config)
