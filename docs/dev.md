@@ -6,6 +6,7 @@
 * [Develop with Docker](#develop-with-docker)
 * [Work with Aggregate MDS](#work-with-aggregate-mds)
 * [Deployment](#deployment)
+* [Configuration](#configuration)
 * [Helm](#Quickstart with Helm)
 
 ## Installation
@@ -28,7 +29,8 @@ poetry shell
 ## Development
 
 Create a file `.env` in the root directory of the checkout:
-(uncomment to override the default)
+(uncomment to override the default - see [Configuration](#configuration) to
+learn where to find the full set of config options).
 
 ```python
 # USE_AGG_MDS = True                  # default: False
@@ -59,12 +61,44 @@ Try out the API at: <http://localhost:8000/docs>.
 
 ## Run tests
 
-Please note that the name of the test database is prepended with "test_", you
-need to create that database first:
+Before running tests, create a test postgres DB.
+Please note that the name of the test database is to be prepended with "test_" (while in config `DB_DATABASE =` it should not have this prefix):
 
 ```bash
 psql
 CREATE DATABASE test_metadata;
+```
+
+Or, using Docker:
+
+```bash
+docker run --name local-mds-test-db --rm \
+-p 5432:5432 \
+-e POSTGRES_PASSWORD=mysecretpassword \
+-d \
+postgres:12.10-bullseye
+```
+
+And then:
+
+```bash
+docker exec -it local-mds-test-db \
+  psql -U postgres -c "CREATE DATABASE test_metadata;"
+```
+
+Finally, create local .env file:
+
+```bash
+cat > .env <<'EOF'
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=mysecretpassword
+DB_DATABASE=metadata
+# most unit tests expect this, and some ovewrite this if not,
+# DO NOT USE IN PRODUCTION:
+TESTING_WITH_DISABLED_AUTHZ=True
+EOF
 ```
 
 ```bash
@@ -92,14 +126,11 @@ gunicorn mds.asgi:app -k uvicorn.workers.UvicornWorker -c gunicorn.conf.py
 Or use the Docker image built from the `Dockerfile`, using environment variables
 with the same name to configure the server.
 
-Other than database configuration, please also set:
+## Configuration
 
-```bash
-DEBUG=0
-ADMIN_LOGINS=alice:123,bob:456
-```
-
-Except that, don't use `123` or `456` as the password.
+For the full set of configuration options, their descriptions and defaults,
+see [src/mds/config.py](../src/mds/config.py). As described above,
+you can override these defaults by creating a `.env` file.
 
 ## Quickstart with Helm
 

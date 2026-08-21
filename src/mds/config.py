@@ -12,11 +12,15 @@ class CommaSeparatedLogins(CommaSeparatedStrings):
 
 config = Config(".env")
 
-# Server
+# =============== Server  ===============
 
-DEBUG = config("DEBUG", cast=bool, default=True)
+# When True, (1) sets log level to debug and (2) ensures fastapi log/error traces are more detailed:
+DEBUG = config("DEBUG", cast=bool, default=False)
 TESTING = config("TESTING", cast=bool, default=False)
-URL_PREFIX = config("URL_PREFIX", default="/" if DEBUG else "/mds")
+# (For easier local testing/dev - DO NOT ENABLE IN PROD) If set to True, this flag will disable authz to simplify some test paths:
+TESTING_WITH_DISABLED_AUTHZ = config(
+    "TESTING_WITH_DISABLED_AUTHZ", cast=bool, default=False
+)
 USE_AGG_MDS = config("USE_AGG_MDS", cast=bool, default=False)
 AGG_MDS_NAMESPACE = config("AGG_MDS_NAMESPACE", default="default_namespace")
 AGG_MDS_DEFAULT_STUDY_DATA_FIELD = config(
@@ -27,7 +31,7 @@ AGG_MDS_DEFAULT_DATA_DICT_FIELD = config(
 )
 ES_ENDPOINT = config("GEN3_ES_ENDPOINT", default="http://localhost:9200")
 
-# Database
+# =============== Database ===============
 
 DB_DRIVER = config("DB_DRIVER", default="postgresql+asyncpg")
 DB_HOST = config("DB_HOST", default=None)
@@ -60,10 +64,10 @@ DB_SSL = config("DB_SSL", default=None)
 DB_CONNECT_RETRIES = config("DB_CONNECT_RETRIES", cast=int, default=32)
 
 
-# Elasticsearch
+# =============== Elasticsearch ===============
 ES_RETRY_INTERVAL = config("ES_RETRY_INTERVAL", cast=int, default=20)
 ES_RETRY_LIMIT = config("ES_RETRY_LIMIT", cast=int, default=5)
-# Authz string
+# =============== Authz string ===============
 
 DEFAULT_AUTHZ_STR = config(
     "DEFAULT_AUTHZ_STR",
@@ -71,18 +75,23 @@ DEFAULT_AUTHZ_STR = config(
     default='{"version": 0, "_resource_paths": ["/open"]}',
 )
 
-# Limits
+# =============== Limits ===============
 METADATA_QUERY_RESULTS_LIMIT = config(
     "METADATA_QUERY_RESULTS_LIMIT", cast=int, default=2000
 )
 
-# Security
+# =============== Security ===============
 
+# Optional. Can be set to enable basic auth on some admin endpoints. E.g. ADMIN_LOGINS=alice:123,bob:456
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
 ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
+# If set to True, this flag will force an authorization check for all metadata query endpoints:
+FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES = config(
+    "FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", cast=bool, default=False
+)
 
-# Other Services
+# =============== Other Services ===============
 
 INDEXING_SERVICE_ENDPOINT = config(
     "INDEXING_SERVICE_ENDPOINT", cast=str, default="http://indexd-service"
