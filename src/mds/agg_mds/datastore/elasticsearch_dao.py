@@ -118,6 +118,8 @@ async def clone_temp_indexes_to_real_indexes():
         i = 0
         while not source_index_ready and i <= 4:
             try:
+                # Force a refresh so all buffered documents become visible before counting
+                elastic_search_client.indices.refresh(index=source_index)
                 doc_count = elastic_search_client.count(index=source_index).get(
                     "count", 0
                 )
@@ -137,9 +139,16 @@ async def clone_temp_indexes_to_real_indexes():
                 time.sleep(30)
             i += 1
 
-        reqBody = {"source": {"index": source_index}, "dest": {"index": index}}
+        reqBody = {
+            "source": {"index": source_index, "size": 100},
+            "dest": {"index": index},
+        }
         logger.debug(f"Cloning index: {source_index} to {index}...")
-        res = elastic_search_client.reindex(body=reqBody)
+        res = elastic_search_client.reindex(
+            body=reqBody,
+            params={"wait_for_completion": "true"},
+            request_timeout=600,
+        )
         # OpenSearch >1.0 introduces the clone api we could use later on
         # res = elastic_search_client.indices.clone(index=source_index, target=index)
         logger.debug(f"Cloned index: {source_index} to {index}: {res}")
@@ -231,14 +240,11 @@ async def update_metadata(
     info: Dict[str, str],
     use_temp_index: bool = False,
 ):
-    index_to_update = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
-    elastic_search_client.index(
-        index=index_to_update,
-        id=name,
-        body=info,
-    )
+    info_index = AGG_MDS_INFO_INDEX_TEMP if use_temp_index else AGG_MDS_INFO_INDEX
+    data_index = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
 
-    index_to_update = AGG_MDS_INDEX_TEMP if use_temp_index else AGG_MDS_INDEX
+    actions = [{"_index": info_index, "_id": name, "_source": info}]
+
     for d in data:
         key = list(d.keys())[0]
         # Flatten out this structure
@@ -249,12 +255,15 @@ async def update_metadata(
             doc[AGG_MDS_DEFAULT_DATA_DICT_FIELD] = d[key][
                 AGG_MDS_DEFAULT_DATA_DICT_FIELD
             ]
+        actions.append({"_index": data_index, "_id": key, "_source": doc})
 
-        try:
-            elastic_search_client.index(index=index_to_update, id=key, body=doc)
-        except Exception as ex:
-            print(f"Failed to index document in index: {index_to_update}")
-            raise (ex)
+    _, errors = helpers.bulk(
+        elastic_search_client, actions, chunk_size=50, raise_on_error=False
+    )
+    if errors:
+        for error in errors:
+            logger.error(f"Failed to index document: {error}")
+        raise Exception(f"Bulk indexing failed with {len(errors)} error(s)")
 
 
 async def update_global_info(key, doc, use_temp_index: bool = False) -> None:
@@ -437,7 +446,7 @@ async def get_all_metadata(limit, offset, counts: Optional[str] = None, flatten=
         return {}
 
 
-async def get_all_named_commons_metadata(name):
+async def get_all_named_commons_metadata(name="HEAL"):
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,
@@ -447,7 +456,7 @@ async def get_all_named_commons_metadata(name):
                         "path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
                         "query": {
                             "match": {
-                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "HEAL"
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": f"{name}"
                             }
                         },
                     }
