@@ -30,7 +30,7 @@ async def create_temp_indexes(commons_mapping):
 
 
 async def clone_temp_indexes_to_real_indexes():
-    await client.clone_temp_indexes_to_real_indexes()
+    return await client.clone_temp_indexes_to_real_indexes()
 
 
 async def close():
