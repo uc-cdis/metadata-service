@@ -5,6 +5,7 @@ from starlette.responses import JSONResponse
 
 from .db import get_data_access_layer, DataAccessLayer
 from . import config
+from mds.authorizations import metadata_queries_access_required
 
 mod = APIRouter()
 
@@ -127,4 +128,11 @@ async def get_metadata(
 
 
 def init_app(app):
-    app.include_router(mod, tags=["Query"])
+    if config.FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES:
+        app.include_router(
+            mod,
+            tags=["Query"],
+            dependencies=[Depends(metadata_queries_access_required)],
+        )
+    else:
+        app.include_router(mod, tags=["Query"])

@@ -23,9 +23,9 @@ The documentation can be browsed in the [docs](docs) folder, and key documents a
 
 ## Creating appropriate resources/roles/policies in the user.yaml
 
-The MDS and all MDS records are public (requiring no login to read) by design to ensure FAIR data management. Therefore, the user.yaml does not need to provide any read access to the MDS for any users.  
+The MDS and all MDS records are public (requiring no login to read) by design to ensure FAIR data management. Therefore, the user.yaml does not need to provide any read access to the MDS for any users.
 
-However, you must create resource/role/policy to permit admin users to create/read/update/delete (CRUD) records in the MDS. Here is what you should add to your user.yaml to permit creation of your MDS.  
+However, you must create resource/role/policy to permit admin users to create/read/update/delete (CRUD) records in the MDS. Here is what you should add to your user.yaml to permit creation of your MDS.
 
 ```
   resources:
@@ -43,5 +43,29 @@ However, you must create resource/role/policy to permit admin users to create/re
     - id: 'mds_admin'
       description: 'be able to CRUD records in metadata service'
       resource_paths: ['/mds_gateway']
+      role_ids: ['mds_crud']
+```
+
+In case the metadata query endpoints need to be closed down (these are open by default - see config
+option `FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES` in [src/mds/config.py](src/mds/config.py))
+and access control needs to be configured, use the resource and policy below:
+
+```
+  resources:
+    - name: 'mds_metadata_queries'
+      description: 'commons /mds-metadata-queries'
+
+  roles:
+    - id: 'mds_crud'
+      permissions:
+        - id: 'mds_access'
+          action:
+            service: 'mds_gateway'
+            method: 'access'
+
+  policies:
+    - id: 'mds_metadata_queries_access'
+      description: 'be able to do metadata queries in metadata service'
+      resource_paths: ['/mds_metadata_queries']
       role_ids: ['mds_crud']
 ```
