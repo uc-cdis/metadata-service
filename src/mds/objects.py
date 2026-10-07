@@ -427,7 +427,7 @@ async def get_object(
     return JSONResponse(response, HTTP_200_OK)
 
 
-@mod.delete("/objects/{guid:path}")
+@mod.delete("/objects/{guid:path}", status_code=HTTP_204_NO_CONTENT)
 async def delete_object(
     guid: str,
     request: Request,
