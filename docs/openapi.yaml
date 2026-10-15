@@ -625,10 +625,7 @@ paths:
           title: Guid
           type: string
       responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
+        '204':
           description: Successful Response
         '422':
           content:
@@ -765,10 +762,7 @@ paths:
           title: Alias
           type: string
       responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
+        '204':
           description: Successful Response
         '422':
           content:
@@ -901,10 +895,7 @@ paths:
           title: Guid
           type: string
       responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
+        '204':
           description: Successful Response
         '422':
           content:
