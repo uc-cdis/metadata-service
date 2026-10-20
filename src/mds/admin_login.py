@@ -1,3 +1,4 @@
+from authutils.token.fastapi import access_token
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import (
     HTTPAuthorizationCredentials,
@@ -6,7 +7,7 @@ from fastapi.security import (
     HTTPBearer,
 )
 from gen3authz.client.arborist.async_client import ArboristClient
-from starlette.status import HTTP_403_FORBIDDEN
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from . import config, logger
 
@@ -35,6 +36,24 @@ async def admin_required(
     service = "mds_gateway"
     method = "access"
     resource = "/mds_gateway"
+    if token:
+        # validate the token before handing it off to Arborist
+        try:
+            await access_token(
+                "user",
+                "openid",
+                # TODO: remove "openid" - it's a workaround to accept old-fence tokens
+                # that do not have the updated aud
+                audience=["openid", "gen3"],
+                allowed_issuers=list(config.ALLOWED_ISSUERS) or None,
+                purpose="access",
+            )(token)
+        except Exception as e:
+            logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
+            raise HTTPException(
+                HTTP_401_UNAUTHORIZED,
+                "Could not verify, parse, and/or validate scope from provided access token.",
+            )
     if not token or not await arborist.auth_request(
         token.credentials, service, method, resource
     ):

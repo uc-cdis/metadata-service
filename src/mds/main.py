@@ -29,6 +29,11 @@ def get_app() -> FastAPI:
     app.async_client = httpx.AsyncClient()
     load_modules(app)
 
+    if not config.ALLOWED_ISSUERS:
+        logger.warning(
+            "ALLOWED_ISSUERS is not configured: access tokens from any issuer will be accepted"
+        )
+
     return app
 
 

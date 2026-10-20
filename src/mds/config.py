@@ -80,6 +80,8 @@ METADATA_QUERY_RESULTS_LIMIT = config(
 
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
+# Issuers that access tokens are accepted from, typically the Fence base URL
+# `https://<hostname>/user`. If empty, the issuer is not validated (NOT RECOMMENDED)
 ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
 
 # Other Services
