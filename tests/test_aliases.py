@@ -1,4 +1,3 @@
-import httpx
 import pytest
 import urllib.parse
 
@@ -30,16 +29,14 @@ def test_create_read_delete_new_aliases(guid, aliases, client, is_post):
     if is_post:
         res = client.post(f"/metadata/{guid}/aliases", json={"aliases": aliases})
         if aliases is None:  # the endpoint expects a list
-            with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
-                res.raise_for_status()
+            assert res.status_code == 422, res.text
         else:
             res.raise_for_status()
     else:
         # use PUT instead of POST, should result in same behavior for new aliases
         res = client.put(f"/metadata/{guid}/aliases", json={"aliases": aliases})
         if aliases is None:  # the endpoint expects a list
-            with pytest.raises(httpx.HTTPStatusError, match="422 Unprocessable Entity"):
-                res.raise_for_status()
+            assert res.status_code == 422, res.text
         else:
             res.raise_for_status()
 
