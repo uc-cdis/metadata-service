@@ -21,7 +21,6 @@ def get_app() -> FastAPI:
         title="Framework Services Object Management Service",
         version=version("mds"),
         debug=config.DEBUG,
-        root_path=config.URL_PREFIX,
         lifespan=lifespan,
     )
     app.include_router(router)

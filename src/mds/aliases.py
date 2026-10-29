@@ -18,9 +18,9 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from .admin_login import admin_required
-from .db import get_data_access_layer, DataAccessLayer
-from . import logger
+from mds.authorizations import admin_required
+from mds.db import get_data_access_layer, DataAccessLayer
+from mds import logger
 
 mod = APIRouter()
 
@@ -99,7 +99,9 @@ async def update_metadata_alias(
     return JSONResponse({"guid": guid, "aliases": final_aliases}, HTTP_201_CREATED)
 
 
-@mod.delete("/metadata/{guid:path}/aliases/{alias:path}")
+@mod.delete(
+    "/metadata/{guid:path}/aliases/{alias:path}", status_code=HTTP_204_NO_CONTENT
+)
 async def delete_metadata_alias(
     guid: str,
     alias: str,
@@ -121,7 +123,7 @@ async def delete_metadata_alias(
         )
 
 
-@mod.delete("/metadata/{guid:path}/aliases")
+@mod.delete("/metadata/{guid:path}/aliases", status_code=HTTP_204_NO_CONTENT)
 async def delete_all_metadata_aliases(
     guid: str,
     data_access_layer: DataAccessLayer = Depends(get_data_access_layer),

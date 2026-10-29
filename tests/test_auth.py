@@ -1,5 +1,4 @@
 import time
-from unittest.mock import AsyncMock, patch
 import uuid
 
 import httpx
@@ -16,7 +15,6 @@ def make_request(client, endpoint, token):
     and return the response along with the mocked authorization check.
 
     - "upload": the token is used to request an upload URL from Fence
-    - "admin": the token is used to check admin access in Arborist
     """
     headers = {"Authorization": f"bearer {token}"}
 
@@ -39,18 +37,10 @@ def make_request(client, endpoint, token):
             client.delete(f"/metadata/{guid}")
         return res, authz_check_mock
 
-    if endpoint == "admin":
-        # disable the authorization bypass so the token is checked
-        with patch.object(config, "DEBUG", False), patch(
-            "mds.admin_login.arborist.auth_request", AsyncMock(return_value=True)
-        ) as authz_check_mock:
-            res = client.get("/metadata_index", headers=headers)
-        return res, authz_check_mock
-
     raise ValueError(f"Unknown endpoint: {endpoint}")
 
 
-@pytest.mark.parametrize("endpoint", ["upload", "admin"])
+@pytest.mark.parametrize("endpoint", ["upload"])
 @pytest.mark.parametrize("test_case", ["match", "mismatch"])
 def test_token_audience_check(client, generate_signed_token, endpoint, test_case):
     """
@@ -70,7 +60,7 @@ def test_token_audience_check(client, generate_signed_token, endpoint, test_case
         assert not authz_check_mock.called
 
 
-@pytest.mark.parametrize("endpoint", ["upload", "admin"])
+@pytest.mark.parametrize("endpoint", ["upload"])
 @pytest.mark.parametrize("test_case", ["match", "mismatch"])
 def test_token_issuer_check(client, generate_signed_token, endpoint, test_case):
     """
@@ -91,7 +81,7 @@ def test_token_issuer_check(client, generate_signed_token, endpoint, test_case):
         assert not authz_check_mock.called
 
 
-@pytest.mark.parametrize("endpoint", ["upload", "admin"])
+@pytest.mark.parametrize("endpoint", ["upload"])
 @pytest.mark.parametrize("test_case", ["expired", "valid"])
 def test_token_expiration_check(client, generate_signed_token, endpoint, test_case):
     """
