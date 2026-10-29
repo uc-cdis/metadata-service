@@ -13,7 +13,9 @@ gunicorn = ">=22.0.0"
 sqlalchemy = {version = ">=2.0", extras = ["asyncio"]}
 psycopg2-binary = "^2.8"
 alembic = "^1.13"
-gen3authz = "*"
+gen3authz = "^2.0"
+# gen3authz imports sniffio without declaring it; it used to come in transitively via httpx<0.28
+sniffio = "^1.3"
 httpx = "^0.28.1"
 authutils = ">=9.0.0"
 cdislogging = "^1.0"
