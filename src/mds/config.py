@@ -85,6 +85,8 @@ METADATA_QUERY_RESULTS_LIMIT = config(
 # Optional. Can be set to enable basic auth on some admin endpoints. E.g. ADMIN_LOGINS=alice:123,bob:456
 ADMIN_LOGINS = config("ADMIN_LOGINS", cast=CommaSeparatedLogins, default=[])
 FORCE_ISSUER = config("FORCE_ISSUER", default=None)
+# Issuers that access tokens are accepted from, typically the Fence base URL
+# `https://<hostname>/user`. If empty, the issuer is not validated (NOT RECOMMENDED)
 ALLOWED_ISSUERS = set(config("ALLOWED_ISSUERS", cast=CommaSeparatedStrings, default=""))
 # If set to True, this flag will force an authorization check for all metadata query endpoints:
 FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES = config(
