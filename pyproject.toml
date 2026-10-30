@@ -10,7 +10,8 @@ python = ">=3.13,<4.0"
 fastapi = "*"
 uvicorn = {extras = ["standard"], version="^0.30.0"}
 gunicorn = ">=22.0.0"
-sqlalchemy = {version = ">=2.0", extras = ["asyncio"]}
+# Add cap to sqlalchemy to fix psycopg error
+sqlalchemy = {version = ">=2.0,<2.1", extras = ["asyncio"]}
 psycopg2-binary = "^2.8"
 alembic = "^1.13"
 gen3authz = "^2.0"
@@ -25,6 +26,8 @@ dataclasses-json = "==0.5.*,>=0.5.2"
 jsonpath-ng = "==1.5.3"
 opensearch-py = ">=2.0.0,<3"
 urllib3 = ">=2.8.0,<3"
+# Pin pyjwt for overdue PPS 5183/5 (Todo fix upstream and remove)
+pyjwt = {version = ">=2.14.0,<3.0", extras = ["crypto"]}
 bleach = ">=3.3.1"
 tenacity = ">=8.0.0"
 pathvalidate = "^3.2.0"
