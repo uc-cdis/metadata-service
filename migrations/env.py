@@ -27,7 +27,7 @@ from mds.config import DB_DSN, DB_CONNECT_RETRIES
 load_modules()
 config.set_main_option(
     "sqlalchemy.url",
-    DB_DSN.set(drivername="postgresql").render_as_string(hide_password=False),
+    DB_DSN.set(drivername="postgresql+psycopg2").render_as_string(hide_password=False),
 )
 target_metadata = Base.metadata
 
