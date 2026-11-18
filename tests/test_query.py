@@ -1,4 +1,8 @@
 import pytest
+import importlib
+from fastapi.testclient import TestClient
+
+from mds import config, main
 
 
 @pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
@@ -171,3 +175,21 @@ def test_query_filter_all_values(client):
     finally:
         for i in range(1, 8):
             client.delete(f"/metadata/tq_{i}")
+
+
+def test_get_with_force_authz_check(monkeypatch, client):
+    """Test that /metadata/some_key denies access appropriately when configured to do so
+
+    Details: this test ensures /metadata/some_key endpoint (which is open by default) now returns 403
+    when config option FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES=True and no authentication is added to request
+    """
+    monkeypatch.setenv("TESTING_WITH_DISABLED_AUTHZ", "False")
+    monkeypatch.setenv("FORCE_AUTHZ_CHECK_FOR_METADATA_QUERIES", "True")
+    importlib.reload(config)
+    importlib.reload(main)
+
+    app = main.get_app()
+    with TestClient(app) as client:
+        key = "any_key"
+        resp = client.get("/metadata/" + key)
+        assert resp.status_code == 403

@@ -9,8 +9,8 @@ from starlette.status import (
     HTTP_409_CONFLICT,
 )
 
-from .admin_login import admin_required
-from .db import get_data_access_layer, DataAccessLayer
+from mds.authorizations import admin_required
+from mds.db import get_data_access_layer, DataAccessLayer
 
 INDEX_REGEXP = re.compile(r"data #>> '{(.+)}'::text")
 

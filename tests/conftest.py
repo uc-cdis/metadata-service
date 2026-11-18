@@ -1,5 +1,8 @@
 import importlib
+import time
 
+import httpx2
+from joserfc import jwk, jwt
 import pytest
 import pytest_asyncio
 from alembic.config import main
@@ -48,6 +51,50 @@ def client():
 
     with TestClient(get_app()) as client:
         yield client
+
+
+TEST_ISSUER = "https://test.planx-pla.net/user"
+
+
+@pytest.fixture(scope="function")
+def generate_signed_token(client, monkeypatch):
+    """
+    Configure `TEST_ISSUER` as the only allowed issuer, and serve the public key of a
+    newly generated key pair from the `/jwt/keys` endpoint of any issuer.
+
+    Returns a function which generates an access token signed with the private key.
+    Claims can be overridden through its keyword arguments.
+    """
+    # set after the `client` fixture, which reloads the config
+    monkeypatch.setattr(config, "ALLOWED_ISSUERS", {TEST_ISSUER})
+    key = jwk.generate_key("RSA", 2048, parameters={"kid": "test-kid"}, private=True)
+
+    async def mock_get(self, url, *args, **kwargs):
+        if not url.endswith("/jwt/keys"):
+            # OIDC discovery is not available: authutils falls back on `/jwt/keys`
+            raise Exception(f"Unexpected URL in test: {url}")
+        mocked_response = MagicMock(httpx2.Response)
+        mocked_response.json.return_value = {"keys": [key.as_dict(private=False)]}
+        return mocked_response
+
+    def do_generate(**claim_overrides):
+        now = int(time.time())
+        claims = {
+            "sub": "TEST_USER_ID",
+            "iss": TEST_ISSUER,
+            "aud": "gen3",
+            "iat": now,
+            "exp": now + 300,
+            "pur": "access",
+            "scope": ["openid", "user"],
+        }
+        claims.update(claim_overrides)
+        return jwt.encode({"alg": "RS256", "typ": "JWT", "kid": key.kid}, claims, key)
+
+    with patch("httpx2.AsyncClient.get", mock_get), patch.dict(
+        "authutils.token.fastapi._jwt_public_keys", clear=True
+    ):
+        yield do_generate
 
 
 @pytest.fixture(

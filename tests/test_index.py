@@ -20,7 +20,7 @@ def test_list(client):
 
 
 def test_list_access_control(monkeypatch, client):
-    monkeypatch.setenv("DEBUG", "0")
+    monkeypatch.setenv("TESTING_WITH_DISABLED_AUTHZ", "False")
     monkeypatch.setenv("ADMIN_LOGINS", "abc:123,def:456")
     importlib.reload(config)
 

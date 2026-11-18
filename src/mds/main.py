@@ -21,13 +21,17 @@ def get_app() -> FastAPI:
         title="Framework Services Object Management Service",
         version=version("mds"),
         debug=config.DEBUG,
-        root_path=config.URL_PREFIX,
         lifespan=lifespan,
     )
     app.include_router(router)
     app.add_middleware(ClientDisconnectMiddleware)
     app.async_client = httpx.AsyncClient()
     load_modules(app)
+
+    if not config.ALLOWED_ISSUERS:
+        logger.warning(
+            "ALLOWED_ISSUERS is not configured: access tokens from any issuer will be accepted"
+        )
 
     return app
 
