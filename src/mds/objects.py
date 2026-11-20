@@ -94,7 +94,13 @@ async def create_object(
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
         token_claims = await access_token(
-            "user", "openid", audience="openid", purpose="access"
+            "user",
+            "openid",
+            # TODO: remove "openid" - it's a workaround to accept old-fence tokens that
+            # do not have the updated aud
+            audience=["openid", "gen3"],
+            allowed_issuers=list(config.ALLOWED_ISSUERS) or None,
+            purpose="access",
         )(token)
     except Exception as e:
         logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
@@ -187,7 +193,13 @@ async def create_object_for_id(
         # NOTE: token can be None if no Authorization header was provided, we expect
         #       this to cause a downstream exception since it is invalid
         token_claims = await access_token(
-            "user", "openid", audience="openid", purpose="access"
+            "user",
+            "openid",
+            # TODO: remove "openid" - it's a workaround to accept old-fence tokens that
+            # do not have the updated aud
+            audience=["openid", "gen3"],
+            allowed_issuers=list(config.ALLOWED_ISSUERS) or None,
+            purpose="access",
         )(token)
     except Exception as e:
         logger.error(e.detail if hasattr(e, "detail") else e, exc_info=True)
