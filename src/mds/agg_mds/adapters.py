@@ -6,7 +6,6 @@ import httpx
 import xmltodict
 import bleach
 import logging
-import re
 from tenacity import (
     retry,
     RetryError,
@@ -2661,9 +2660,9 @@ class MC2DPFilesAdapter(Gen3Adapter):
         mappings = kwargs.get("mappings", None)
         config = kwargs.get("config", {})
         study_field = config.get("study_field", "gen3_discovery")
-        data_files_field = config.get("data_files_field", "data_files")
+        data_files_field = config.get("data_files_field", "data_type")
         file_guid_field = config.get("file_guid_field", "file_unique_identifier")
-        keepOriginalFields = kwargs.get("keepOriginalFields", True)
+        keepOriginalFields = kwargs.get("keepOriginalFields", False)
         globalFieldFilters = kwargs.get("globalFieldFilters", [])
         schema = kwargs.get("schema", {})
 
