@@ -19,9 +19,10 @@ import re
 from functools import lru_cache
 
 
-@lru_cache(maxsize=None)
-def _cached_parse(expr: str):
-    return parse(expr)
+@lru_cache(maxsize=4096)
+def _parse_cached(expression: str):
+    """Compile and cache a JSON Path expression. Parsing dominates cost, so reuse it."""
+    return parse(expression)
 
 
 def strip_email(text: str):
@@ -189,15 +190,8 @@ class FieldFilters:
         return FieldFilters.filters[name](value)
 
 
-# Sentinel-free traversal below returns early, so no need for one here.
 # Matches plain dotted paths like $.foo.bar.baz — no filters, wildcards, indices, or recursion.
 _SIMPLE_PATH = re.compile(r"^\$(?:\.[A-Za-z_]\w*)+$")
-
-
-@lru_cache(maxsize=4096)
-def _parse_cached(expression: str):
-    """Compile and cache a JSON Path expression. Parsing dominates cost, so reuse it."""
-    return parse(expression)
 
 
 @lru_cache(maxsize=4096)
@@ -326,7 +320,7 @@ class RemoteMetadataAdapter(ABC):
             has_default_value = False
             default_value = None
             try:
-                jsonpath_expr = _cached_parse(key)
+                jsonpath_expr = _parse_cached(key)
             except JSONPathError as exc:
                 logger.error(
                     f"Invalid JSON Path expression {exc} found as key . See https://github.com/json-path/JsonPath. Skipping this field"
@@ -2647,7 +2641,7 @@ def gather_metadata(
 class MC2DPFilesAdapter(Gen3Adapter):
     def normalizeToGen3MDSFields(self, data, **kwargs) -> Dict[str, Any]:
         """
-        Iterates over the response extracting each data file from the _data_files field.
+        Iterates over the response extracting each data file from the `study_field._data_files` field.
         * data: input metadata to normalize
         * kwargs: key value parameters passed as a dict
         return: dict of results where the keys are identifiers in the Gen3 metadata format:
@@ -2680,8 +2674,6 @@ class MC2DPFilesAdapter(Gen3Adapter):
             items = record[study_field][data_files_field]
             logger.info(f"Processing {len(items)} data files for {guid}")
             for file_item in items:
-                item = {}
-                item["_guid_type"] = "discovery_metadata"
                 item = Gen3Adapter.addGen3ExpectedFields(
                     file_item,
                     mappings,
@@ -2690,6 +2682,12 @@ class MC2DPFilesAdapter(Gen3Adapter):
                     schema,
                 )
                 file_guid = item.get(file_guid_field, None)
+                if file_guid is None:
+                    logger.error(f"File GUID not found in item: {item}")
+                    continue
+                if file_guid in results:
+                    logger.warning(f"Duplicate file GUID found: {file_guid}")
+                    continue
                 results[file_guid] = {
                     "_guid_type": "discovery_metadata",
                     "gen3_discovery": item,
