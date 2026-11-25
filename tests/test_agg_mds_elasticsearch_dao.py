@@ -90,26 +90,43 @@ async def test_clone_temp_indexes_to_real_indexes():
         "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client",
         MagicMock(),
     ) as mock_client:
+        # a non-empty temp index, so we don't sleep/retry waiting for documents
+        mock_client.count.return_value = {"count": 1}
         await elasticsearch_dao.clone_temp_indexes_to_real_indexes()
+    mock_client.indices.refresh.assert_has_calls(
+        [
+            call(index=AGG_MDS_INDEX_TEMP),
+            call(index=AGG_MDS_INFO_INDEX_TEMP),
+            call(index=AGG_MDS_CONFIG_INDEX_TEMP),
+        ],
+        any_order=True,
+    )
+    reindex_kwargs = {
+        "params": {"wait_for_completion": "true"},
+        "request_timeout": 600,
+    }
     mock_client.reindex.assert_has_calls(
         [
             call(
                 body={
-                    "source": {"index": AGG_MDS_INDEX_TEMP},
+                    "source": {"index": AGG_MDS_INDEX_TEMP, "size": 100},
                     "dest": {"index": AGG_MDS_INDEX},
                 },
+                **reindex_kwargs,
             ),
             call(
                 body={
-                    "source": {"index": AGG_MDS_INFO_INDEX_TEMP},
+                    "source": {"index": AGG_MDS_INFO_INDEX_TEMP, "size": 100},
                     "dest": {"index": AGG_MDS_INFO_INDEX},
                 },
+                **reindex_kwargs,
             ),
             call(
                 body={
-                    "source": {"index": AGG_MDS_CONFIG_INDEX_TEMP},
+                    "source": {"index": AGG_MDS_CONFIG_INDEX_TEMP, "size": 100},
                     "dest": {"index": AGG_MDS_CONFIG_INDEX},
                 },
+                **reindex_kwargs,
             ),
         ],
         any_order=True,
@@ -196,9 +213,9 @@ async def test_create_index_raise_exception():
 @pytest.mark.asyncio
 async def test_update_metadata():
     with patch(
-        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.index",
-        MagicMock(),
-    ) as mock_index:
+        "mds.agg_mds.datastore.elasticsearch_dao.helpers.bulk",
+        MagicMock(return_value=(2, [])),
+    ) as mock_bulk:
         await elasticsearch_dao.update_metadata(
             "my_commons",
             [
@@ -216,35 +233,50 @@ async def test_update_metadata():
             {},
             {},
         )
-    mock_index.assert_has_calls(
+    mock_bulk.assert_called_once_with(
+        elasticsearch_dao.elastic_search_client,
         [
-            call(
-                body={},
-                id="my_commons",
-                index=AGG_MDS_INFO_INDEX,
-            ),
-            call(
-                body={
+            {"_index": AGG_MDS_INFO_INDEX, "_id": "my_commons", "_source": {}},
+            {
+                "_index": AGG_MDS_INDEX,
+                "_id": "my_id",
+                "_source": {
                     AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
                         "some_field": "some_value",
                         "__manifest": {},
                         "sites": "",
                     }
                 },
-                id="my_id",
-                index=AGG_MDS_INDEX,
-            ),
+            },
         ],
-        any_order=True,
+        chunk_size=50,
+        raise_on_error=False,
     )
+
+
+@pytest.mark.asyncio
+async def test_update_metadata_bulk_errors():
+    bulk_errors = [{"index": {"_id": "my_id", "error": "mapper_parsing_exception"}}]
+    with patch(
+        "mds.agg_mds.datastore.elasticsearch_dao.helpers.bulk",
+        MagicMock(return_value=(1, bulk_errors)),
+    ):
+        with pytest.raises(Exception, match="Bulk indexing failed with 1 error"):
+            await elasticsearch_dao.update_metadata(
+                "my_commons",
+                [{"my_id": {AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {"some_field": "x"}}}],
+                [],
+                {},
+                {},
+            )
 
 
 @pytest.mark.asyncio
 async def test_update_metadata_to_temp_index():
     with patch(
-        "mds.agg_mds.datastore.elasticsearch_dao.elastic_search_client.index",
-        MagicMock(),
-    ) as mock_index:
+        "mds.agg_mds.datastore.elasticsearch_dao.helpers.bulk",
+        MagicMock(return_value=(2, [])),
+    ) as mock_bulk:
         await elasticsearch_dao.update_metadata(
             "my_commons",
             [
@@ -263,26 +295,24 @@ async def test_update_metadata_to_temp_index():
             {},
             use_temp_index=True,
         )
-    mock_index.assert_has_calls(
+    mock_bulk.assert_called_once_with(
+        elasticsearch_dao.elastic_search_client,
         [
-            call(
-                body={},
-                id="my_commons",
-                index=AGG_MDS_INFO_INDEX_TEMP,
-            ),
-            call(
-                body={
+            {"_index": AGG_MDS_INFO_INDEX_TEMP, "_id": "my_commons", "_source": {}},
+            {
+                "_index": AGG_MDS_INDEX_TEMP,
+                "_id": "my_id",
+                "_source": {
                     AGG_MDS_DEFAULT_STUDY_DATA_FIELD: {
                         "some_field": "some_value",
                         "__manifest": {},
                         "sites": "",
                     }
                 },
-                id="my_id",
-                index=AGG_MDS_INDEX_TEMP,
-            ),
+            },
         ],
-        any_order=True,
+        chunk_size=50,
+        raise_on_error=False,
     )
 
 
@@ -462,12 +492,21 @@ async def test_get_all_named_commons_metadata():
                         "path": AGG_MDS_DEFAULT_STUDY_DATA_FIELD,
                         "query": {
                             "match": {
-                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "HEAL"
+                                f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword": "my-commons"
                             }
                         },
                     }
                 }
             },
+        )
+
+        # the name defaults to HEAL
+        await elasticsearch_dao.get_all_named_commons_metadata()
+        assert (
+            mock_client.search.call_args.kwargs["body"]["query"]["nested"]["query"][
+                "match"
+            ][f"{AGG_MDS_DEFAULT_STUDY_DATA_FIELD}.commons_name.keyword"]
+            == "HEAL"
         )
 
     with patch(
